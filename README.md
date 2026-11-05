@@ -29,6 +29,7 @@ The dapp itself can always see your address and your IP. Canary protects you fro
 |---|---|
 | [`extension/`](extension/) | The Canary MV3 extension: shim, policy, popup, e2e test |
 | [`idea.md`](idea.md) | Team working doc: product, architecture, coverage model, build plan, risks, tracks |
+| [`agent-sdk.md`](agent-sdk.md) | Blueprint: Canary for autonomous agents (gateway + SDK + ENSv2 agent names) |
 | [`test-repo.md`](test-repo.md) | Test log of the anon-rpc repo and of the Canary spike, with numbers |
 | [`test-artifacts/`](test-artifacts/) | Raw logs and benchmark output referenced by test-repo.md |
 | [`canary-spike/`](canary-spike/) | The first proof of concept (superseded by `extension/`) |
