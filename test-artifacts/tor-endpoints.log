@@ -1,0 +1,30 @@
+/Users/mac/Desktop/canary/anon-rpc/impl/node_modules/json5/lib/index.js
+/Users/mac/Desktop/canary/anon-rpc/impl/node_modules/playwright/index.mjs
+/Users/mac/Desktop/canary/anon-rpc/impl/node_modules/vite/dist/node/index.js
+{"net":"mainnet","url":"https://cloudflare-eth.com","direct":"0/3 (Internal error)","tor-js":"0/3 (Failed to read response headers: peer cl)","nym":"0/3 (operation timed out)"}
+{"net":"mainnet","url":"https://eth.drpc.org","direct":"3/3 ~3836ms","tor-js":"3/3 ~9929ms","nym":"0/3 (operation timed out)"}
+{"net":"mainnet","url":"https://1rpc.io/eth","direct":"3/3 ~395ms","tor-js":"3/3 ~825ms","nym":"0/3 (operation timed out)"}
+{"net":"mainnet","url":"https://rpc.flashbots.net","direct":"1/3 ~1168ms","tor-js":"1/3 ~1271ms","nym":"0/3 (operation timed out)"}
+{"net":"mainnet","url":"https://eth.merkle.io","direct":"0/3 (Failed to fetch)","tor-js":"0/3 (HTTP 429)","nym":"0/3 (operation timed out)"}
+{"net":"sepolia","url":"https://ethereum-sepolia-rpc.publicnode.com","direct":"3/3 ~220ms","tor-js":"3/3 ~952ms","nym":"0/3 (operation timed out)"}
+{"net":"sepolia","url":"https://sepolia.drpc.org","direct":"0/3 (HTTP 400)","tor-js":"0/3 (HTTP 400)","nym":"0/3 (operation timed out)"}
+{"net":"sepolia","url":"https://1rpc.io/sepolia","direct":"2/3 ~523ms","tor-js":"3/3 ~1621ms","nym":"0/3 (operation timed out)"}
+{"net":"sepolia","url":"https://rpc.sepolia.org","direct":"0/3 (timeout)","tor-js":"0/3 (HTTP 522)","nym":"0/3 (operation timed out)"}
+{"net":"sepolia","url":"https://sepolia.gateway.tenderly.co","direct":"3/3 ~879ms","tor-js":"0/3 (HTTP 403)","nym":"0/3 (operation timed out)"}
+
+| net | endpoint | direct | tor-js | nym |
+|---|---|---|---|---|
+| mainnet | ethereum-rpc.publicnode.com | 3/3 ~4726ms | 3/3 ~9568ms | 0/3 (operation timed out) |
+| mainnet | eth.llamarpc.com | 0/3 (Failed to fetch) | 0/3 (HTTP 525) | 0/3 (operation timed out) |
+| mainnet | cloudflare-eth.com | 0/3 (Internal error) | 0/3 (Failed to read response headers: peer cl) | 0/3 (operation timed out) |
+| mainnet | eth.drpc.org | 3/3 ~3836ms | 3/3 ~9929ms | 0/3 (operation timed out) |
+| mainnet | 1rpc.io/eth | 3/3 ~395ms | 3/3 ~825ms | 0/3 (operation timed out) |
+| mainnet | rpc.flashbots.net | 1/3 ~1168ms | 1/3 ~1271ms | 0/3 (operation timed out) |
+| mainnet | eth.merkle.io | 0/3 (Failed to fetch) | 0/3 (HTTP 429) | 0/3 (operation timed out) |
+| sepolia | ethereum-sepolia-rpc.publicnode.com | 3/3 ~220ms | 3/3 ~952ms | 0/3 (operation timed out) |
+| sepolia | sepolia.drpc.org | 0/3 (HTTP 400) | 0/3 (HTTP 400) | 0/3 (operation timed out) |
+| sepolia | 1rpc.io/sepolia | 2/3 ~523ms | 3/3 ~1621ms | 0/3 (operation timed out) |
+| sepolia | rpc.sepolia.org | 0/3 (timeout) | 0/3 (HTTP 522) | 0/3 (operation timed out) |
+| sepolia | sepolia.gateway.tenderly.co | 3/3 ~879ms | 0/3 (HTTP 403) | 0/3 (operation timed out) |
+
+[exited with code 0]

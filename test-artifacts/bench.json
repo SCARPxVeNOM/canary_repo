@@ -1,0 +1,303 @@
+{
+  "ranAt": "2026-11-05T14:28:56.826Z",
+  "rpcHost": "ethereum-rpc.publicnode.com",
+  "watch": "0x00000000219ab540356cBB839Cbe05303d7705Fa",
+  "n": 8,
+  "boots": [
+    {
+      "id": "direct",
+      "ok": true,
+      "bootMs": 0
+    },
+    {
+      "id": "passthrough",
+      "ok": true,
+      "bootMs": 1517.0999999642372
+    },
+    {
+      "id": "tor-js",
+      "ok": true,
+      "bootMs": 13022.199999988079
+    },
+    {
+      "id": "nym",
+      "ok": true,
+      "bootMs": 65809
+    },
+    {
+      "id": "nox",
+      "ok": false,
+      "bootMs": 528,
+      "error": "short bytes32 return"
+    }
+  ],
+  "summary": [
+    {
+      "arm": "direct",
+      "n": 8,
+      "p50": 220.30000001192093,
+      "p90": 293.60000002384186,
+      "p99": 293.60000002384186,
+      "discarded": 0
+    },
+    {
+      "arm": "passthrough",
+      "n": 8,
+      "p50": 399.19999998807907,
+      "p90": 521.6999999880791,
+      "p99": 521.6999999880791,
+      "discarded": 0
+    },
+    {
+      "arm": "tor-js",
+      "n": 8,
+      "p50": 1530.5999999642372,
+      "p90": 1995,
+      "p99": 1995,
+      "discarded": 0
+    },
+    {
+      "arm": "nym",
+      "n": 8,
+      "p50": 823.8999999761581,
+      "p90": 6313.700000047684,
+      "p99": 6313.700000047684,
+      "discarded": 0
+    },
+    {
+      "arm": "nox",
+      "n": 0,
+      "p50": null,
+      "p90": null,
+      "p99": null,
+      "discarded": 0,
+      "bootFailed": "short bytes32 return"
+    }
+  ],
+  "samples": [
+    {
+      "round": 0,
+      "id": "direct",
+      "ok": true,
+      "ms": 197.5,
+      "result": "0x4d0193eab0636a12179116"
+    },
+    {
+      "round": 0,
+      "id": "passthrough",
+      "ok": true,
+      "ms": 368.30000001192093,
+      "result": "0x4d0193eab0636a12179116"
+    },
+    {
+      "round": 0,
+      "id": "tor-js",
+      "ok": true,
+      "ms": 1995,
+      "result": "0x4d0193eab0636a12179116"
+    },
+    {
+      "round": 0,
+      "id": "nym",
+      "ok": true,
+      "ms": 6313.700000047684,
+      "result": "0x4d0193eab0636a12179116"
+    },
+    {
+      "round": 1,
+      "id": "passthrough",
+      "ok": true,
+      "ms": 401,
+      "result": "0x4d0193eab0636a12179116"
+    },
+    {
+      "round": 1,
+      "id": "tor-js",
+      "ok": true,
+      "ms": 1468,
+      "result": "0x4d0193eab0636a12179116"
+    },
+    {
+      "round": 1,
+      "id": "nym",
+      "ok": true,
+      "ms": 491.19999998807907,
+      "result": "0x4d0193eab0636a12179116"
+    },
+    {
+      "round": 1,
+      "id": "direct",
+      "ok": true,
+      "ms": 220.30000001192093,
+      "result": "0x4d0193eab0636a12179116"
+    },
+    {
+      "round": 2,
+      "id": "tor-js",
+      "ok": true,
+      "ms": 1530.5999999642372,
+      "result": "0x4d0193eab0636a12179116"
+    },
+    {
+      "round": 2,
+      "id": "nym",
+      "ok": true,
+      "ms": 1024.0999999642372,
+      "result": "0x4d0193eab0636a12179116"
+    },
+    {
+      "round": 2,
+      "id": "direct",
+      "ok": true,
+      "ms": 293.60000002384186,
+      "result": "0x4d0193eab0636a12179116"
+    },
+    {
+      "round": 2,
+      "id": "passthrough",
+      "ok": true,
+      "ms": 521.6999999880791,
+      "result": "0x4d0193eab0636a12179116"
+    },
+    {
+      "round": 3,
+      "id": "nym",
+      "ok": true,
+      "ms": 723.4000000357628,
+      "result": "0x4d0193eab0636a12179116"
+    },
+    {
+      "round": 3,
+      "id": "direct",
+      "ok": true,
+      "ms": 224.9000000357628,
+      "result": "0x4d0193eab0636a12179116"
+    },
+    {
+      "round": 3,
+      "id": "passthrough",
+      "ok": true,
+      "ms": 399.19999998807907,
+      "result": "0x4d0193eab0636a12179116"
+    },
+    {
+      "round": 3,
+      "id": "tor-js",
+      "ok": true,
+      "ms": 1490.6000000238419,
+      "result": "0x4d0193eab0636a12179116"
+    },
+    {
+      "round": 4,
+      "id": "direct",
+      "ok": true,
+      "ms": 192.10000002384186,
+      "result": "0x4d0193eab0636a12179116"
+    },
+    {
+      "round": 4,
+      "id": "passthrough",
+      "ok": true,
+      "ms": 394.69999998807907,
+      "result": "0x4d0193eab0636a12179116"
+    },
+    {
+      "round": 4,
+      "id": "tor-js",
+      "ok": true,
+      "ms": 1513.2999999523163,
+      "result": "0x4d0193eab0636a12179116"
+    },
+    {
+      "round": 4,
+      "id": "nym",
+      "ok": true,
+      "ms": 1483.6000000238419,
+      "result": "0x4d0193eab0636a12179116"
+    },
+    {
+      "round": 5,
+      "id": "passthrough",
+      "ok": true,
+      "ms": 450.19999998807907,
+      "result": "0x4d0193eab0636a12179116"
+    },
+    {
+      "round": 5,
+      "id": "tor-js",
+      "ok": true,
+      "ms": 1992.300000011921,
+      "result": "0x4d0193eab0636a12179116"
+    },
+    {
+      "round": 5,
+      "id": "nym",
+      "ok": true,
+      "ms": 823.8999999761581,
+      "result": "0x4d0193eab0636a12179116"
+    },
+    {
+      "round": 5,
+      "id": "direct",
+      "ok": true,
+      "ms": 194.30000001192093,
+      "result": "0x4d0193eab0636a12179116"
+    },
+    {
+      "round": 6,
+      "id": "tor-js",
+      "ok": true,
+      "ms": 1544.5999999642372,
+      "result": "0x4d0193eab0636a12179116"
+    },
+    {
+      "round": 6,
+      "id": "nym",
+      "ok": true,
+      "ms": 621.2000000476837,
+      "result": "0x4d0193eab0636a12179116"
+    },
+    {
+      "round": 6,
+      "id": "direct",
+      "ok": true,
+      "ms": 259.19999998807907,
+      "result": "0x4d0193eab0636a12179116"
+    },
+    {
+      "round": 6,
+      "id": "passthrough",
+      "ok": true,
+      "ms": 396.69999998807907,
+      "result": "0x4d0193eab0636a12179116"
+    },
+    {
+      "round": 7,
+      "id": "nym",
+      "ok": true,
+      "ms": 866.1999999880791,
+      "result": "0x4d0193eab0636a12179116"
+    },
+    {
+      "round": 7,
+      "id": "direct",
+      "ok": true,
+      "ms": 242.30000001192093,
+      "result": "0x4d0193eab0636a12179116"
+    },
+    {
+      "round": 7,
+      "id": "passthrough",
+      "ok": true,
+      "ms": 431.2000000476837,
+      "result": "0x4d0193eab0636a12179116"
+    },
+    {
+      "round": 7,
+      "id": "tor-js",
+      "ok": true,
+      "ms": 1616.800000011921,
+      "result": "0x4d0193eab0636a12179116"
+    }
+  ]
+}

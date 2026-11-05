@@ -1,0 +1,42 @@
+6a68d2fea160: Download complete
+94bba57d0e11: Download complete
+94bba57d0e11: Pull complete
+422e94f36765: Download complete
+6a68d2fea160: Pull complete
+422e94f36765: Pull complete
+fb2c23b70a75: Download complete
+fb2c23b70a75: Pull complete
+Digest: sha256:35246d87a7c88ea9b771c65d33171b2611b02a8253b4b12ce6f94376c55f99f2
+Status: Downloaded newer image for mcr.microsoft.com/playwright:v1.56.0-noble
+  [kps-bundle] GET /w.js HTTP/1.1
+  [kps-bundle] GET /missing.js HTTP/1.1
+  [kps-bundle] GET /gzip.js HTTP/1.1
+  ✓ iframe sandbox is allow-scripts only (§6)
+  ✓ acceptLog delivers a line logged before anyone was listening (§13.1)
+  ✓ log args cross as a list, with the level intact (§13.1)
+  ✓ plain fetch passthrough body
+  ✓ init config delivered to the worker (§7.1)
+  ✓ anonOptions forwarded to the worker (§9.1, §9.3)
+  ✓ custom init entry forwarded, bytes intact (§9.1, §9.4)
+  ✓ a non-plain forwarded entry rejects the fetch with TypeError (§9.1)
+  ✓ kps-routed echo round-trips bytes
+  ✓ worker observes conn.remoteAddress (§10.1)
+  ✓ Request-object POST body honored (§5)
+  ✓ ReadableStream body transfers across the boundary
+  ✓ pre-aborted fetch rejects with AbortError
+  ✓ fetch after an aborted fetch still works (§8 no-drop)
+  ✓ worker-persisted call counter (§11 storage)
+  ✓ minimal passthrough-worker template serves fetch
+  ✓ minimal template adds no extra headers
+  ✓ bundle resolved over a kps resolver, unrecognized entry ignored (§4.1–4.2)
+  ✓ every §4.2 failure mode was attempted in order against the kps server
+  ✓ boot rejects with diagnostics when every kps resolver fails
+  ✓ gzip-encoded bundle advertised, decoded, and verified (§4.2)
+  ✓ signalFailed rejects ready with the structured reason; late signalReady ignored (§7)
+  [page:info] [worker] test-worker starting
+  ✓ storage persists across page reloads (IndexedDB, §11)
+  ✓ absent config surfaces as undefined (§7.1)
+
+✅ all e2e assertions passed
+
+[exited with code 0]
