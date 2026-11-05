@@ -1,7 +1,9 @@
 node_modules/
 dist/
 dist-live/
-test/out/
+**/test/out/
 .DS_Store
 *.tgz
 .env
+live-check.json
+live-check.log

@@ -332,3 +332,37 @@ Local stub chain + the repo's **passthrough** worker (hash-verified the same way
 - **The core EF claim is demonstrable today on a real dapp**: "the dapp's own keyed RPC provider saw none of your reads", with coverage measured.
 - Real dapps lean on **indexer/REST APIs** as much as on RPC. Report them in coverage as their own category ("backend/indexer"); this matches EF's "how much of the app's traffic" criterion.
 - ~1–3 s per batched read is usable for a profile/dashboard page. Keep the worker warm.
+
+---
+
+# Round 3: Canary for agents (6 Nov 2026)
+
+Tests of `packages/` (agent-sdk.md §0) and of the extension after moving it onto `@canary/core`.
+
+- **Machine:** Linux container, Node v22.23.4, Google Chrome for Testing 153.0.8010.12 (headless), Python 3.13.18.
+- **Packages:** playwright-core 1.64.1 (drives Chrome), viem 2.57.16, ganache 7.9.2 + solc 0.8.38 (local chain and mock ENSv2 contracts).
+- **anon-rpc:** `@anon-rpc/browser-harness` 0.4.0 from npm, with EF's passthrough reference worker, hash-verified exactly as on chain. `@anon-rpc/node-harness` is not on npm (404).
+
+## 11. Results
+
+| Suite | Result | Covers |
+|---|---|---|
+| `@canary/core` | ✅ 5/5 | classifier, address encodings, manifest validation and host rules |
+| `@canary/ens` | ✅ 4/4 | manifest load; one-key report role with **both** documented delegation APIs; signed report; revocation via simulated `setText` and `EACRolesChanged`; tampering, forged reporter, policy drift |
+| `@canary/gateway` | ✅ 39/39 | bridge (16 MB streamed in 64 frames, aborts, 10 concurrent calls); Chrome killed mid-request (fails closed, one relaunch); boot failure (recovers); JSON-RPC routing, per-wallet batch split, fail closed; proxy and CONNECT rules; MITM CA; reports; jitter; ENS policy with live updates and publishing over anon-rpc; Python agent |
+| `@canary/agent` | ✅ 13/13 | viem and ethers through the gateway; fetch policy; LLM round trip (provider sees `WALLET_1`, agent gets the address back); `wrapTools`; events; report; embedded mode |
+| `extension/` e2e | ✅ 24/24 | unchanged checks, now on `@canary/core` |
+
+## 12. Findings
+
+1. **Chrome uses the environment's proxy.** In a sandbox that sets `HTTPS_PROXY`, the anon backend's HTTPS went to that proxy. Pass `--no-proxy-server` there (the fixtures do; the extension e2e already did).
+2. **The passthrough worker is the page's own `fetch`,** so CORS applies: non-RPC hosts need preflight answers in tests. tor-js doesn't use the browser's fetch for the exit request; recheck this live.
+3. **Shutdown with open CONNECT tunnels hung:** `server.close()` waits for tunnel sockets that Node's HTTP server doesn't track. Fixed by ending tunnels before closing. The gateway would otherwise hang on stop.
+4. **The ENSv2 docs show two delegation APIs** (`authorizeTextRoles` and `grantSetterRoles`/`revokeRoles`). Both are supported and tested against mocks; which one Sepolia runs is a mentor question (agent-sdk.md §10).
+5. **The passthrough worker hands over a large body in one piece;** the bridge re-frames it (≤256 KB) so one big `eth_getLogs` doesn't become one giant WebSocket message.
+
+## 13. Not tested yet
+
+- The gateway over **tor-js** (this container can't reach EF's KPS gateway). First thing to run: `examples/viem-agent` with `npm run gateway`.
+- **ENS on Sepolia** (live Permissioned Resolver, Universal Resolver address, which delegation API).
+- Windows and macOS runs of `npm test` (the scripts avoid Unix-only syntax; the tests find Chrome via `CHROME_BIN` or the installed Chrome).

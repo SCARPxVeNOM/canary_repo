@@ -1,0 +1,40 @@
+{
+  "name": "@canary/agent",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "license": "MIT",
+  "description": "In-process Canary SDK for TypeScript agents: viem transport, fetch, and an LLM prompt pseudonymizer, enforced by a Canary Gateway.",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "node --test --test-concurrency=1 \"test/*.test.mjs\""
+  },
+  "dependencies": {
+    "@canary/core": "0.1.0",
+    "viem": "^2.21.0"
+  },
+  "peerDependencies": {
+    "@canary/gateway": "0.1.0",
+    "ethers": "^6.13.0"
+  },
+  "peerDependenciesMeta": {
+    "@canary/gateway": {
+      "optional": true
+    },
+    "ethers": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@canary/gateway": "0.1.0",
+    "ethers": "^6.13.0"
+  }
+}
