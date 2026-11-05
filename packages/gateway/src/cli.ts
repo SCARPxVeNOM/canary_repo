@@ -50,6 +50,15 @@ gw.backend.ready.then(
   () => console.log(`  anon-rpc worker ready in ${gw.backend.status().bootMs} ms`),
   (e) => console.error(`  anon-rpc worker failed: ${e.message} (requests fail closed)`),
 );
+// Ready isn't serving: say when calls actually start (or stop) getting through.
+let serving = "unknown";
+setInterval(() => {
+  const p = gw.backend.status().path;
+  if (p.serving === serving) return;
+  serving = p.serving;
+  if (p.serving === "yes") console.log(`  anon path serving (first call through ${p.firstOkMs} ms after launch)`);
+  else if (p.serving === "no") console.warn(`  anon path not serving: ${p.lastError} (requests fail closed)`);
+}, 1000).unref();
 const stop = async () => (await gw.close(), process.exit(0));
 process.on("SIGINT", stop);
 process.on("SIGTERM", stop);

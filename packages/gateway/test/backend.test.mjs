@@ -86,6 +86,45 @@ test("abort rejects, and the bridge keeps working afterwards", async () => {
   assert.equal((await r.json()).id, 2);
 });
 
+test("path health: ready isn't serving; successes and timeouts count, a caller's abort doesn't", async () => {
+  const b4 = await startChromiumBackend({ network: fx.network, ...CHROME_OPTS, args: fx.chromiumArgs });
+  const call = (init = {}) => b4.fetch(fx.url("read.test"), { method: "POST", body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "eth_blockNumber" }), ...init });
+  try {
+    await b4.ready;
+    assert.equal(b4.status().path.serving, "unknown", "the worker's ready signal alone says nothing about the path");
+
+    await (await call()).json();
+    let p = b4.status().path;
+    assert.equal(p.serving, "yes");
+    assert.equal(p.ok, 1);
+    assert.equal(typeof p.firstOkMs, "number");
+
+    fx.state.readDelayMs = 2000;
+    await assert.rejects(call({ signal: AbortSignal.timeout(200) }));
+    p = b4.status().path;
+    assert.equal(p.serving, "no");
+    assert.equal(p.failed, 1);
+    assert.equal(p.consecutiveFailures, 1);
+    assert.ok(p.lastError);
+
+    const ac = new AbortController();
+    const aborted = call({ signal: ac.signal });
+    setTimeout(() => ac.abort(), 100);
+    await assert.rejects(aborted);
+    assert.equal(b4.status().path.failed, 1, "the caller's own abort is not a path failure");
+
+    fx.state.readDelayMs = 0;
+    await (await call()).json();
+    p = b4.status().path;
+    assert.equal(p.serving, "yes");
+    assert.equal(p.consecutiveFailures, 0);
+    assert.equal(p.ok, 2);
+  } finally {
+    fx.state.readDelayMs = 0;
+    await b4.close();
+  }
+});
+
 test("a destination that is down is an error response or a rejection, never a direct retry", async () => {
   fx.state.readDown = true;
   fx.reset();

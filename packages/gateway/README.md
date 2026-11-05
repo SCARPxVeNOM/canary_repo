@@ -14,7 +14,7 @@ canary-gateway ca                              # opt-in MITM CA: create it, prin
 | `http://127.0.0.1:18545/<chainId>` | the agent's RPC URL (`POST /` works when one chain is configured) |
 | `http://127.0.0.1:18080` | `HTTPS_PROXY` / `HTTP_PROXY` |
 | `POST /canary/fetch` + `x-canary-url` | the SDK's in-process fetch: full policy, bodies visible |
-| `GET /canary/status` | backend state, chains, policy hash, jitter, MITM, ENS state |
+| `GET /canary/status` | backend state, chains, policy hash, jitter, MITM, ENS state. `backend.state` is the worker's own signal; `backend.path.serving` (`unknown` / `yes` / `no`) says whether calls are actually getting through, from their outcomes since launch. Over tor-js the worker can be `ready` minutes before it is serving. |
 | `GET /canary/report` | signed full report + coarse form (`?rotate=1` starts a new window) |
 | `POST /canary/publish` | sign and publish the coarse report to the agent's ENS name now (409 if the report key can't write) |
 | `GET /canary/events` | live egress decisions (server-sent events) |

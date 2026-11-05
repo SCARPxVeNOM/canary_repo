@@ -10,7 +10,7 @@ import { randomBytes } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { WebSocketServer, type WebSocket } from "ws";
-import type { AnonBackend, AnonInit, BackendStatus, NetworkConfig, WorkerLog } from "./types.js";
+import type { AnonBackend, AnonInit, BackendStatus, NetworkConfig, PathHealth, WorkerLog } from "./types.js";
 
 export type ChromiumOptions = {
   network: NetworkConfig;
@@ -56,7 +56,7 @@ export class ChromiumBackend implements AnonBackend {
   private failures = 0;
 
   constructor(private opts: ChromiumOptions) {
-    this.st = { backend: "chromium", network: opts.network.label ?? opts.network.id, state: "starting", restarts: 0 };
+    this.st = { backend: "chromium", network: opts.network.label ?? opts.network.id, state: "starting", restarts: 0, path: freshPath() };
     this.ready = this.newReady();
   }
 
@@ -67,7 +67,26 @@ export class ChromiumBackend implements AnonBackend {
   }
 
   status(): BackendStatus {
-    return { ...this.st };
+    return { ...this.st, path: { ...this.st.path } };
+  }
+
+  private recordOk() {
+    const p = this.st.path;
+    p.ok++;
+    p.consecutiveFailures = 0;
+    p.serving = "yes";
+    p.lastOkAt = Date.now();
+    p.firstOkMs ??= p.lastOkAt - this.bootStart;
+  }
+
+  /** A caller's own abort says nothing about the path; timeouts and worker errors do. */
+  private recordFail(e: unknown) {
+    if ((e as Error)?.name === "AbortError") return;
+    const p = this.st.path;
+    p.failed++;
+    p.consecutiveFailures++;
+    p.serving = "no";
+    p.lastError = String((e as Error)?.message ?? e);
   }
 
   onLog(listener: (l: WorkerLog) => void) {
@@ -142,6 +161,7 @@ export class ChromiumBackend implements AnonBackend {
     const port = (this.server!.address() as any).port;
     await page.goto(`http://127.0.0.1:${port}/?t=${this.token}`);
     this.st.bootMs = undefined;
+    this.st.path = freshPath();
     this.bootStart = t0;
   }
   private bootStart = 0;
@@ -268,7 +288,7 @@ export class ChromiumBackend implements AnonBackend {
     let body: string | undefined;
     if (init.body != null) body = Buffer.from(await new Response(init.body as BodyInit).arrayBuffer()).toString("base64");
     const ws = await this.socket();
-    return new Promise<Response>((resolveHead, reject) => {
+    const head = new Promise<Response>((resolveHead, reject) => {
       this.pending.set(id, { resolveHead, reject, headDone: false, enqueued: 0 });
       signal?.addEventListener(
         "abort",
@@ -284,6 +304,14 @@ export class ChromiumBackend implements AnonBackend {
       );
       ws.send(JSON.stringify({ t: "req", id, url, method: init.method ?? "GET", headers, ...(body !== undefined ? { body } : {}), ...(init.anonOptions ? { anonOptions: init.anonOptions } : {}) }));
     });
+    // Any response head (even an HTTP error from the destination) means the path carried the call.
+    return head.then(
+      (r) => (this.recordOk(), r),
+      (e) => {
+        this.recordFail(e);
+        throw e;
+      },
+    );
   }
 
   async close() {
@@ -295,6 +323,10 @@ export class ChromiumBackend implements AnonBackend {
     this.wss?.close();
     await new Promise<void>((r) => (this.server ? this.server.close(() => r()) : r()));
   }
+}
+
+function freshPath(): PathHealth {
+  return { serving: "unknown", ok: 0, failed: 0, consecutiveFailures: 0 };
 }
 
 export async function startChromiumBackend(opts: ChromiumOptions): Promise<ChromiumBackend> {

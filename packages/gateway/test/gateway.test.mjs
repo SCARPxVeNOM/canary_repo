@@ -118,7 +118,7 @@ test("read endpoint down: fail closed with a JSON-RPC error, no direct retry", a
 });
 
 test("anon backend down: every call fails closed", async () => {
-  const dead = { name: "dead", ready: Promise.resolve(), status: () => ({ backend: "dead", network: "x", state: "failed", restarts: 0 }), fetch: () => Promise.reject(new Error("worker gone")), close: async () => {} };
+  const dead = { name: "dead", ready: Promise.resolve(), status: () => ({ backend: "dead", network: "x", state: "failed", restarts: 0, path: { serving: "no", ok: 0, failed: 0, consecutiveFailures: 0 } }), fetch: () => Promise.reject(new Error("worker gone")), close: async () => {} };
   const g2 = await createGateway({ backend: dead, port: 0, proxyPort: false, chains: { 1: { read: fx.url("read.test") } } });
   fx.reset();
   const r = await (await fetch(g2.rpcUrl(1), { method: "POST", body: JSON.stringify([call(1, "eth_blockNumber"), call(2, "eth_chainId")]) })).json();

@@ -28,7 +28,7 @@ One core, two hosts: `extension/` and `packages/` share `@canary/core`.
 | Dapp scanner (Playwright + mitmproxy) | Not started (cut in favour of agents: agent-sdk.md §9) |
 | ENSv2 manifest + signed verdicts for dapps | Not started |
 | **Agents:** `@canary/core` ([`packages/core`](packages/core/)) | Done; the extension imports it. 5/5 tests (+ the extension's 24/24). |
-| **Agents:** gateway ([`packages/gateway`](packages/gateway/)) | Working: anon-rpc in headless Chrome, JSON-RPC endpoint, HTTP(S) proxy, opt-in MITM CA, policy from ENS with live updates, signed reports, timing jitter, crash recovery. 39/39 tests on EF's passthrough worker. **Not yet run live over tor-js.** |
+| **Agents:** gateway ([`packages/gateway`](packages/gateway/)) | Working: anon-rpc in headless Chrome, JSON-RPC endpoint, HTTP(S) proxy, opt-in MITM CA, policy from ENS with live updates, signed reports, timing jitter, crash recovery. 40/40 tests on EF's passthrough worker. Live over tor-js: works when EF's demo KPS gateway lets circuits through (reads ~1 s once warm; boot to first read takes minutes; see [test-repo.md](test-repo.md) round 4). |
 | **Agents:** ENSv2 ([`packages/ens`](packages/ens/)) | Working against mock ENSv2 contracts: manifest loader, one-key report role (both documented delegation APIs), signed `privacy.report`, revocation detection, `canary-ens` CLI. 4/4 tests. **Not yet run on the live Sepolia deployment.** |
 | **Agents:** SDK ([`packages/agent`](packages/agent/)) | viem transport, ethers provider, `fetch`, LLM pseudonymizer, `wrapTools`, embedded mode. 13/13 tests. |
 | **Agents:** examples | [`viem-agent`](examples/viem-agent/) (with `--leaky` before/after) and [`python-agent`](examples/python-agent/) (zero code changes, tested). |

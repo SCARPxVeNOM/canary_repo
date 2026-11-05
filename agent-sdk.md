@@ -32,7 +32,9 @@ Draft v1.1 · 6 Nov 2026 · brainstorm first, then the blueprint. v1 applies the
 
 ## 0. Implementation status (6 Nov 2026)
 
-Everything below is in `packages/` and `examples/`; each package README has the API and config reference. **Tests:** 61 pass (`npm test` at the repo root), plus the extension's 24/24 now that it runs on `@canary/core`. They run against EF's passthrough reference worker (hash-verified as on chain), local fixtures, and a local chain with mock ENSv2 contracts. **Not yet run live over tor-js, nor on ENS's Sepolia deployment.** Those are the first two things to do with a network.
+Everything below is in `packages/` and `examples/`; each package README has the API and config reference. **Tests:** 62 pass (`npm test` at the repo root), on Linux and Windows, plus the extension's 24/24 now that it runs on `@canary/core`. They run against EF's passthrough reference worker (hash-verified as on chain), local fixtures, and a local chain with mock ENSv2 contracts.
+
+**Live over tor-js (test-repo.md round 4):** works when EF's demo KPS gateway lets circuits through. On 5 Nov, 18/19 live checks passed (reads ~0.9 s once warm; the only fail was a 180 s boot limit). On 6 Nov, one run reached its first read at ~229 s, and another got nothing through in 10 min. The bottleneck is the demo gateway ("limited capacity"), not Canary, which failed closed throughout. Readiness is now reported as `path.serving` from call outcomes, because tor-js signals `ready` minutes before it can carry a call. **ENS on Sepolia is not yet run live.**
 
 | Blueprint part | Where | Status |
 |---|---|---|
@@ -392,7 +394,7 @@ The extension is done. This replaces the scanner work in idea.md §6 if we choos
 - Is there a native path for tor-js in Node (WASM in the QuickJS guest, or tor-js over the node harness's existing `socket` capability)? Does the node harness implement KPS, and when will it be on npm?
 - Is a headless-Chromium backend acceptable as "a new platform"?
 - Is `isolationKey` honoured by tor-js (separate circuits)?
-- Can we run our own KPS gateway?
+- Can we run our own KPS gateway? The demo one (`152.236.3.22:12298`) is the bottleneck in our live runs: fast bootstrap always failed, and boot to first circuit took ~4 min in a good run and never finished in a bad one (test-repo.md §15). Is it shared and rate-limited?
 
 **ENS:**
 - Which one-key delegation API is deployed on Sepolia: `authorizeTextRoles(name, key, account, grant)` or `grantSetterRoles(setter, account)` / `revokeRoles`? (`@canary/ens` handles both; we want to demo the live one.) Which Universal Resolver address should clients use?

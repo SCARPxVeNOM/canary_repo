@@ -366,3 +366,45 @@ Tests of `packages/` (agent-sdk.md §0) and of the extension after moving it ont
 - The gateway over **tor-js** (this container can't reach EF's KPS gateway). First thing to run: `examples/viem-agent` with `npm run gateway`.
 - **ENS on Sepolia** (live Permissioned Resolver, Universal Resolver address, which delegation API).
 - Windows and macOS runs of `npm test` (the scripts avoid Unix-only syntax; the tests find Chrome via `CHROME_BIN` or the installed Chrome).
+
+---
+
+# Round 4: Canary for agents, live over tor-js (5–6 Nov 2026)
+
+The packages from round 3, on a Windows machine and the real network.
+
+- **Machine:** Windows 11, Node v25.2.1, installed Google Chrome (gateway backend), Playwright Chromium 156 (extension e2e).
+- **anon-rpc:** `@anon-rpc/browser-harness` 0.4.0, the tor-js specifier `0x700dA3193D35fA54Cd3fBf29B66f2a2A0385659e`, EF's one KPS gateway `152.236.3.22:12298`.
+
+## 14. Local suites on Windows
+
+| Suite | Result |
+|---|---|
+| `@canary/core` | ✅ 5/5 |
+| `@canary/ens` | ✅ 4/4 |
+| `@canary/gateway` | ✅ 40/40 (one new: path health) |
+| `@canary/agent` | ✅ 13/13 |
+
+## 15. Live runs over tor-js
+
+| Run | Worker `ready` | First read through | Reads after that |
+|---|---|---|---|
+| 5 Nov (`scripts/live-check.mjs`) | not within 180 s | ~204 s (23.6 s for the first read) | 0.8–0.9 s; 18/19 checks passed, the only fail was the 180 s boot limit |
+| 6 Nov, probe 1 | 304 s | not before the run ended | — |
+| 6 Nov, probe 2 | 69 s | ~229 s | 0.86–2.3 s (7 reads) |
+| 6 Nov, live check | not within 300 s | not within the next 300 s (9 tries) | — |
+
+The 5 Nov run passed everything else over tor-js: mainnet and Sepolia reads, batches split per wallet, the SDK's viem client, an undeclared host blocked, CoinGecko (declared `anon`) answered from a Tor exit, and the coverage report (14/14 RPC calls protected, nothing direct, nothing failed closed).
+
+## 16. Findings
+
+1. **`ready` is not serving.** tor-js signals ready once it has a directory. Circuits through the KPS gateway came minutes later (69 s against ~229 s in probe 2), and in that gap every read timed out after 30 s while the status said `ready`. The backend now tracks call outcomes: `status().path.serving` is `unknown` / `yes` / `no`. `/canary/status` and the CLI show it, and the live check waits for the first read that gets through and reports both times.
+2. **The slow part is the KPS gateway, not Canary.** Fast bootstrap failed every time ("all gateways failed for /bootstrap.zip.zst"). Directory downloads and circuit builds timed out in a loop ("Problem downloading directory object", "All tunnel attempts failed due to timeout", "Could not connect to guard"). The gateway reports itself as "a demo instance: limited capacity, and it may disappear at any time". Same code, same machine: boot in 69 s in one run, nothing after 10 min in another.
+3. **Canary failed closed throughout.** No read went direct while the path was down; each returned a JSON-RPC error (`anon path failed: … timeout`).
+4. **"Chromium page crashed" was the test harness.** All three crashes landed ~2 s before the deadline of the `timeout` command wrapping the probe (58 s of 60, 327 of 330, 378 of 380): on Windows it kills Chrome first. Not a Canary bug; don't wrap the gateway in `timeout` on Windows.
+
+## 17. Next
+
+- Ask EF (agent-sdk.md §10): is the demo KPS gateway shared and rate-limited, and can we run our own? With a reliable gateway the demo needs boot + first circuit to be predictable.
+- Rerun `run-live-check.cmd` when the gateway is quiet. Warm the gateway well before a demo: boot to first read took 3.5–4 min when it worked.
+- ENS on live Sepolia still untested (needs a Sepolia name; `--ens-name`).

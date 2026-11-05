@@ -6,7 +6,8 @@
 //
 // Boots the gateway from the config (tor-js by default), then checks, over the
 // real anon-rpc network:
-//   1. the worker boots (and how long it takes)
+//   1. the worker boots, then serves: tor-js can report ready minutes before it
+//      builds a circuit through the KPS gateway, so both times are reported
 //   2. each configured chain: local eth_chainId, reads through anon-rpc, latency
 //   3. a batch carrying two wallets is answered (split per wallet)
 //   4. the SDK: viem through the gateway; an undeclared host refused;
@@ -31,7 +32,8 @@ const { values } = parseArgs({
     config: { type: "string", default: resolve(ROOT, "examples/viem-agent/canary.config.json") },
     "ens-name": { type: "string" },
     out: { type: "string", default: resolve(ROOT, "live-check.json") },
-    "boot-timeout": { type: "string", default: "180000" },
+    "boot-timeout": { type: "string", default: "300000" },
+    "serve-timeout": { type: "string", default: "300000" },
   },
 });
 
@@ -80,6 +82,21 @@ const rpc = async (chain, body) => {
   const r = await fetch(gw.rpcUrl(chain), { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
   return r.json();
 };
+
+await step("anon path serves reads", async () => {
+  const chain = Object.keys(cfg.chains)[0];
+  const end = Date.now() + Number(values["serve-timeout"]);
+  let tries = 0;
+  for (;;) {
+    tries++;
+    const r = await rpc(chain, { jsonrpc: "2.0", id: 1, method: "eth_blockNumber" }).catch((e) => ({ error: { message: e.message } }));
+    if (r.result) break;
+    if (Date.now() > end) throw new Error(`no read got through in ${values["serve-timeout"]} ms (${tries} tries): ${JSON.stringify(gw.backend.status().path)}`);
+    await new Promise((res) => setTimeout(res, 5000));
+  }
+  const s = gw.backend.status();
+  return `first read through anon-rpc ${s.path.firstOkMs} ms after launch (worker ready at ${s.bootMs ?? "?"} ms) · ${tries} tries`;
+});
 
 for (const chain of Object.keys(cfg.chains)) {
   await step(`chain ${chain}: eth_chainId answered locally`, async () => {
