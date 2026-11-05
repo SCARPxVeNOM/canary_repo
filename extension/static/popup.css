@@ -1,0 +1,37 @@
+:root {
+  --bg: #0f1115; --panel: #171a21; --line: #262b36; --text: #e7e9ee; --muted: #8b93a4;
+  --green: #22c55e; --amber: #f59e0b; --red: #ef4444; --blue: #60a5fa; --yellow: #facc15;
+}
+* { box-sizing: border-box; }
+body { margin: 0; width: 400px; background: var(--bg); color: var(--text); font: 13px/1.45 ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif; }
+header { display: flex; justify-content: space-between; align-items: center; padding: 12px 14px; border-bottom: 1px solid var(--line); }
+.brand { font-weight: 700; font-size: 15px; letter-spacing: .2px; }
+.bird { color: var(--yellow); }
+.pill { font-size: 11px; padding: 2px 8px; border-radius: 999px; background: var(--panel); border: 1px solid var(--line); color: var(--muted); }
+.pill.ready { color: var(--green); border-color: #14532d; }
+.pill.warming { color: var(--amber); border-color: #78350f; }
+.pill.failed { color: var(--red); border-color: #7f1d1d; }
+section { padding: 10px 14px; border-bottom: 1px solid var(--line); }
+h2 { margin: 0 0 6px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .6px; color: var(--muted); }
+.origin { font-weight: 600; margin-bottom: 6px; word-break: break-all; }
+.row { display: flex; gap: 8px; align-items: center; margin: 4px 0; }
+.row.sub { color: var(--muted); font-size: 12px; }
+.headline { font-size: 14px; margin-bottom: 6px; }
+.headline b { color: var(--green); }
+table { width: 100%; border-collapse: collapse; }
+.counts td { padding: 2px 0; }
+.counts td:last-child { text-align: right; font-variant-numeric: tabular-nums; }
+.dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; vertical-align: 1px; }
+.recipients td { padding: 4px 0; border-top: 1px solid var(--line); vertical-align: top; }
+.recipients .host { font-weight: 600; word-break: break-all; }
+.recipients .meta { color: var(--muted); font-size: 11px; }
+.tag { display: inline-block; font-size: 10.5px; padding: 0 6px; border-radius: 4px; margin: 1px 2px 1px 0; background: #1f2430; }
+.muted { color: var(--muted); font-size: 12px; }
+.mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11.5px; }
+ul { margin: 0; padding-left: 16px; }
+form { display: flex; gap: 6px; margin-top: 6px; }
+input[type="text"], #addInput { flex: 1; background: var(--panel); color: var(--text); border: 1px solid var(--line); border-radius: 6px; padding: 5px 7px; }
+button { background: #1f2937; color: var(--text); border: 1px solid var(--line); border-radius: 6px; padding: 5px 10px; cursor: pointer; }
+footer { padding: 10px 14px 12px; }
+footer p { margin: 0 0 6px; }
+.empty { color: var(--muted); font-style: italic; }

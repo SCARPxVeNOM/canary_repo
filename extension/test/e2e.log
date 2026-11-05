@@ -1,0 +1,42 @@
+
+1. Baseline: no extension
+   dapp: {"chainId":11155111,"blockNumber":"273","balance":"1","call":"0x0000000000000000000000000000000000000000000000000000000000000001","custom":{"from":"provider"},"batch":["273","1"],"xhrBalance":"0x1","wsBlockNumber":"273","hostileBalance":"1","rpcMs":355,"trackerFetch":"sent 204","trackerBase64":"sent 204","trackerBeacon":true,"trackerXhr":204,"trackerPixel":"loaded","trackerClean":"sent 204","points":{"points":42},"indexer":{"name":"vitalik.eth"}}
+  ✓ provider received reads from the page's origin
+  ✓ WebSocket provider received reads
+  ✓ tracker received the address (fetch, base64, beacon, XHR, pixel)
+
+2. With Canary
+   dapp: {"chainId":11155111,"blockNumber":"546","balance":"2","call":"0x0000000000000000000000000000000000000000000000000000000000000002","custom":{"from":"provider"},"batch":["546","2"],"xhrBalance":"0x2","wsBlockNumber":"546","hostileBalance":"2","rpcMs":416,"trackerFetch":"failed: Failed to fetch","trackerBase64":"failed: Failed to fetch","trackerBeacon":true,"trackerXhr":0,"trackerPixel":"error","trackerClean":"sent 204","points":{"points":42},"indexer":{"name":"vitalik.eth"}}
+   counts: {"backend":2,"blocked":5,"detected":1,"direct":0,"failedClosed":0,"notInspected":0,"protected":9,"protectedIpOnly":1} notes: ["chain of torblock.provider.test assumed from the wallet (11155111)"]
+   provider got: eth_chainId@null, alchemy_getTokenBalances@null, eth_chainId@null
+   tracker got: /event
+  ✓ dapp works: reads answered by the read endpoint (546 / 2)
+  ✓ eth_call substituted
+  ✓ XHR JSON-RPC substituted
+  ✓ WebSocket JSON-RPC substituted (socket carried no reads)
+  ✓ provider saw no read methods
+  ✓ nothing reached the provider from the page's origin
+  ✓ non-standard method forwarded over anon path (IP only)
+  ✓ Tor-hostile provider: read still answered (chain from wallet, labelled)
+  ✓ tracker received NO request carrying the address
+  ✓ tracker's clean pageview still went through
+  ✓ leaks blocked: fetch, base64 fetch, XHR, pixel all failed for the page
+  ✓ first-party /api/points allowed and reported as detected
+  ✓ indexer traffic allowed and reported as backend
+  ✓ coverage counts: blocked ≥ 5, protected ≥ 8, failedClosed 0
+  ✓ wallet address learned via EIP-1193/6963
+
+3. Anon path down (read endpoint 503) → fail closed
+   dapp: {"chainId":"ERR An internal error was received.","blockNumber":"ERR An internal error was received.","balance":"ERR An internal error was received.","call":"ERR An internal error was received.","custom":{"from":"provider"},"batch":"ERR An internal error was received.","xhrBalance":"{\"jsonrpc\":\"2.0\",\"id\":7,\"error\":{\"code\":-32603,\"message\":\"Canary: anon path unavailable (Failed to fetch). Not sent directly.\"}}","wsBlockNumber":"ERR An internal error was received.","hostileBalance":"ERR An internal error was received.","rpcMs":7920}
+  ✓ reads failed with an error instead of going direct
+  ✓ counted as failed closed
+
+4. Same, with "allow direct" on for this site
+  ✓ reads went directly to the provider (user's choice) and the dapp works
+  ✓ counted as direct, not protected
+
+5. Protection off for this site
+  ✓ everything behaves like baseline (reads to provider, tracker gets the address)
+  ✓ DNR pixel rule exempts the disabled site
+
+24/24 checks passed
