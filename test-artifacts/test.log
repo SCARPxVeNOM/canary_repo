@@ -1,0 +1,281 @@
+
+> anon-rpc-impl@0.0.0 test
+> npm run test --workspaces --if-present
+
+
+> @anon-rpc/harness-core@0.4.0 test
+> node check-spec-version.mjs && node test/run.mjs
+
+✓ spec-version check: package 0.4.0 >= spec 0.4.0, README claim matches
+✔ delivers queued items in FIFO order (0.800709ms)
+✔ pending take resolves when an item arrives (0.146417ms)
+✔ aborted take is withdrawn and never consumes an item (§8) (0.4135ms)
+✔ pre-aborted signal rejects immediately (0.144542ms)
+✔ concurrent takes are served FIFO, none stranded (0.098625ms)
+✔ abort of one pending take leaves the others live (0.128166ms)
+✔ pushFront returns an item to the head of the queue (0.133208ms)
+✔ pushFront delivers to a pending take (0.11025ms)
+✔ remove withdraws only not-yet-delivered items (0.102709ms)
+✔ rejectAll rejects pending takes (0.169708ms)
+✔ rejectAll clears queued items (20.351ms)
+✔ modeled members are not forwarded; everything else is, copied (1.537958ms)
+✔ no forwarded entries, or no init, is undefined (0.174834ms)
+✔ a non-plain entry throws a TypeError naming it (0.445833ms)
+✔ a forwarded "__proto__" key stays an own property (0.141084ms)
+✔ delivers entries in the order they were produced (§13.1) (0.793166ms)
+✔ a pending take resolves when an entry arrives (0.843625ms)
+✔ drops the OLDEST once the retention bound is reached (0.841042ms)
+✔ a waiting taker is fed directly and never counts against the bound (0.1375ms)
+✔ aborted take is withdrawn without consuming an entry (§13.1) (0.526208ms)
+✔ pre-aborted signal rejects immediately (0.177667ms)
+✔ entries retained at close stay readable, then take rejects (§13.1) (0.207083ms)
+✔ close rejects the pending taker rather than hanging it (0.185541ms)
+✔ pushes after close are ignored (0.170917ms)
+✔ concurrent takers are served in order, none stranded (0.197416ms)
+✔ primitives and numbers are delivered exactly (1.782ms)
+✔ objects and arrays are deep copies (0.925916ms)
+✔ an undefined property is delivered as a present, undefined property (0.137709ms)
+✔ array holes become undefined; non-index keys are dropped (0.115583ms)
+✔ null-prototype objects are plain; copies get Object.prototype (0.130375ms)
+✔ a "__proto__" key stays an own property (0.106917ms)
+✔ symbol keys and non-enumerable properties are not copied (0.10775ms)
+✔ Uint8Array (and subclasses) become a plain Uint8Array of just the view (0.159958ms)
+✔ ArrayBuffer is copied; resizable sources become fixed-length (0.132333ms)
+✔ detached buffers are refused (0.484792ms)
+✔ values reachable twice are copied independently (0.117375ms)
+✔ cycles are refused with a TypeError, not a hang (0.231792ms)
+✔ everything else is refused with a TypeError naming the path (0.631625ms)
+✔ plain values survive JSON exactly, including what JSON loses (0.352042ms)
+✔ a "__proto__" key crosses as an own property (0.082708ms)
+✔ holes become undefined; a value reachable twice is copied twice (0.075ms)
+✔ non-plain values and cycles fail with a TypeError naming the path (0.991166ms)
+✔ readSpecifier decodes workerHash and workerResolvers (2.173708ms)
+✔ readSpecifier rejects malicious ABI data instead of hanging/OOM (0.59025ms)
+✔ readSpecifier rejects truncated ABI data (0.252208ms)
+✔ fetchAndVerifyBundle accepts hash-matching bytes (20.509ms)
+✔ fetchAndVerifyBundle rejects non-matching bytes (§4) (1.157042ms)
+✔ fetchAndVerifyBundle rejects a body past the size cap (§4.2) (0.423125ms)
+✔ fetchAndVerifyBundle cancels an oversized STREAMED body at the cap (0.743125ms)
+✔ fetchAndVerifyBundle falls through an oversized resolver to a good one (0.380916ms)
+✔ fetchAndVerifyBundle ignores unrecognized resolver kinds (§4.1) (0.288ms)
+✔ only-unrecognized resolvers fail with an explanatory error (0.246291ms)
+✔ the default bundle cap is 64 MiB (0.099958ms)
+✔ fetchAndVerifyBundle falls through failing resolvers to a good one (0.600416ms)
+ℹ tests 54
+ℹ suites 0
+ℹ pass 54
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 127.9545
+
+> @anon-rpc/browser-harness@0.4.0 test
+> node check-spec-version.mjs && node test/run.mjs
+
+✓ spec-version check: package 0.4.0 >= spec 0.4.0, README claim matches
+✔ parseKpsResolver splits at the first slash (§4.1) (1.377709ms)
+✔ parseKpsResolver handles bracketed IPv6 addresses (0.119583ms)
+✔ parseKpsResolver returns undefined for non-kps entries (0.108459ms)
+✔ parseKpsResolver throws on kps entries missing a path (0.303542ms)
+✔ buildKpsHttpRequest emits the §4.2 request with certhash Host (0.111958ms)
+✔ parseKpsHttpResponse parses status, headers, and EOF-delimited body (0.275292ms)
+✔ parseKpsHttpResponse abandons on Transfer-Encoding (§4.2) (0.162667ms)
+✔ parseKpsHttpResponse rejects malformed responses (0.152709ms)
+✔ ambientCodings advertises what DecompressionStream can decode (§4.2) (4.878375ms)
+✔ buildKpsHttpRequest advertises codings; omits the header when none (0.184333ms)
+✔ decodeBody round-trips gzip and deflate (10.846ms)
+✔ decodeBody enforces the cap on DECODED bytes (zip bomb, §4.2) (5.561042ms)
+✔ decodeBody rejects undecodable codings (0.178333ms)
+✔ bare string URL produces no requestInit (20.654125ms)
+✔ URL object input (0.118542ms)
+✔ init with method/headers/string body (0.742084ms)
+✔ init signal is surfaced and flagged (0.104ms)
+✔ ReadableStream body is passed through for transfer, not buffered (0.519916ms)
+✔ buffered URLSearchParams body keeps its derived content-type (1.859209ms)
+✔ buffered FormData body keeps its multipart boundary content-type (0.862208ms)
+✔ caller-set content-type is not overridden by the derived one (0.245167ms)
+✔ fresh buffers are transferred; caller-owned Uint8Array is not (0.140917ms)
+✔ Request input carries method/headers/body/signal (§5 typeof fetch) (1.443375ms)
+✔ init overrides a Request input's fields (0.486959ms)
+✔ init entries §9.1 does not model are forwarded as plain values (0.299ms)
+✔ an init with no forwarded entries carries none (0.641375ms)
+✔ forwarded values are copied when fetch is called, before any await (4.443083ms)
+✔ a forwarded value that is not plain rejects with a TypeError (0.548583ms)
+✔ Request input: only init contributes forwarded entries (0.272333ms)
+✔ request/response round-trip (22.761667ms)
+✔ handler errors preserve name and code (§12) (1.388ms)
+✔ unknown method rejects (0.852834ms)
+✔ events are delivered (0.910292ms)
+✔ abort rejects locally even if the peer never answers (31.775375ms)
+✔ pre-aborted signal rejects without posting (0.2335ms)
+✔ late response after abort is ignored and later calls still work (50.895625ms)
+✔ get/set/has/delete round-trip (0.773834ms)
+✔ namespaces are isolated by address (§11) (0.185209ms)
+✔ listKeys honors prefix (1.407959ms)
+✔ clear with prefix removes only matching keys (§11) (0.262417ms)
+✔ config lands on the api; absent config is undefined (§7.1) (1.911417ms)
+✔ signalReady reaches the host as an event (21.740042ms)
+✔ signalFailed reaches the host with the structured reason (§7) (1.583959ms)
+✔ acceptCall delivers a fetch call; respond round-trips the response (1.076583ms)
+✔ forwarded entries sit beside the modeled fields in requestInit (§9.1) (0.543541ms)
+✔ a rejected respond carries name/message/code to the host (§12) (0.554917ms)
+✔ respond throws on second invocation (0.640833ms)
+✔ call-abort racing ahead of delivery still aborts the call's signal (0.489167ms)
+✔ call-abort after delivery aborts the live signal (0.405917ms)
+✔ acceptCall abort that loses the delivery race hands the call back (§8) (31.662375ms)
+✔ respond transfers a Uint8Array body instead of cloning it (0.518584ms)
+✔ storage proxies forward abort signals (§11 declared surface) (11.1975ms)
+✔ log calls arrive as events with level and args (0.32275ms)
+ℹ tests 53
+ℹ suites 0
+ℹ pass 53
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 204.780834
+
+> @anon-rpc/browser-extension-harness@0.4.0 test
+> node check-spec-version.mjs && node test/run.mjs
+
+✓ spec-version check: package 0.4.0 >= spec 0.4.0, README claim matches
+✔ bytes survive the round trip (1.285625ms)
+✔ empty and absent bodies are both undefined, not empty strings (0.113208ms)
+✔ a body larger than the argument-stack limit round-trips (8.82375ms)
+✔ base64 is what makes this necessary: JSON alone mangles a Uint8Array (0.312708ms)
+✔ error codes cross intact so a host can branch on them (§12) (0.18525ms)
+✔ plainKey ignores key order but keeps distinctions JSON would erase (0.505625ms)
+ℹ tests 6
+ℹ suites 0
+ℹ pass 6
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 15.580292
+✔ chunks arrive in order, and the stream ends (12.420125ms)
+✔ backpressure: the sender reads no further ahead than the receiver asks (24.481834ms)
+✔ a chunk larger than MAX_CHUNK is split, and its bytes survive (21.823792ms)
+✔ cancelling the received stream cancels the source, with the reason (23.968084ms)
+✔ a source error errors the received stream, name and message intact (5.393125ms)
+✔ an abort errors the receiving side and cancels the sending side (23.659542ms)
+✔ closeAll ends every body when the port goes away (0.253959ms)
+✔ request and response bodies of one call do not cross wires (5.084208ms)
+✔ an empty body ends without sending a chunk (2.6415ms)
+✔ a receiver failed on its own side cancels the remote sender (21.431083ms)
+✔ onDone runs once when a received body ends, errors or is cancelled (72.181917ms)
+ℹ tests 11
+ℹ suites 0
+ℹ pass 11
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 218.0915
+✔ Firefox mode copies forwarded options when fetch is called (§9.1) (16.06225ms)
+✔ Firefox mode rejects a non-plain option immediately, without reaching the harness (0.462958ms)
+✔ a rejected streaming upload cancels and releases the caller's stream (30.128916ms)
+✔ a streamed response removes its abort listener once the body is done (52.1985ms)
+ℹ tests 4
+ℹ suites 0
+ℹ pass 4
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 102.061583
+  ✓ extension loaded, service worker running (algkpdlkflonlheiknoafgldcnnfhdoo)
+  · service worker reachability: ok 200 pong
+  ✓ eth_blockNumber answered through the extension's worker (0x1312d00)
+  ✓ §4 specifier read + hash-verified bundle fetch happened in the offscreen document
+  ✓ worker requests carry Origin: null — the sandboxed page is at an opaque origin
+  ✓ offscreen document is not enumerable by Playwright (expected; it is not a page or background page)
+  ✓ a second call reused the booted worker — no re-read, no re-fetch, no re-verify
+  ✓ the offscreen document fetched a bundle from a NO-CORS endpoint — it has host permissions
+  ✓ worker code cannot reach the extension API (typeof chrome === "undefined")
+  ✓ anonOptions crossed the service worker → offscreen hop intact (§9.1, §9.3)
+  ✓ a ReadableStream request body reached the worker as a stream, intact
+  ✓ response streamed: first chunk at 2ms, last at 813ms (§9)
+  ✓ worker's own origin is "null" — not chrome-extension://algkpdlkflonlheiknoafgldcnnfhdoo
+  ✓ worker CANNOT reach the same no-CORS endpoint — it has none of the extension's host permissions
+  ✓ a boot that failed is evicted from the cache, so the retry is a real retry
+  ✓ §13 logs reach the service worker intact: info ["probe worker ready","{\"noCors\":\"blocked\"}"]
+  ✓ absent assets named, with the fix (§install): the packaged anon-rpc sandboxed page is not in this extensio…
+  ✓ cross-origin iframeUrl refused (§6): iframeUrl must be same-origin with the host (chrome-extension://algkpdlk…
+  ✓ no console errors (CSP violations would appear here)
+
+✅ browser-extension-harness e2e passed
+  - Firefox e2e skipped: set FIREFOX_BIN and GECKODRIVER to run it
+
+> @anon-rpc/node-harness@0.0.0 test
+> node test/run.mjs
+
+  ✓ worker booted: specifier read, bundle keccak-verified, running in a QuickJS isolate
+  ✓ eth_blockNumber answered through the isolated worker (0x1312d00)
+  ✓ the unmodified reference bundle ran — `fetch` as a grant, not a platform fact
+  ✓ five concurrent calls each got their own response (§8 correlation)
+  ✓ fetch after close() rejects (worker closed)
+  ✓ bundle rejected when keccak256 does not match workerHash (§4)
+  ✓ realm escape is CLOSED: fn.constructor is the guest's Function, `return process` gives undefined
+  ✓ guest has no process, no require, no module loader (import: "could not load module 'node:fs'")
+  ✓ raw host bridge unreachable; 80 globals total, all accounted for
+  ✓ an ungranted optional capability is absent (`if (anonRpcWorker.socket)` answers truthfully)
+  ✓ an unimplemented REQUIRED capability is present and throws "unsupported" (§12)
+  ✓ granted fetch refused loopback, RFC1918 and file:// by policy (permission-denied)
+  ✓ bridged socket carried a real connection ("HTTP/1.1 200 OK"), closed: {"ok":true}
+  ✓ address policy refused a non-allow-listed destination (permission-denied)
+  ✓ config and forwarded init entries arrived exactly: undefined, NaN, -0, bytes, __proto__ (§9.4)
+  ✓ non-plain values are refused: fetch rejects, constructor throws (config.self is not a plain value (§9.4): got a value that contains itself)
+  ✓ hostile guest contained: infinite loop → interrupted (823ms)
+  ✓ hostile guest contained: deep recursion → stack overflow (75ms)
+  ✓ hostile guest contained: heap exhaustion → out of memory (388ms)
+  ✓ host process survived every hostile guest
+
+✅ node-harness e2e passed
+
+> anon-rpc-specifier@0.0.0 test
+> node test/run.mjs
+
+dotenv tests
+  ✓ unspaced # stays in the value
+  ✓ inline comment stripped from unquoted value
+  ✓ quoted value keeps #
+  ✓ surrounding whitespace trimmed
+  ✓ non-uppercase keys ignored
+github-resolver tests
+  ✓ raw URL from ssh remote
+  ✓ raw URL from https remote
+  ✓ upload reports the content-addressed raw URL
+  ✓ bundle stored at hash[0:2]/hash[2:]
+  ✓ orphan branch has exactly one commit
+  ✓ pushed to the remote
+  ✓ keccak history is independent of main
+  ✓ re-upload is a no-op
+  ✓ second bundle appends a commit
+  ✓ both bundles remain retrievable
+⚠ foundry not installed — skipping contract/publish tests (https://getfoundry.sh)
+
+> anon-rpc-demo-extension@0.1.0 test
+> node test/run.mjs
+
+  ✓ archive is a valid zip: 9 entries, 76.6kb, manifest at the root
+  ✓ manifest is shipping-clean: no comment keys, sandbox declared, version 0.1.0
+  ✓ extension loaded (ggkgipccbpaaioenkgkjpcjbodifdpmc)
+  ✓ watch address and both RPC fields prefilled on a fresh profile (https://ethereum-rpc.publicnode.com)
+  ✓ a bootstrap URL that never booted a worker is not persisted, and does not leave it 'running'
+  ✓ popup watched a balance through the worker (1,234 ETH)
+  ✓ §4 ran once: specifier read twice, bundle fetched and hash-verified once
+  ✓ first boot reported honestly: cold boot in 137 ms — specifier read, bundle fetched, keccak256 verified
+  ✓ popup log drawer opens with 5 rows, boot and query among them
+  ✓ reopened popup resumed watching with no re-read, no re-fetch, no re-verify
+  ✓ …and kept polling: the new balance arrived through the same worker
+  ✓ log survived the popup closing: 5 rows before, 6 after, boot line intact
+  ✓ no console errors (CSP violations would appear here)
+
+✅ demo-extension tests passed
+
+> anon-rpc-site@0.0.0 test
+> node test/run.mjs
+
+⚠ foundry not installed — skipping site smoke test (https://getfoundry.sh)

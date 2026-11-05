@@ -1,0 +1,22 @@
+   [page error] Failed to load resource: the server responded with a status of 404 (Not Found)
+
+— Baseline (no extension) —
+  dapp saw:    {"chainId":11155111,"blockNumber":"273","balance":"1","custom":{"from":"provider"},"batch":["273","1"],"ms":46}
+  provider got: eth_chainId@http://127.0.0.1:42331, eth_blockNumber@http://127.0.0.1:42331, eth_getBalance@http://127.0.0.1:42331, alchemy_getTokenBalances@http://127.0.0.1:42331, eth_blockNumber@http://127.0.0.1:42331, eth_getBalance@http://127.0.0.1:42331
+  read got:     (nothing)
+   [page error] Failed to load resource: the server responded with a status of 404 (Not Found)
+
+— With Canary —
+  dapp saw:    {"chainId":11155111,"blockNumber":"546","balance":"2","custom":{"from":"provider"},"batch":["546","2"],"ms":59}
+  provider got: eth_chainId@null, alchemy_getTokenBalances@null
+  read got:     eth_chainId@null, eth_blockNumber@null, eth_getBalance@null, eth_blockNumber@null, eth_getBalance@null
+  stats:        {"boot":{"cold":false,"ms":11},"failedClosed":0,"ipOnly":1,"latencies":[24,4,5,5,5],"methods":{"alchemy_getTokenBalances":"protected-ip-only","eth_blockNumber":"protected","eth_chainId":"protected","eth_getBalance":"protected"},"protected":5}
+
+  ✓ baseline: provider saw reads from the page origin
+  ✓ canary: dapp still works (got values)
+  ✓ canary: reads answered by READ endpoint (0x222 / 0x2)
+  ✓ canary: provider saw NO read methods
+  ✓ canary: nothing reached provider or read with the page's Origin
+  ✓ canary: every request left from the worker's null origin
+  ✓ canary: non-substitutable method forwarded to provider (IP-only)
+  ✓ canary: batch request substituted as a batch
