@@ -1,0 +1,22 @@
+{
+  "name": "canary-extension",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "license": "MIT",
+  "description": "Canary: answers a dapp's RPC reads through anon-rpc, blocks third-party requests carrying your address, and measures coverage.",
+  "scripts": {
+    "build": "node build.mjs",
+    "build:live": "node build.mjs --config config/live.json",
+    "test": "node test/e2e.mjs"
+  },
+  "dependencies": {
+    "@anon-rpc/browser-extension-harness": "0.4.0"
+  },
+  "devDependencies": {
+    "@noble/hashes": "^1.8.0",
+    "esbuild": "^0.28.0",
+    "playwright": "^1.56.0",
+    "viem": "^2.57.0"
+  }
+}
