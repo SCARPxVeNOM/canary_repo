@@ -1,0 +1,223 @@
+{
+  "suite": "gateway-compare",
+  "gateway": "127.0.0.1:12298:uEiA7-gErW8ncO5ilJnuAcDIYIn-eaeWW46qB8FvCrfqeyA",
+  "cold-fresh-profile": {
+    "bootMs": 3986,
+    "firstRead": {
+      "ok": true,
+      "status": 200,
+      "ms": 1294,
+      "bytes": 46
+    },
+    "logTail": [
+      [
+        2391,
+        "info",
+        "[00.030] Bootstrapping..."
+      ],
+      [
+        2446,
+        "info",
+        "[00.085] [tor_js::fast_bootstrap] Fast bootstrap: fetching bootstrap.zip..."
+      ],
+      [
+        2446,
+        "info",
+        "[00.085] Fast bootstrap: fetching bootstrap.zip.zst..."
+      ],
+      [
+        2745,
+        "info",
+        "[00.384] Fast bootstrap: received 1461612 bytes (compressed)"
+      ],
+      [
+        2775,
+        "info",
+        "[00.414] [tor_js::fast_bootstrap] Fast bootstrap: decompressed zstd archive to 8000108 bytes"
+      ],
+      [
+        2775,
+        "info",
+        "[00.414] [tor_js::fast_bootstrap] Fast bootstrap: received 8000108 bytes, parsing..."
+      ],
+      [
+        2969,
+        "info",
+        "[00.608] [tor_js::fast_bootstrap] Fast bootstrap: stored consensus (valid-after 1793908800)"
+      ],
+      [
+        2972,
+        "info",
+        "[00.611] [tor_js::fast_bootstrap] Fast bootstrap: stored 12 authority certs"
+      ],
+      [
+        3022,
+        "info",
+        "[00.661] [tor_js::fast_bootstrap] Fast bootstrap: stored 9583 microdescriptors"
+      ],
+      [
+        3022,
+        "info",
+        "[00.661] [tor_js::fast_bootstrap] Fast bootstrap: done"
+      ],
+      [
+        3023,
+        "info",
+        "[00.662] [tor_js] TorClient created (unbootstrapped)"
+      ],
+      [
+        3023,
+        "info",
+        "[00.662] [tor_js] Bootstrapping Tor client..."
+      ]
+    ]
+  },
+  "warm-storage-1": {
+    "bootMs": 4095,
+    "firstRead": {
+      "ok": true,
+      "status": 200,
+      "ms": 2137,
+      "bytes": 46
+    },
+    "logTail": [
+      [
+        1817,
+        "info",
+        "[00.025] Bootstrapping..."
+      ],
+      [
+        2954,
+        "info",
+        "[01.161] [tor_js::fast_bootstrap] Fast bootstrap: storage already has consensus, skipping"
+      ],
+      [
+        2955,
+        "info",
+        "[01.163] [tor_js] TorClient created (unbootstrapped)"
+      ],
+      [
+        2955,
+        "info",
+        "[01.163] [tor_js] Bootstrapping Tor client..."
+      ],
+      [
+        3282,
+        "info",
+        "[01.490] [tor_dirmgr] Marked consensus usable."
+      ],
+      [
+        3306,
+        "info",
+        "[01.514] [tor_js] Bootstrap complete!"
+      ],
+      [
+        3431,
+        "info",
+        "[01.639] [tor_dirmgr] Marked consensus usable."
+      ],
+      [
+        3451,
+        "info",
+        "[01.658] Bootstrap complete"
+      ],
+      [
+        3466,
+        "info",
+        "[01.669] Waiting for client to be ready"
+      ],
+      [
+        4090,
+        "info",
+        "[02.298] Client ready in 2280ms"
+      ],
+      [
+        4095,
+        "info",
+        "[02.303] tor-js worker: Tor ready"
+      ]
+    ]
+  },
+  "warm-storage-2": {
+    "bootMs": 4274,
+    "firstRead": {
+      "ok": true,
+      "status": 200,
+      "ms": 2603,
+      "bytes": 46
+    },
+    "logTail": [
+      [
+        1613,
+        "info",
+        "[00.026] Bootstrapping..."
+      ],
+      [
+        2655,
+        "info",
+        "[01.067] [tor_js::fast_bootstrap] Fast bootstrap: storage already has consensus, skipping"
+      ],
+      [
+        2656,
+        "info",
+        "[01.068] [tor_js] TorClient created (unbootstrapped)"
+      ],
+      [
+        2656,
+        "info",
+        "[01.068] [tor_js] Bootstrapping Tor client..."
+      ],
+      [
+        2966,
+        "info",
+        "[01.378] [tor_dirmgr] Marked consensus usable."
+      ],
+      [
+        2990,
+        "info",
+        "[01.402] [tor_js] Bootstrap complete!"
+      ],
+      [
+        3112,
+        "info",
+        "[01.524] [tor_dirmgr] Marked consensus usable."
+      ],
+      [
+        3132,
+        "info",
+        "[01.544] Bootstrap complete"
+      ],
+      [
+        3148,
+        "info",
+        "[01.555] Waiting for client to be ready"
+      ],
+      [
+        4268,
+        "info",
+        "[02.679] Client ready in 2661ms"
+      ],
+      [
+        4274,
+        "info",
+        "[02.686] tor-js worker: Tor ready"
+      ]
+    ]
+  },
+  "seq15": {
+    "n": 15,
+    "min": 1087,
+    "p50": 1242,
+    "p90": 1296,
+    "max": 1428,
+    "ok": 15
+  },
+  "seq15-sepolia": {
+    "n": 15,
+    "min": 1246,
+    "p50": 1412,
+    "p90": 1724,
+    "max": 1831,
+    "ok": 15
+  }
+}

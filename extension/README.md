@@ -45,8 +45,19 @@ offscreen document → null-origin sandbox → anon-rpc worker (tor-js) → KPS 
 ```
 
 - **Your address** is learned from the wallet (EIP-1193 `eth_accounts`/`eth_requestAccounts`, EIP-6963 announcements, `accountsChanged`), or added in the popup. Matching is exact: the 40 hex digits case-insensitively (covers checksummed, lowercase, no-`0x`, ABI-padded, URL-encoded), plus base64 of the raw bytes and of the hex string.
-- **Which chain an RPC URL is on**, in order: a table of well-known providers whose URLs name the chain (Alchemy, Infura, dRPC, publicnode, …); one `eth_chainId` probe over the anon path, cached; and only if the probe fails (e.g. the provider refuses Tor), the wallet's chain, labelled in the popup as assumed. The wallet is never asked first because dapps often read chains other than the wallet's (app.ens.domains reads mainnet whatever the wallet is on).
-- **Per-address isolation:** a request containing one of your addresses is sent with `anonOptions.isolationKey = "addr:<address>"`, so the network can keep different addresses unlinkable at the exit (if it supports it; ask EF whether tor-js does).
+- **Which chain an RPC URL is on**, in order: a table of well-known providers whose URLs name the chain (Alchemy, Infura, dRPC, publicnode, …); one `eth_chainId` probe over the anon path, cached; and only if the probe fails (e.g. the provider refuses Tor), a chain id the URL names (`/rpc/8453`, `?chainId=10`, only if Canary has a read endpoint for it), then the wallet's chain, both labelled in the popup as assumed. Dapp proxies that refuse every probe over Tor are listed by host (`PROXY_CHAIN` in `src/shared.ts`; Uniswap's answers 401 without its Cloudflare cookies, so before this all its reads failed closed; now all 13 on /explore/tokens are protected). The wallet is never asked first because dapps often read chains other than the wallet's (app.ens.domains reads mainnet whatever the wallet is on).
+- **Per-address isolation:** a request containing one of your addresses is sent with `anonOptions.isolationKey = "addr:<address>"`. tor-js (0.4.4+) puts each key on its own circuit and TLS session cache, so the exit can't link two of your addresses. Verified live: different keys left through different exits, a repeated key through the same one.
+- **Fewer Tor round trips** (`src/rpc-pipeline.ts`). Each request over tor-js costs ~1 s whatever its size (a new stream, TCP and TLS through three relays), so Canary sends fewer of them:
+  - *batch*: calls for the same endpoint and the same isolation key that arrive within 15 ms leave as one JSON-RPC batch (max 20). Never across keys. If an endpoint rejects batches, or drops a call from one, those calls are retried singly.
+  - *cache*: `eth_chainId`/`net_version` for good (seeded from the chain Canary already resolved, so they never go out), deployed `eth_getCode` for good, `eth_blockNumber` for 2 s.
+  - *dedupe*: an identical call already in flight shares its answer.
+  - *pre-warm*: when the wallet reveals an address, Canary sends one `eth_blockNumber` under that address's key, so its circuit is built before the dapp's first read (first read on a new key: ~2.0 s cold vs ~1.15 s warm). Redone after ~9 min, when arti stops reusing a circuit.
+  - *hedge*: if a read fails, or hasn't answered within 3 s, it goes out again on a fresh circuit (a new isolation key derived from the original, so still one address per circuit) and the first answer wins. Without it a dead gateway stalls reads until the 15 s timeout.
+  - *starts at load*: the worker boots, and pre-warms, when the browser or extension starts, not on the first dapp request.
+  - Writes (`eth_sendRawTransaction`, signing, anything not in `SUBSTITUTABLE`) skip all of this: the original body is forwarded byte for byte, once.
+  - The popup shows "N calls sent as M anon-rpc requests".
+- **Packaged Tor directory snapshot** (`"torBootstrap": true`): `build.mjs` fetches tor-js's fast-bootstrap snapshot (~1.5 MB) from a gateway and ships it in the extension, refreshed when over 3 h old. A first boot then skips downloading it (11–13 s on EF's demo gateway). It's ignored once the worker's storage holds a consensus, and not used if older than 72 h. Fetch it on its own with `npm run snapshot`.
+- **Gateway:** `network.workerConfig.gateways`. EF's demo gateway is shared and unreliable (on 6 Nov it stopped completing boots); run your own from [`../gateway/`](../gateway/) and build with `config/local-gateway.json` for a laptop demo (`node build.mjs --config config/local-gateway.json --out dist-local`).
 - **Fail closed:** if the anon path fails, the dapp gets a JSON-RPC error. "If the anon path is down, send directly from my IP" is a per-site opt-in, and those calls are counted as *Direct*.
 
 ## Config (`config/live.json`)
@@ -56,6 +67,7 @@ offscreen document → null-origin sandbox → anon-rpc worker (tor-js) → KPS 
 | `network` | anon-rpc worker: `specifier` (on-chain), `bootstrapRpc` (to read it), `workerConfig` (network-defined, e.g. tor-js gateways) |
 | `readEndpoints` | chainId → the RPC Canary answers substituted reads from. Must accept Tor traffic (Tenderly doesn't; see test-repo.md §5) |
 | `timeoutMs` | per request over the anon path |
+| `torBootstrap` | `true`: package a tor-js directory snapshot fetched from the configured gateways at build time |
 | `matches`, `hostPermissions` | where the content scripts run |
 
 ## Shared core

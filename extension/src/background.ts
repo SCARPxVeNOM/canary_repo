@@ -11,8 +11,9 @@
 // read chains other than the one your wallet is on.
 
 import { AnonRpcWorker, type PlainValue } from "@anon-rpc/browser-extension-harness";
+import { RpcPipeline } from "./rpc-pipeline.js";
 import {
-  findAddress, isThirdParty, knownChain, needlesFor, parseJsonRpc, SUBSTITUTABLE,
+  chainHintFromUrl, findAddress, isLocalHost, isThirdParty, knownChain, needlesFor, parseJsonRpc, SUBSTITUTABLE,
   type Category, type Observation,
 } from "./shared.js";
 
@@ -22,6 +23,8 @@ type Config = {
   network: { id: string; label: string; specifier: string; bootstrapRpc: string; workerConfig?: PlainValue };
   readEndpoints: Record<string, string>;
   timeoutMs: number;
+  /** A tor-js fast-bootstrap snapshot packaged at build time (build.mjs --tor-bootstrap). */
+  torBootstrap?: { file: string; fetchedAt: number; maxAgeHours: number };
 };
 declare const __CANARY_CONFIG__: Config;
 const CFG = __CANARY_CONFIG__;
@@ -120,13 +123,15 @@ export type TabState = {
   latencies: number[];
   walletChain?: number;
   notes: string[];
+  /** calls answered without a request of their own: from cache, or by joining an identical one in flight */
+  noRequest: number;
 };
 
 const emptyCounts = (): Record<Category, number> => ({
-  protected: 0, protectedIpOnly: 0, blocked: 0, detected: 0, backend: 0, notInspected: 0, failedClosed: 0, direct: 0,
+  protected: 0, protectedIpOnly: 0, blocked: 0, detected: 0, backend: 0, notInspected: 0, failedClosed: 0, direct: 0, localNode: 0,
 });
 const freshTab = (origin: string): TabState => ({
-  origin, since: Date.now(), counts: emptyCounts(), rpcCalls: 0, recipients: {}, latencies: [], notes: [],
+  origin, since: Date.now(), counts: emptyCounts(), rpcCalls: 0, recipients: {}, latencies: [], notes: [], noRequest: 0,
 });
 
 const tabs = new Map<number, TabState>();
@@ -203,36 +208,65 @@ let worker: AnonRpcWorker | undefined;
 let booting: Promise<AnonRpcWorker> | undefined;
 let providerCalls = 0;
 
+/**
+ * The worker config: the network's own, plus the packaged directory snapshot
+ * while it is fresh enough for Tor to accept. tor-js uses the snapshot only
+ * while its storage holds no consensus, so it saves the ~1.5 MB download from
+ * the gateway on a first boot (11–13 s measured) and is ignored after that.
+ * The age check is made once per service-worker start, so the config (which
+ * keys the harness's warm-worker cache) doesn't change under a running worker.
+ */
+let workerConfigP: Promise<PlainValue | undefined> | undefined;
+function workerConfig(): Promise<PlainValue | undefined> {
+  return (workerConfigP ??= (async () => {
+    const base = CFG.network.workerConfig;
+    const tb = CFG.torBootstrap;
+    if (!tb || !base || typeof base !== "object" || Array.isArray(base)) return base;
+    if (Date.now() - tb.fetchedAt > tb.maxAgeHours * 3600_000) return base;
+    try {
+      const bytes = new Uint8Array(await (await fetch(chrome.runtime.getURL(tb.file))).arrayBuffer());
+      return { ...(base as Record<string, PlainValue>), bootstrap: bytes };
+    } catch {
+      return base;
+    }
+  })());
+}
+
 function getWorker(): Promise<AnonRpcWorker> {
   if (worker) return Promise.resolve(worker);
   if (booting) return booting;
   const before = providerCalls;
   const t0 = Date.now();
   setStatus({ state: "warming", error: undefined });
-  const w = new AnonRpcWorker({
-    address: CFG.network.specifier,
-    config: CFG.network.workerConfig,
-    preExisting: {
-      rpcProvider: {
-        request: ({ method, params }: any) => (providerCalls++, bootstrapCall(method, (params as unknown[]) ?? [])),
+  booting = (async () => {
+    const config = await workerConfig();
+    const w = new AnonRpcWorker({
+      address: CFG.network.specifier,
+      config,
+      preExisting: {
+        rpcProvider: {
+          request: ({ method, params }: any) => (providerCalls++, bootstrapCall(method, (params as unknown[]) ?? [])),
+        },
       },
-    },
-  });
-  void (async () => {
-    for (;;) {
-      try {
-        const e = await w.acceptLog();
-        if (e.level === "warn" || e.level === "error") console.warn("[anon-rpc worker]", ...e.args);
-      } catch {
-        return;
+    });
+    void (async () => {
+      for (;;) {
+        try {
+          const e = await w.acceptLog();
+          if (e.level === "warn" || e.level === "error") console.warn("[anon-rpc worker]", ...e.args);
+        } catch {
+          return;
+        }
       }
-    }
-  })();
-  booting = w.ready.then(
-    () => {
+    })();
+    await w.ready;
+    return w;
+  })().then(
+    (w) => {
       worker = w;
       booting = undefined;
       setStatus({ state: "ready", bootMs: Date.now() - t0, cold: providerCalls > before });
+      void prewarmKnown();
       return w;
     },
     (e) => {
@@ -261,16 +295,101 @@ async function anonFetch(w: AnonRpcWorker, url: string, body: string, isolationK
   }
 }
 
+/**
+ * Every read goes through here: cache, dedupe, batch (rpc-pipeline.ts).
+ *
+ * Hedged on a fresh circuit: if the anon path fails, or hasn't answered in
+ * HEDGE_MS (warm reads are ~0.9 s p50, 1.3 s p90), the same read goes out
+ * again under a new isolation key, which makes tor-js build a new circuit,
+ * and the first answer wins. A circuit whose gateway died otherwise stalls
+ * until its 15 s timeout (measured: 15–35 s gaps when a gateway was killed).
+ * The hedge key is derived from the original, so a hedge for one address
+ * still never shares a circuit with another address. Reads only: background
+ * never sends a write through the pipeline.
+ */
+const HEDGE_MS = 3000;
+let retrySeq = 0;
+const pipeline = new RpcPipeline(async (target, body, key) => {
+  const w = await getWorker();
+  const first = anonFetch(w, target, body, key);
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const second = new Promise<{ status: number; text: string }>((resolve, reject) => {
+    let started = false;
+    const go = () => {
+      if (started) return;
+      started = true;
+      clearTimeout(timer);
+      anonFetch(w, target, body, `${key ?? "shared"}#retry${++retrySeq}`).then(resolve, reject);
+    };
+    timer = setTimeout(go, HEDGE_MS);
+    first.catch(go);
+  });
+  try {
+    return await Promise.any([first, second]);
+  } catch (e) {
+    throw (e as AggregateError).errors?.[1] ?? e;
+  } finally {
+    clearTimeout(timer);
+  }
+});
+
+/* --- circuit pre-warming --------------------------------------------------
+   With per-address isolation, the first read about an address builds a new
+   circuit: ~2.0 s instead of ~1.15 s (test-repo.md §14). Building it as soon
+   as Canary learns the address takes that off the dapp's first read. The
+   warm-up is one eth_blockNumber to a read endpoint, under the address's key:
+   the endpoint learns nothing it wouldn't from the real read. Arti stops
+   putting new streams on a circuit ~10 min after first use, so a warm-up
+   older than that is redone on the next page load. */
+
+const WARM_FOR_MS = 9 * 60_000;
+const warmedAt = new Map<string, number>();
+const keyFor = (address: string) => `addr:${address.toLowerCase()}`;
+
+async function prewarm(key: string | undefined, chainId?: number) {
+  const k = key ?? "";
+  if (Date.now() - (warmedAt.get(k) ?? 0) < WARM_FOR_MS) return;
+  const target = (chainId && CFG.readEndpoints[String(chainId)]) || CFG.readEndpoints["1"] || Object.values(CFG.readEndpoints)[0];
+  if (!target || isLocalHost(new URL(target).hostname)) return;
+  warmedAt.set(k, Date.now());
+  try {
+    await anonFetch(await getWorker(), target, JSON.stringify({ jsonrpc: "2.0", id: 1, method: "eth_blockNumber", params: [] }), key);
+  } catch {
+    warmedAt.delete(k); // try again next time
+  }
+}
+
+/** The shared (unkeyed) circuit, plus one per known address: the most recent few. */
+async function prewarmKnown(chainId?: number) {
+  const { all } = await getAddresses();
+  await Promise.all([prewarm(undefined, chainId), ...all.slice(-4).map((a) => prewarm(keyFor(a), chainId))]);
+}
+
 /* --- which chain is the dapp's endpoint on ------------------------------- */
 
 const chainCache = new Map<string, number>();
-async function chainOf(w: AnonRpcWorker, url: string, walletChain?: number): Promise<{ id: number; assumed: boolean } | undefined> {
+const chainInflight = new Map<string, Promise<{ id: number; assumed: boolean; from?: "wallet" | "url" } | undefined>>();
+/** One probe per URL at a time: concurrent first reads share it. */
+function chainOf(w: AnonRpcWorker | undefined, url: string, walletChain?: number) {
+  let p = chainInflight.get(url);
+  if (!p) {
+    p = chainOfUncached(w, url, walletChain).finally(() => chainInflight.delete(url));
+    chainInflight.set(url, p);
+  }
+  return p;
+}
+async function chainOfUncached(w: AnonRpcWorker | undefined, url: string, walletChain?: number): Promise<{ id: number; assumed: boolean; from?: "wallet" | "url" } | undefined> {
   const cached = chainCache.get(url) ?? ((await chrome.storage.session.get("chains")).chains ?? {})[url];
   if (cached) return { id: cached, assumed: false };
   let id = knownChain(url);
   if (id === undefined) {
     try {
-      const r = await anonFetch(w, url, JSON.stringify({ jsonrpc: "2.0", id: 1, method: "eth_chainId", params: [] }));
+      // A node on this machine can't be reached through Tor, and asking it
+      // directly tells no third party anything.
+      const probe = JSON.stringify({ jsonrpc: "2.0", id: 1, method: "eth_chainId", params: [] });
+      const r = isLocalHost(new URL(url).hostname)
+        ? await fetch(url, { method: "POST", headers: { "content-type": "application/json" }, body: probe }).then(async (x) => ({ status: x.status, text: await x.text() }))
+        : await anonFetch(w!, url, probe);
       const j = JSON.parse(r.text);
       if (r.status === 200 && j.result) id = Number(j.result);
     } catch {
@@ -283,7 +402,11 @@ async function chainOf(w: AnonRpcWorker, url: string, walletChain?: number): Pro
     await chrome.storage.session.set({ chains: { ...chains, [url]: id } });
     return { id, assumed: false };
   }
-  return walletChain ? { id: walletChain, assumed: true } : undefined;
+  // The probe failed (e.g. the provider refuses Tor). A chain id the URL names
+  // beats the wallet's: dapps read chains other than the one the wallet is on.
+  const hint = chainHintFromUrl(url);
+  if (hint !== undefined && CFG.readEndpoints[String(hint)]) return { id: hint, assumed: true, from: "url" };
+  return walletChain ? { id: walletChain, assumed: true, from: "wallet" } : undefined;
 }
 
 /* --- handling one intercepted JSON-RPC request --------------------------- */
@@ -306,6 +429,16 @@ async function handleRpc(tabId: number, origin: string, url: string, body: strin
   const site = await getSite(origin);
   const tab = await tabState(tabId);
 
+  // A local node (anvil, hardhat, a devnet) that we have no public read
+  // endpoint for: no third party on the other end, and Tor couldn't reach it.
+  if (isLocalHost(host)) {
+    const chain = calls.every((c) => SUBSTITUTABLE.has(c.method)) ? await chainOf(undefined, url, tab?.walletChain).catch(() => undefined) : undefined;
+    if (!(chain && CFG.readEndpoints[String(chain.id)])) {
+      await record(tabId, { ...base, category: "localNode" }, calls.length);
+      return { passthrough: true };
+    }
+  }
+
   try {
     const w = await getWorker();
     let target = url;
@@ -317,17 +450,35 @@ async function handleRpc(tabId: number, origin: string, url: string, body: strin
       if (read) {
         target = read;
         category = "protected";
-        if (chain.assumed) note = `chain of ${host} assumed from the wallet (${chain.id})`;
+        if (chain.assumed) note = `chain of ${host} assumed from ${chain.from === "url" ? "its URL" : "the wallet"} (${chain.id})`;
+        // The read endpoint's chain is known, so these never need a request.
+        pipeline.seed(read, "eth_chainId", [], "0x" + chain.id.toString(16));
+        pipeline.seed(read, "net_version", [], String(chain.id));
       } else if (chain) {
         note = `no read endpoint configured for chain ${chain.id}; forwarded instead`;
       }
     }
-    // Per-address isolation: calls about different addresses should not be
-    // linkable to each other at the exit (honoured if the network supports it).
-    const r = await anonFetch(w, target, body, taint ? `addr:${taint.address}` : undefined);
-    if (r.status >= 400) throw new Error(`HTTP ${r.status} from ${new URL(target).hostname}`);
-    await record(tabId, { ...base, category, ms: Date.now() - t0, note }, calls.length);
-    return { status: r.status, body: r.text };
+    // Per-address isolation: tor-js puts calls under different keys on
+    // different circuits, so the exit can't link two of your addresses. The
+    // pipeline batches only within one key.
+    const key = taint ? keyFor(taint.address) : undefined;
+    // Only read methods go through the pipeline. Anything else (sends, custom
+    // methods) is forwarded exactly as the dapp wrote it: never batched with
+    // other calls, deduped, cached or retried, so a write can't be sent twice.
+    if (!calls.every((c) => SUBSTITUTABLE.has(c.method))) {
+      const r = await anonFetch(w, target, body, key);
+      if (r.status >= 400) throw new Error(`HTTP ${r.status} from ${new URL(target).hostname}`);
+      await record(tabId, { ...base, category, ms: Date.now() - t0, note }, calls.length);
+      return { status: r.status, body: r.text };
+    }
+    const outs = await Promise.all(calls.map((c) => pipeline.call(target, c, key)));
+    const answers = calls.map((c, i) => ({ jsonrpc: "2.0", id: c.id ?? null, ...outs[i].answer }));
+    const noRequest = outs.filter((o) => o.source !== "network").length;
+    if (noRequest && tab) tab.noRequest = (tab.noRequest ?? 0) + noRequest;
+    // A call answered from cache took no anon-rpc round trip: don't let it pull the latency figures down.
+    const ms = outs.some((o) => o.source === "network") ? Date.now() - t0 : undefined;
+    await record(tabId, { ...base, category, ms, note }, calls.length);
+    return { status: 200, body: JSON.stringify(/^\s*\[/.test(body) ? answers : answers[0]) };
   } catch (e) {
     const why = String((e as Error)?.message ?? e);
     if (site.allowDirect) {
@@ -350,7 +501,8 @@ chrome.runtime.onMessage.addListener((msg: any, sender: any, respond: (r: unknow
         if (tabId !== undefined && sender.frameId === 0) {
           tabs.set(tabId, freshTab(msg.origin));
           persist(tabId);
-          void getWorker().catch(() => {});
+          // Rebuilds any circuit that has aged out (no-op when ready() hasn't happened yet).
+          void getWorker().then(() => prewarmKnown(), () => {});
         }
         const site = await getSite(msg.origin);
         return { enabled: site.enabled, addresses: (await getAddresses()).all };
@@ -366,6 +518,8 @@ chrome.runtime.onMessage.addListener((msg: any, sender: any, respond: (r: unknow
           const s = await tabState(tabId);
           if (s) (s.walletChain = msg.chainId), persist(tabId);
         }
+        // Build each address's circuit now, before the dapp's first read about it.
+        for (const a of msg.addresses ?? []) if (/^0x[0-9a-fA-F]{40}$/.test(a)) void prewarm(keyFor(a), Number.isFinite(msg.chainId) ? msg.chainId : undefined);
         return null;
       }
       // popup
@@ -377,6 +531,7 @@ chrome.runtime.onMessage.addListener((msg: any, sender: any, respond: (r: unknow
           site: s ? await getSite(s.origin) : null,
           addresses: await getAddresses(),
           readEndpoints: CFG.readEndpoints,
+          pipeline: pipeline.stats,
         };
       }
       case "setSite":
@@ -399,6 +554,12 @@ chrome.runtime.onMessage.addListener((msg: any, sender: any, respond: (r: unknow
   return true;
 });
 
-// Warm up as soon as the extension starts: tor-js takes ~13 s to boot.
+// Boot Tor when the browser starts or Canary is installed/updated, not when the
+// first dapp request happens to wake the service worker: registering these
+// listeners is what makes Chrome start the worker at launch. The booted Tor
+// client lives in the offscreen document, so later service-worker restarts
+// reattach to it (~1 ms) instead of booting again.
+chrome.runtime.onStartup.addListener(() => void getWorker().catch(() => {}));
+chrome.runtime.onInstalled.addListener(() => void getWorker().catch(() => {}));
 void syncBlockRules();
 void getWorker().catch(() => {});

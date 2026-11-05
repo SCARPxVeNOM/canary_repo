@@ -1,0 +1,53 @@
+{
+  "gatewaySnapshot": [
+    {
+      "bootMs": 20002,
+      "firstReadMs": 2640,
+      "ok": true
+    },
+    {
+      "bootMs": 33152,
+      "firstReadMs": 1773,
+      "ok": true
+    },
+    {
+      "bootMs": 34340,
+      "firstReadMs": 45003,
+      "ok": false
+    }
+  ],
+  "hostSnapshot": [
+    {
+      "bootMs": 32974,
+      "firstReadMs": 10657,
+      "ok": true
+    },
+    {
+      "bootMs": 38974,
+      "firstReadMs": 15367,
+      "ok": true
+    },
+    {
+      "bootMs": 9214,
+      "firstReadMs": 1401,
+      "ok": true
+    }
+  ],
+  "storageReuse": [
+    {
+      "bootMs": 33534,
+      "firstReadMs": 1259,
+      "ok": true
+    },
+    {
+      "bootMs": 33482,
+      "firstReadMs": 12113,
+      "ok": true
+    },
+    {
+      "bootMs": 43068,
+      "firstReadMs": 3337,
+      "ok": true
+    }
+  ]
+}

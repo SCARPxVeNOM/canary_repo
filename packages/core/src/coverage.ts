@@ -11,7 +11,8 @@ export type Category =
   | "failedClosed" // anon path down: answered with an error instead of going direct
   | "direct" // sent normally, because the policy declares it
   | "pseudonymized" // addresses replaced before reaching an LLM or tool
-  | "undeclared"; // egress to a host not in the manifest (report mode)
+  | "undeclared" // egress to a host not in the manifest (report mode)
+  | "localNode"; // an RPC on this machine or private network: no third party, sent as-is
 
 export const CATEGORY_LABEL: Record<Category, string> = {
   protected: "Protected",
@@ -24,6 +25,7 @@ export const CATEGORY_LABEL: Record<Category, string> = {
   direct: "Direct (declared)",
   pseudonymized: "Pseudonymized",
   undeclared: "Undeclared",
+  localNode: "Local node (no third party)",
 };
 
 export type Channel = "fetch" | "xhr" | "websocket" | "beacon" | "url" | "rpc" | "proxy" | "connect" | "sdk" | "llm";

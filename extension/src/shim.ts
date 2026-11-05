@@ -56,7 +56,10 @@ import {
 
   function applyConfig(c: Config) {
     config = c;
-    needles = c.addresses.map(needlesFor);
+    // Merge, don't replace: the wallet may have handed out an address before
+    // this reply arrived, and dropping it would let that address leak.
+    const known = new Set(needles.map((n) => n.address));
+    needles = [...needles, ...c.addresses.map((a) => a.toLowerCase()).filter((a) => !known.has(a)).map(needlesFor)];
     resolveReady();
   }
 

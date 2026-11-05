@@ -8,9 +8,9 @@ declare const chrome: any;
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
 const COLOR: Record<Category, string> = {
   protected: "var(--green)", protectedIpOnly: "var(--blue)", blocked: "var(--yellow)", detected: "var(--red)",
-  backend: "var(--muted)", notInspected: "#6b7280", failedClosed: "var(--amber)", direct: "var(--red)",
+  backend: "var(--muted)", notInspected: "#6b7280", failedClosed: "var(--amber)", direct: "var(--red)", localNode: "#a78bfa",
 };
-const ORDER: Category[] = ["protected", "protectedIpOnly", "blocked", "detected", "backend", "notInspected", "failedClosed", "direct"];
+const ORDER: Category[] = ["protected", "protectedIpOnly", "blocked", "detected", "backend", "notInspected", "failedClosed", "direct", "localNode"];
 
 async function tabId(): Promise<number> {
   const q = new URLSearchParams(location.search).get("tabId");
@@ -50,7 +50,7 @@ async function render() {
   ($("allowDirect") as HTMLInputElement).checked = st.site.allowDirect;
 
   const c = tab.counts as Record<Category, number>;
-  const rpcTotal = c.protected + c.protectedIpOnly + c.failedClosed + c.direct + rpcDetected(tab);
+  const rpcTotal = c.protected + c.protectedIpOnly + c.failedClosed + c.direct + c.localNode + rpcDetected(tab);
   const viaAnon = c.protected + c.protectedIpOnly;
   $("headline").innerHTML = !st.site.enabled
     ? `<span class="muted">Protection is off for this site.</span>`
@@ -60,9 +60,16 @@ async function render() {
   $("counts").innerHTML = ORDER.filter((k) => c[k] || k === "protected" || k === "blocked")
     .map((k) => `<tr><td><span class="dot" style="background:${COLOR[k]}"></span>${CATEGORY_LABEL[k]}</td><td>${c[k]}</td></tr>`)
     .join("");
-  $("latency").textContent = tab.latencies.length
+  const lat = tab.latencies.length
     ? `anon-rpc latency per request: p50 ${pct(tab.latencies, 50)} ms · p95 ${pct(tab.latencies, 95)} ms (n=${tab.latencies.length})`
     : "";
+  const p = st.pipeline;
+  // Across all tabs: batching merges calls from every page into fewer Tor requests.
+  const saved = p?.calls
+    ? `${p.calls} calls sent as ${p.requests} anon-rpc requests (${p.cacheHits + p.shared} answered without one)` +
+      (tab.noRequest ? ` · on this page: ${tab.noRequest} from cache` : "")
+    : "";
+  $("latency").innerHTML = [lat, saved].filter(Boolean).map(esc).join("<br>");
 
   const recips = Object.values(tab.recipients as Record<string, any>).sort((a: any, b: any) => total(b) - total(a));
   $("recipients").innerHTML = recips.length

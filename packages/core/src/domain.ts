@@ -22,6 +22,15 @@ export function isThirdParty(pageHost: string, requestHost: string): boolean {
   return registrableDomain(pageHost) !== registrableDomain(requestHost);
 }
 
+/** This machine or its private network: no third party can be on the other end. */
+export function isLocalHost(host: string): boolean {
+  const h = host.toLowerCase().replace(/^\[|\]$/g, "");
+  return (
+    h === "localhost" || h.endsWith(".localhost") || h.endsWith(".local") || h === "::1" ||
+    /^127\./.test(h) || /^10\./.test(h) || /^192\.168\./.test(h) || /^172\.(1[6-9]|2\d|3[01])\./.test(h)
+  );
+}
+
 const KNOWN_PROVIDER = /(alchemy\.com|infura\.io|drpc\.(org|live)|publicnode\.com|ankr\.com|llamarpc\.com|1rpc\.io|blastapi\.io|quiknode\.pro|chainstack\.com|tenderly\.co|cloudflare-eth\.com|merkle\.io|flashbots\.net)/i;
 const CHAIN_PATTERNS: [RegExp, number][] = [
   [/base[-_]?sepolia/i, 84532],
@@ -39,7 +48,39 @@ const CHAIN_PATTERNS: [RegExp, number][] = [
 
 /** Chain named by a well-known provider URL; undefined for anything else. */
 export function knownChain(url: string): number | undefined {
+  const proxied = proxyChain(url);
+  if (proxied !== undefined) return proxied;
   if (!KNOWN_PROVIDER.test(url)) return undefined;
   for (const [re, id] of CHAIN_PATTERNS) if (re.test(url)) return id;
   return undefined;
+}
+
+/* Dapps' own RPC proxies whose path names the chain. Curated, because these
+   proxies often can't be probed over Tor: Uniswap's answers 401 to anything
+   without its Cloudflare cookies, including its own first request. */
+const PROXY_CHAIN: [host: RegExp, path: RegExp][] = [
+  [/^entry-gateway\.backend-prod\.api\.uniswap\.org$/i, /^\/rpc\/(\d+)\/?$/],
+];
+function proxyChain(url: string): number | undefined {
+  try {
+    const u = new URL(url);
+    for (const [host, path] of PROXY_CHAIN) {
+      const m = host.test(u.hostname) && u.pathname.match(path);
+      if (m) return Number(m[1]);
+    }
+  } catch {
+    /* not a URL */
+  }
+  return undefined;
+}
+
+/** A chain id the URL seems to name (`/rpc/8453`, `?chainId=10`): a hint, used only after a probe failed. */
+export function chainHintFromUrl(url: string): number | undefined {
+  try {
+    const u = new URL(url);
+    const m = u.pathname.match(/\/(?:rpc|chains?|networks?|evm)\/(\d{1,10})(?:\/|$)/i) ?? u.search.match(/[?&]chain(?:_?id)?=(\d{1,10})(?:&|$)/i);
+    return m ? Number(m[1]) : undefined;
+  } catch {
+    return undefined;
+  }
 }

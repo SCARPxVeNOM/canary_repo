@@ -11,6 +11,7 @@ import { cp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { createRequire } from "node:module";
 import { dirname, resolve } from "node:path";
 import { parseArgs } from "node:util";
+import { ensureTorBootstrap } from "./scripts/fetch-tor-bootstrap.mjs";
 
 const require = createRequire(import.meta.url);
 const HERE = import.meta.dirname;
@@ -22,6 +23,22 @@ export async function buildExtension(cfg, out) {
   await cp(resolve(harness, "dist/static/anon-rpc"), resolve(out, "anon-rpc"), { recursive: true });
 
   const runtime = { network: cfg.network, readEndpoints: cfg.readEndpoints, timeoutMs: cfg.timeoutMs ?? 30000 };
+
+  // tor-js fast-bootstrap snapshot (config "torBootstrap": true). Refreshed when
+  // the packaged one is over 3 h old; skipped with a warning if no gateway
+  // answers, since the worker can always fetch it from a gateway itself.
+  if (cfg.torBootstrap) {
+    const gateways = cfg.network.workerConfig?.gateways ?? [];
+    try {
+      const meta = await ensureTorBootstrap(gateways, resolve(HERE, ".tor-bootstrap"));
+      await cp(resolve(HERE, ".tor-bootstrap/bootstrap.zip.zst"), resolve(out, "tor-bootstrap.zip.zst"));
+      // Arti accepts a consensus up to 3 days past valid-until; stay inside that.
+      runtime.torBootstrap = { file: "tor-bootstrap.zip.zst", fetchedAt: meta.validAfter, maxAgeHours: 72 };
+      console.log(`packaged tor-js snapshot: ${(meta.bytes / 1e6).toFixed(2)} MB, consensus valid-after ${new Date(meta.validAfter).toISOString()}`);
+    } catch (e) {
+      console.warn(`warning: no tor-js snapshot packaged (${e.message}); the worker will fetch it from a gateway on first boot`);
+    }
+  }
   const common = { bundle: true, platform: "browser", target: "es2022", logLevel: "warning", sourcemap: "linked" };
   await build({ ...common, format: "esm", entryPoints: [resolve(HERE, "src/background.ts")], outfile: resolve(out, "background.js"), define: { __CANARY_CONFIG__: JSON.stringify(runtime) } });
   for (const name of ["shim", "bridge", "popup"]) {

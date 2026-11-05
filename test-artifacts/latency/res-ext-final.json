@@ -1,0 +1,322 @@
+{
+ "out": {
+  "startup: browser launch → Tor ready (no tab opened)": {
+   "ms": 4624,
+   "worker": {
+    "bootMs": 3346,
+    "cold": true,
+    "network": "tor-js (own gateways)",
+    "state": "ready"
+   }
+  },
+  "first dapp read after startup": {
+   "ms": 2120,
+   "ok": true
+  },
+  "single read, warm (30 samples)": {
+   "n": 30,
+   "p50": 1015,
+   "p90": 1357,
+   "mean": 1093
+  },
+  "eth_chainId (answered by Canary)": {
+   "n": 10,
+   "p50": 1,
+   "p90": 1,
+   "mean": 1
+  },
+  "20 parallel reads (5 runs)": {
+   "n": 5,
+   "p50": 1063,
+   "p90": 1280,
+   "mean": 1104,
+   "ok": [
+    20,
+    20,
+    20,
+    20,
+    20
+   ]
+  },
+  "app.uniswap.org": {
+   "counts": {
+    "backend": 45,
+    "blocked": 0,
+    "detected": 0,
+    "direct": 0,
+    "failedClosed": 0,
+    "localNode": 0,
+    "notInspected": 0,
+    "protected": 13,
+    "protectedIpOnly": 0
+   },
+   "notes": [],
+   "rpcCalls": 13
+  },
+  "failover round 0 (killed canary-gateway-12299)": {
+   "failedReads": 1,
+   "gapMs": 18890,
+   "readsAfter": "3759 ✗11071 621 1033 601 553 572 563 634 697 577 611",
+   "errors": [
+    "Canary: anon path unavailable (Failed to connect: tor: bad API usage (bug): Protocol error while launching a data stream: Problem building circuit 1.3, while begin stream: Stream not connected). Not sent directly."
+   ]
+  },
+  "failover round 1 (killed canary-gateway-12300)": {
+   "failedReads": 1,
+   "gapMs": 20700,
+   "readsAfter": "✗13037 4781 2054 1234 1233 1224 1222 1187 1218 1214 1200 1231",
+   "errors": [
+    "Canary: anon path unavailable (Failed to connect: tor: operation timed out at exit: Timed out while waiting for answer from exit). Not sent directly."
+   ]
+  }
+ },
+ "log": [
+  {
+   "at": 0,
+   "ms": 1776,
+   "ok": true
+  },
+  {
+   "at": 4345,
+   "ms": 1451,
+   "ok": true
+  },
+  {
+   "at": 6300,
+   "ms": 1142,
+   "ok": true
+  },
+  {
+   "at": 7946,
+   "ms": 978,
+   "ok": true
+  },
+  {
+   "at": 9427,
+   "ms": 997,
+   "ok": true
+  },
+  {
+   "at": 12850,
+   "ms": 3759,
+   "ok": true
+  },
+  {
+   "at": 17115,
+   "ms": 11071,
+   "ok": false,
+   "err": "Canary: anon path unavailable (Failed to connect: tor: bad API usage (bug): Protocol error while launching a data stream: Problem building circuit 1.3, while begin stream: Stream not connected). Not sent directly."
+  },
+  {
+   "at": 28693,
+   "ms": 621,
+   "ok": true
+  },
+  {
+   "at": 29819,
+   "ms": 1033,
+   "ok": true
+  },
+  {
+   "at": 31355,
+   "ms": 601,
+   "ok": true
+  },
+  {
+   "at": 32460,
+   "ms": 553,
+   "ok": true
+  },
+  {
+   "at": 33516,
+   "ms": 572,
+   "ok": true
+  },
+  {
+   "at": 34593,
+   "ms": 563,
+   "ok": true
+  },
+  {
+   "at": 35659,
+   "ms": 634,
+   "ok": true
+  },
+  {
+   "at": 36797,
+   "ms": 697,
+   "ok": true
+  },
+  {
+   "at": 37997,
+   "ms": 577,
+   "ok": true
+  },
+  {
+   "at": 39077,
+   "ms": 611,
+   "ok": true
+  },
+  {
+   "at": 40192,
+   "ms": 594,
+   "ok": true
+  },
+  {
+   "at": 41288,
+   "ms": 623,
+   "ok": true
+  },
+  {
+   "at": 42414,
+   "ms": 619,
+   "ok": true
+  },
+  {
+   "at": 43537,
+   "ms": 578,
+   "ok": true
+  },
+  {
+   "at": 44619,
+   "ms": 623,
+   "ok": true
+  },
+  {
+   "at": 45746,
+   "ms": 842,
+   "ok": true
+  },
+  {
+   "at": 47092,
+   "ms": 593,
+   "ok": true
+  },
+  {
+   "at": 48189,
+   "ms": 928,
+   "ok": true
+  },
+  {
+   "at": 49621,
+   "ms": 578,
+   "ok": true
+  },
+  {
+   "at": 50704,
+   "ms": 625,
+   "ok": true
+  },
+  {
+   "at": 51833,
+   "ms": 584,
+   "ok": true
+  },
+  {
+   "at": 53924,
+   "ms": 635,
+   "ok": true
+  },
+  {
+   "at": 55063,
+   "ms": 714,
+   "ok": true
+  },
+  {
+   "at": 56281,
+   "ms": 628,
+   "ok": true
+  },
+  {
+   "at": 57412,
+   "ms": 648,
+   "ok": true
+  },
+  {
+   "at": 58562,
+   "ms": 594,
+   "ok": true
+  },
+  {
+   "at": 59660,
+   "ms": 637,
+   "ok": true
+  },
+  {
+   "at": 60801,
+   "ms": 577,
+   "ok": true
+  },
+  {
+   "at": 63756,
+   "ms": 13037,
+   "ok": false,
+   "err": "Canary: anon path unavailable (Failed to connect: tor: operation timed out at exit: Timed out while waiting for answer from exit). Not sent directly."
+  },
+  {
+   "at": 77297,
+   "ms": 4781,
+   "ok": true
+  },
+  {
+   "at": 82582,
+   "ms": 2054,
+   "ok": true
+  },
+  {
+   "at": 85141,
+   "ms": 1234,
+   "ok": true
+  },
+  {
+   "at": 86880,
+   "ms": 1233,
+   "ok": true
+  },
+  {
+   "at": 88617,
+   "ms": 1224,
+   "ok": true
+  },
+  {
+   "at": 90345,
+   "ms": 1222,
+   "ok": true
+  },
+  {
+   "at": 92071,
+   "ms": 1187,
+   "ok": true
+  },
+  {
+   "at": 93761,
+   "ms": 1218,
+   "ok": true
+  },
+  {
+   "at": 95483,
+   "ms": 1214,
+   "ok": true
+  },
+  {
+   "at": 97200,
+   "ms": 1200,
+   "ok": true
+  },
+  {
+   "at": 98904,
+   "ms": 1231,
+   "ok": true
+  },
+  {
+   "at": 100641,
+   "ms": 1267,
+   "ok": true
+  },
+  {
+   "at": 102411,
+   "ms": 1207,
+   "ok": true
+  }
+ ]
+}

@@ -1,0 +1,62 @@
+{
+  "label": "old",
+  "boot": {
+    "bootMs": 3169,
+    "cold": true,
+    "network": "tor-js (own gateway)",
+    "state": "ready",
+    "observedMs": 3464
+  },
+  "sites": [
+    {
+      "url": "https://app.ens.domains/vitalik.eth",
+      "round": 0,
+      "settleMs": 6764,
+      "rpcCalls": 8,
+      "protected": 8,
+      "ipOnly": 0,
+      "failedClosed": 0,
+      "latP50": 901,
+      "latMax": 1189
+    },
+    {
+      "url": "https://app.uniswap.org/explore/tokens",
+      "round": 0,
+      "settleMs": 89494,
+      "rpcCalls": 82,
+      "protected": 0,
+      "ipOnly": 0,
+      "failedClosed": 82
+    },
+    {
+      "url": "https://curve.fi/dex/ethereum/pools/",
+      "round": 0,
+      "settleMs": 90172
+    },
+    {
+      "url": "https://app.ens.domains/vitalik.eth",
+      "round": 1,
+      "settleMs": 11455,
+      "rpcCalls": 8,
+      "protected": 8,
+      "ipOnly": 0,
+      "failedClosed": 0,
+      "latP50": 1850,
+      "latMax": 2372
+    },
+    {
+      "url": "https://app.uniswap.org/explore/tokens",
+      "round": 1,
+      "settleMs": 88172,
+      "rpcCalls": 67,
+      "protected": 0,
+      "ipOnly": 0,
+      "failedClosed": 67
+    },
+    {
+      "url": "https://curve.fi/dex/ethereum/pools/",
+      "round": 1,
+      "settleMs": 90061
+    }
+  ]
+}

@@ -14,7 +14,9 @@ export {
   findAddress,
   registrableDomain,
   isThirdParty,
+  isLocalHost,
   knownChain,
+  chainHintFromUrl,
   type RpcCall,
   type Taint,
   type AddressNeedles,
@@ -32,6 +34,7 @@ export const CATEGORY_LABEL: Record<Category, string> = {
   notInspected: "Not inspected",
   failedClosed: "Failed closed",
   direct: "Direct (you allowed it)",
+  localNode: "Local node (no third party)",
 };
 
 export type Observation = Omit<CoreObservation, "category" | "channel" | "firstParty"> & {

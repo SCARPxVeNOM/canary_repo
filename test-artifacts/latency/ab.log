@@ -1,0 +1,10 @@
+new round 0 {"bootMs":6776,"dash":{"ms":1680,"ok":20,"n":20},"dashAgain":{"ms":760,"ok":20,"n":20},"ens":{"settleMs":6621,"calls":8,"protected":8,"failed":0}}
+old round 0 {"bootMs":6372,"dash":{"ms":1913,"ok":18,"n":20},"dashAgain":{"ms":1057,"ok":19,"n":20},"ens":{"settleMs":7929,"calls":8,"protected":8,"failed":0}}
+old round 1 {"bootMs":6943,"dash":{"ms":4199,"ok":19,"n":20},"dashAgain":{"ms":2198,"ok":17,"n":20},"ens":{"settleMs":9925,"calls":8,"protected":8,"failed":0}}
+new round 1 {"bootMs":6787,"dash":{"ms":1404,"ok":20,"n":20},"dashAgain":{"ms":1055,"ok":20,"n":20},"ens":{"settleMs":6335,"calls":8,"protected":8,"failed":0}}
+new round 2 {"bootMs":6534,"dash":{"ms":1497,"ok":20,"n":20},"dashAgain":{"ms":856,"ok":20,"n":20},"ens":{"settleMs":7643,"calls":8,"protected":8,"failed":0}}
+old round 2 {"bootMs":6399,"dash":{"ms":3237,"ok":16,"n":20},"dashAgain":{"ms":1137,"ok":20,"n":20},"ens":{"settleMs":7196,"calls":8,"protected":8,"failed":0}}
+old round 3 {"bootMs":6403,"dash":{"ms":2367,"ok":20,"n":20},"dashAgain":{"ms":1035,"ok":20,"n":20},"ens":{"settleMs":6371,"calls":8,"protected":8,"failed":0}}
+new round 3 {"bootMs":6584,"dash":{"ms":4175,"ok":20,"n":20},"dashAgain":{"ms":1861,"ok":20,"n":20},"ens":{"settleMs":8448,"calls":8,"protected":8,"failed":0}}
+new MEDIAN {"boot":6776,"dash":1680,"dashAgain":1055,"ensSettle":7643}
+old MEDIAN {"boot":6403,"dash":3237,"dashAgain":1137,"ensSettle":7929}

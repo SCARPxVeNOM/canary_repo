@@ -210,6 +210,9 @@ let tab;
   check("indexer traffic allowed and reported as backend", logs.indexer.length === 1 && tab?.recipients["indexer.test"]?.categories.backend >= 1);
   check("coverage counts: blocked ≥ 5, protected ≥ 8, failedClosed 0", tab?.counts.blocked >= 5 && tab?.counts.protected >= 8 && tab?.counts.failedClosed === 0, tab?.counts);
   check("wallet address learned via EIP-1193/6963", (await c.sw.evaluate(() => chrome.storage.local.get("walletAddresses"))).walletAddresses?.includes(ADDR));
+  check("eth_chainId answered from Canary's cache: the read endpoint was never asked", result.chainId === 11155111 && !logs.read.some((l) => l.method === "eth_chainId") && tab?.noRequest >= 1, { read: logs.read.map((l) => l.method), noRequest: tab?.noRequest });
+  const st = await ext(c, { type: "state", tabId: tab.tabId });
+  check("pipeline sent fewer anon-rpc requests than it answered calls", st.pipeline.requests < st.pipeline.calls, st.pipeline);
 
   // popup screenshot
   const id = await c.sw.evaluate(() => chrome.runtime.id);
@@ -244,7 +247,8 @@ console.log("\n4. Same, with \"allow direct\" on for this site");
   const { page, result } = await runPage(c.ctx, { leaks: false });
   const t = await tabStateOf(c.sw);
   check("reads went directly to the provider (user's choice) and the dapp works", result.balance === "1" && reads(logs.provider).some((l) => l.origin.includes("leakydash")), { result, provider: logs.provider.length });
-  check("counted as direct, not protected", t?.counts.direct > 0 && t?.counts.protected === 0, t?.counts);
+  // Only calls Canary answered from its own cache (e.g. the read endpoint's chain id) may count as protected here.
+  check("counted as direct, not protected", t?.counts.direct > 0 && t?.counts.protected <= (t?.noRequest ?? 0), { counts: t?.counts, noRequest: t?.noRequest });
   readDown = false;
   await page.close();
 }

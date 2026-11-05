@@ -23,11 +23,11 @@ One core, two hosts: `extension/` and `packages/` share `@canary/core`.
 
 | Part | State |
 |---|---|
-| Enforcement extension ([`extension/`](extension/)) | Working. End-to-end test 24/24 against a leaky fixture dapp. |
+| Enforcement extension ([`extension/`](extension/)) | Working. End-to-end test 26/26 against a leaky fixture dapp. |
 | Live over Tor | The earlier spike ran on the unmodified app.ens.domains: 8/8 of its RPC batches to its own keyed provider were answered via anon-rpc instead (1.3–2.8 s each). |
 | Dapp scanner (Playwright + mitmproxy) | Not started (cut in favour of agents: agent-sdk.md §9) |
 | ENSv2 manifest + signed verdicts for dapps | Not started |
-| **Agents:** `@canary/core` ([`packages/core`](packages/core/)) | Done; the extension imports it. 5/5 tests (+ the extension's 24/24). |
+| **Agents:** `@canary/core` ([`packages/core`](packages/core/)) | Done; the extension imports it. 8/8 tests (+ the extension's 26/26). |
 | **Agents:** gateway ([`packages/gateway`](packages/gateway/)) | Working: anon-rpc in headless Chrome, JSON-RPC endpoint, HTTP(S) proxy, opt-in MITM CA, policy from ENS with live updates, signed reports, timing jitter, crash recovery. 39/39 tests on EF's passthrough worker. **Not yet run live over tor-js.** |
 | **Agents:** ENSv2 ([`packages/ens`](packages/ens/)) | Working against mock ENSv2 contracts: manifest loader, one-key report role (both documented delegation APIs), signed `privacy.report`, revocation detection, `canary-ens` CLI. 4/4 tests. **Not yet run on the live Sepolia deployment.** |
 | **Agents:** SDK ([`packages/agent`](packages/agent/)) | viem transport, ethers provider, `fetch`, LLM pseudonymizer, `wrapTools`, embedded mode. 13/13 tests. |
@@ -43,6 +43,7 @@ One core, two hosts: `extension/` and `packages/` share `@canary/core`.
 | [`agent-sdk.md`](agent-sdk.md) | Blueprint: Canary for autonomous agents (gateway + SDK + ENSv2 agent names) |
 | [`test-repo.md`](test-repo.md) | Test log of the anon-rpc repo and of the Canary spike, with numbers |
 | [`test-artifacts/`](test-artifacts/) | Raw logs and benchmark output referenced by test-repo.md |
+| [`gateway/`](gateway/) | Dockerfile for our own tor-js gateway (EF's `tor-js-gateway`, pinned commit) |
 | [`canary-spike/`](canary-spike/) | The first proof of concept (superseded by `extension/`) |
 | [`packages/core/`](packages/core/) | `@canary/core`: JSON-RPC classifier, address matching, coverage categories, privacy manifest. Platform-neutral; shared with the extension |
 | [`packages/gateway/`](packages/gateway/) | `@canary/gateway`: anon-rpc in headless Chrome, JSON-RPC endpoint, HTTP(S) proxy, MITM CA, ledger, signed reports, ENS binding, `canary-gateway` CLI |
@@ -80,9 +81,9 @@ WALLET=0x… npm run agent         # terminal 2 (npm run agent:leaky for the sam
 
 ## CROPS
 
-- **C (censorship resistance):** Canary depends on the anon-rpc network's gateway (EF's demo gateway by default; configurable) and on the read endpoints in `extension/config/live.json`. If they go away, Canary fails closed and the popup says so; a per-site opt-in allows direct requests instead.
+- **C (censorship resistance):** Canary depends on a tor-js gateway and on the read endpoints in `extension/config/live.json`. Gateways are a list: tor-js spreads clients across them and fails over on its own, and anyone can run one from [`gateway/`](gateway/) (one Docker container, one UDP port). If all of them or the read endpoint go away, Canary fails closed and the popup says so; a per-site opt-in allows direct requests instead.
 - **O (open source):** MIT. Everything builds from this repo with `npm install && npm run build`.
-- **P (privacy):** the read endpoint learns which addresses are queried, but not your IP or which dapp you're using. Forwarded non-standard calls reveal the dapp to its provider, not your IP. The dapp itself still sees your address and IP. Canary has no analytics or telemetry.
+- **P (privacy):** the gateway learns your IP, that you use Tor, and traffic volume and timing; not destinations or contents (circuits are built and encrypted in the browser). The read endpoint learns which addresses are queried, but not your IP or which dapp you're using. We never run both a gateway and a read endpoint, so no single operator can match the two by timing. Batching never mixes calls about different addresses. Forwarded non-standard calls reveal the dapp to its provider, not your IP. The dapp itself still sees your address and IP. Canary has no analytics or telemetry.
 - **S (security):** Canary never holds keys or signs anything. The anon-rpc worker is hash-pinned on chain and runs in a null-origin sandbox with none of the extension's permissions. Read endpoints could lie about responses; proof verification is future work.
 - **Agents:**
   - The gateway never touches the agent's wallet keys and refuses node-side signing.

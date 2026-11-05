@@ -1,0 +1,252 @@
+{
+ "out": {
+  "startup: browser launch → Tor ready (no tab opened)": {
+   "ms": 4809,
+   "worker": {
+    "bootMs": 3416,
+    "cold": true,
+    "network": "tor-js (own gateways)",
+    "state": "ready"
+   }
+  },
+  "first dapp read after startup": {
+   "ms": 1475,
+   "ok": true
+  },
+  "single read, warm (30 samples)": {
+   "n": 30,
+   "p50": 861,
+   "p90": 1271,
+   "mean": 930
+  },
+  "eth_chainId (answered by Canary)": {
+   "n": 10,
+   "p50": 1,
+   "p90": 2,
+   "mean": 2
+  },
+  "20 parallel reads (5 runs)": {
+   "n": 5,
+   "p50": 959,
+   "p90": 1157,
+   "mean": 947,
+   "ok": [
+    20,
+    20,
+    20,
+    20,
+    20
+   ]
+  },
+  "app.uniswap.org": {
+   "counts": {
+    "backend": 44,
+    "blocked": 0,
+    "detected": 0,
+    "direct": 0,
+    "failedClosed": 0,
+    "localNode": 0,
+    "notInspected": 0,
+    "protected": 13,
+    "protectedIpOnly": 0
+   },
+   "notes": [],
+   "rpcCalls": 13
+  },
+  "failover round 0 (killed canary-gateway-12300)": {
+   "failedReads": 1,
+   "gapMs": 36360,
+   "readsAfter": "✗15396 17918 1156 1686 1071",
+   "errors": [
+    "Canary: anon path unavailable (Failed to connect: tor: bad API usage (bug): Protocol error while launching a data stream: Problem building circuit 1.4, while begin stream: Stream not connected). Not sent directly."
+   ]
+  },
+  "failover round 1 (killed canary-gateway)": {
+   "failedReads": 1,
+   "gapMs": 20252,
+   "readsAfter": "✗15679 1998 873 791 747 759 804 796 1111 735 768 791",
+   "errors": [
+    "Canary: anon path unavailable (Failed to connect: tor: bad API usage (bug): Protocol error while launching a data stream: Problem building circuit 2.5, while begin stream: Stream not connected). Not sent directly."
+   ]
+  }
+ },
+ "log": [
+  {
+   "at": 0,
+   "ms": 838,
+   "ok": true
+  },
+  {
+   "at": 2412,
+   "ms": 1155,
+   "ok": true
+  },
+  {
+   "at": 4070,
+   "ms": 882,
+   "ok": true
+  },
+  {
+   "at": 5457,
+   "ms": 905,
+   "ok": true
+  },
+  {
+   "at": 6866,
+   "ms": 729,
+   "ok": true
+  },
+  {
+   "at": 8099,
+   "ms": 720,
+   "ok": true
+  },
+  {
+   "at": 11362,
+   "ms": 15396,
+   "ok": false,
+   "err": "Canary: anon path unavailable (Failed to connect: tor: bad API usage (bug): Protocol error while launching a data stream: Problem building circuit 1.4, while begin stream: Stream not connected). Not sent directly."
+  },
+  {
+   "at": 27261,
+   "ms": 17918,
+   "ok": true
+  },
+  {
+   "at": 45684,
+   "ms": 1156,
+   "ok": true
+  },
+  {
+   "at": 47344,
+   "ms": 1686,
+   "ok": true
+  },
+  {
+   "at": 49533,
+   "ms": 1071,
+   "ok": true
+  },
+  {
+   "at": 51108,
+   "ms": 1540,
+   "ok": true
+  },
+  {
+   "at": 53941,
+   "ms": 1247,
+   "ok": true
+  },
+  {
+   "at": 55693,
+   "ms": 1137,
+   "ok": true
+  },
+  {
+   "at": 57334,
+   "ms": 1631,
+   "ok": true
+  },
+  {
+   "at": 59469,
+   "ms": 1065,
+   "ok": true
+  },
+  {
+   "at": 61038,
+   "ms": 1093,
+   "ok": true
+  },
+  {
+   "at": 64203,
+   "ms": 15679,
+   "ok": false,
+   "err": "Canary: anon path unavailable (Failed to connect: tor: bad API usage (bug): Protocol error while launching a data stream: Problem building circuit 2.5, while begin stream: Stream not connected). Not sent directly."
+  },
+  {
+   "at": 80385,
+   "ms": 1998,
+   "ok": true
+  },
+  {
+   "at": 82886,
+   "ms": 873,
+   "ok": true
+  },
+  {
+   "at": 84262,
+   "ms": 791,
+   "ok": true
+  },
+  {
+   "at": 85558,
+   "ms": 747,
+   "ok": true
+  },
+  {
+   "at": 86809,
+   "ms": 759,
+   "ok": true
+  },
+  {
+   "at": 88071,
+   "ms": 804,
+   "ok": true
+  },
+  {
+   "at": 89378,
+   "ms": 796,
+   "ok": true
+  },
+  {
+   "at": 90678,
+   "ms": 1111,
+   "ok": true
+  },
+  {
+   "at": 92292,
+   "ms": 735,
+   "ok": true
+  },
+  {
+   "at": 93530,
+   "ms": 768,
+   "ok": true
+  },
+  {
+   "at": 94802,
+   "ms": 791,
+   "ok": true
+  },
+  {
+   "at": 96098,
+   "ms": 787,
+   "ok": true
+  },
+  {
+   "at": 97389,
+   "ms": 776,
+   "ok": true
+  },
+  {
+   "at": 98669,
+   "ms": 914,
+   "ok": true
+  },
+  {
+   "at": 100087,
+   "ms": 805,
+   "ok": true
+  },
+  {
+   "at": 101397,
+   "ms": 945,
+   "ok": true
+  },
+  {
+   "at": 102845,
+   "ms": 1021,
+   "ok": true
+  }
+ ]
+}

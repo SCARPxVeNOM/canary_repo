@@ -1,0 +1,223 @@
+{
+  "suite": "all",
+  "gateway": "152.236.3.22:12298:uEiCH0VdbhryzJcMtCfB0vLA4sOvHdQ4hq5w7CopcwU59bQ",
+  "boot": 16026,
+  "direct": {
+    "n": 10,
+    "min": 154,
+    "p50": 171,
+    "p90": 540,
+    "max": 786
+  },
+  "seq20-nokey": {
+    "n": 20,
+    "min": 935,
+    "p50": 1446,
+    "p90": 1657,
+    "max": 3469,
+    "totalMs": 30524,
+    "ok": 20,
+    "each": [
+      1190,
+      940,
+      984,
+      935,
+      1082,
+      1284,
+      1022,
+      1445,
+      1497,
+      1324,
+      3469,
+      1643,
+      1446,
+      3070,
+      1534,
+      1657,
+      1604,
+      1488,
+      1367,
+      1543
+    ]
+  },
+  "exitIpByKey": {
+    "none": [
+      "185.129.61.5"
+    ],
+    "k-a": [
+      "204.8.96.169",
+      "204.8.96.169"
+    ],
+    "k-b": [
+      "185.220.100.242"
+    ]
+  },
+  "newKey-firstRead": {
+    "n": 6,
+    "min": 1223,
+    "p50": 2036,
+    "p90": 3421,
+    "max": 3421
+  },
+  "newKey-secondRead": {
+    "n": 6,
+    "min": 889,
+    "p50": 1152,
+    "p90": 2725,
+    "max": 2725
+  },
+  "r0-seq20": {
+    "totalMs": 47633,
+    "ok": 20
+  },
+  "r0-par20": {
+    "totalMs": 6418,
+    "ok": 20,
+    "p50": 5673,
+    "max": 6418
+  },
+  "r0-jsonrpc-batch20": {
+    "ok": true,
+    "status": 200,
+    "ms": 2076,
+    "bytes": 933,
+    "results": 20
+  },
+  "r0-multicall20": {
+    "ok": true,
+    "status": 200,
+    "ms": 4174,
+    "bytes": 6567,
+    "resultHexLen": 6530
+  },
+  "r1-seq20": {
+    "totalMs": 43256,
+    "ok": 20
+  },
+  "r1-par20": {
+    "totalMs": 3511,
+    "ok": 20,
+    "p50": 3040,
+    "max": 3511
+  },
+  "r1-jsonrpc-batch20": {
+    "ok": true,
+    "status": 200,
+    "ms": 1605,
+    "bytes": 933,
+    "results": 20
+  },
+  "r1-multicall20": {
+    "ok": true,
+    "status": 200,
+    "ms": 2249,
+    "bytes": 6567,
+    "resultHexLen": 6530
+  },
+  "r2-seq20": {
+    "totalMs": 54530,
+    "ok": 20
+  },
+  "r2-par20": {
+    "totalMs": 4696,
+    "ok": 20,
+    "p50": 4372,
+    "max": 4696
+  },
+  "r2-jsonrpc-batch20": {
+    "ok": true,
+    "status": 200,
+    "ms": 1673,
+    "bytes": 933,
+    "results": 20
+  },
+  "r2-multicall20": {
+    "ok": true,
+    "status": 200,
+    "ms": 2107,
+    "bytes": 6567,
+    "resultHexLen": 6530
+  },
+  "hedge-single": {
+    "n": 15,
+    "min": 954,
+    "p50": 1087,
+    "p90": 2151,
+    "max": 2382
+  },
+  "hedge-race2": {
+    "n": 15,
+    "min": 880,
+    "p50": 1051,
+    "p90": 2151,
+    "max": 2265
+  },
+  "afterIdle30s": {
+    "ok": true,
+    "status": 200,
+    "ms": 3823,
+    "bytes": 61
+  },
+  "afterIdle120s": {
+    "ok": true,
+    "status": 200,
+    "ms": 1607,
+    "bytes": 61
+  },
+  "endpoint https://ethereum-rpc.publicnode.com": {
+    "n": 8,
+    "min": 1524,
+    "p50": 2180,
+    "p90": 6117,
+    "max": 6117,
+    "ok": 8
+  },
+  "endpoint https://1rpc.io/eth": {
+    "n": 8,
+    "min": 1572,
+    "p50": 3718,
+    "p90": 9172,
+    "max": 9172,
+    "ok": 6
+  },
+  "endpoint https://eth.drpc.org": {
+    "n": 8,
+    "min": 1576,
+    "p50": 1786,
+    "p90": 3162,
+    "max": 3162,
+    "ok": 8
+  },
+  "endpoint https://rpc.ankr.com/eth": {
+    "n": 8,
+    "min": 1450,
+    "p50": 2055,
+    "p90": 3441,
+    "max": 3441,
+    "ok": 8
+  },
+  "endpoint https://eth-mainnet.public.blastapi.io": {
+    "n": 8,
+    "min": 1581,
+    "p50": 1994,
+    "p90": 3311,
+    "max": 3311,
+    "ok": 8
+  },
+  "endpoint https://ethereum-sepolia-rpc.publicnode.com": {
+    "n": 8,
+    "min": 1807,
+    "p50": 2009,
+    "p90": 3245,
+    "max": 3245,
+    "ok": 8
+  },
+  "endpoint https://1rpc.io/sepolia": {
+    "n": 8,
+    "min": 1604,
+    "p50": 1792,
+    "p90": 3187,
+    "max": 3187,
+    "ok": 8
+  }
+}

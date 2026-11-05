@@ -366,3 +366,71 @@ Tests of `packages/` (agent-sdk.md §0) and of the extension after moving it ont
 - The gateway over **tor-js** (this container can't reach EF's KPS gateway). First thing to run: `examples/viem-agent` with `npm run gateway`.
 - **ENS on Sepolia** (live Permissioned Resolver, Universal Resolver address, which delegation API).
 - Windows and macOS runs of `npm test` (the scripts avoid Unix-only syntax; the tests find Chrome via `CHROME_BIN` or the installed Chrome).
+
+---
+
+## 14. Latency: where it goes and what we changed (6 Nov)
+
+Scripts and raw results: [test-artifacts/latency/](test-artifacts/latency/). All runs use the real tor-js worker from its on-chain specifier (`0x700dA319…`, bundle = `tor-js@0.4.4/dist/anon-rpc-worker.js`, keccak matches `workerHash`).
+
+### Why a read costs ~1 s
+
+- tor-js sends `Connection: close` on every request (`crates/tor-js-wasm/src/fetch.rs:382`): each read is a new Tor stream + TCP + TLS through three relays, about 3 circuit round trips. TLS sessions are resumed per isolation key.
+- The WASM is not the bottleneck: the 5.08 MB Arti binary (embedded as base64 in a 6.87 MB bundle) compiles in 8 ms; loading a directory snapshot takes 0.7 s.
+- EF's demo gateway is in Frankfurt (ipinfo), 125 ms RTT from this machine (Maharashtra, IN).
+
+### Probes over the demo gateway (`drive.mjs all`)
+
+| What | Result |
+|---|---|
+| Direct, no Tor | p50 171 ms |
+| Warm read, one at a time | p50 1,446 ms (935–3,469) |
+| 20 reads: sequential / parallel / **one JSON-RPC batch** / Multicall3 | 43–55 s / 3.5–6.4 s / **1.6–2.1 s** / 2.1–4.2 s |
+| `isolationKey` | real: no key → exit A; key a → exit B, B again; key b → exit C |
+| First read on a new key vs the next | p50 2,036 vs 1,152 ms |
+| Racing one read on two circuits | p50 1,087 → 1,051 ms, p90 unchanged: not worth it |
+| Read endpoints over Tor (p50) | drpc 1.8 s, blast 2.0, ankr 2.1, publicnode 2.2, 1rpc 3.7 (2/8 failed) |
+
+Real dapps, no wallet (`traffic.mjs`): app.uniswap.org 24 RPC calls, **20 exact duplicates**, 12 `eth_chainId`/`net_version`; curve 10 calls, 2 duplicates + 3 static; app.ens.domains 8 calls, 7 of them Multicall3, 1 duplicate.
+
+### Boot
+
+- Demo gateway, 6 Nov ~00:15 IST: boots 18–43 s. Snapshot download over the gateway 12.7 s (1.46 MB); dial alone 2.8 s; then `Could not connect to guard … retrying in 30 s`. A host-supplied snapshot (`config.bootstrap`) worked: directory ready at 0.7 s instead of the download, but the guard failures still cost 18–28 s.
+- ~02:00 IST the demo gateway stopped completing KPS handshakes (`kps: HELLO timeout` / `dial timed out`, two Chromium versions) and no boot finished within 5 min.
+- **Own gateway** (`gateway/`, Docker on this laptop, 127.0.0.1): directory synced in ~30 s after start; snapshot served in **414 ms**; tor-js cold boot **4.0 s**, warm-storage boots 4.1–4.3 s; reads p50 1,242 ms, p90 1,296 ms (mainnet publicnode), Sepolia p50 1,412 ms.
+- With our gateway serving the snapshot that fast, packaging it saves little (extension boot 3.4 s vs 3.2 s). It matters when the gateway is slow or loaded.
+
+### Old vs new extension, live (`ab.mjs`, own gateway, 4 interleaved rounds, fresh browser each)
+
+| | Old (one worker.fetch per request) | New (batch + cache + dedupe + pre-warm) |
+|---|---|---|
+| Dashboard page: 20 parallel reads incl. 3× chainId, 3× blockNumber, 4 duplicates — median | 3,237 ms, **73/80 answers OK** (read endpoint dropped some of 20 parallel requests) | **1,680 ms, 80/80 OK** |
+| Same view again a few seconds later | 1,137 ms | 1,055 ms |
+| app.ens.domains/vitalik.eth, page settled | 7,929 ms | 7,643 ms |
+| Extension boot (incl. 3 s idle in the script) | 6,403 ms | 6,776 ms |
+
+Reading it:
+- Batching wins where a page fires many reads at once: ~2× faster and no dropped answers. It doesn't help ENS: its 8 Multicall requests depend on each other, so they arrive one after another.
+- 25× (sequential vs batch) is the upper bound for a page that awaits each read; real dapps mostly fire in parallel, so ~2× is the honest number.
+- Pre-warm isn't in this table (no wallet connected). Its effect is the first-read-on-a-new-key cost above (~0.9 s).
+
+### Final run through the extension (`ext-final.mjs`, dist-local, 3 own gateways, 6 Nov)
+
+| | Result |
+|---|---|
+| Browser launch → Tor ready, no tab opened | 4.6–4.8 s (boot 3.3–3.4 s, packaged snapshot) |
+| First dapp read after startup | 1.5–2.1 s |
+| Single read, warm (30) | p50 0.86–1.02 s, p90 1.27–1.36 s, mean 0.93–1.09 s |
+| `eth_chainId` (answered by Canary) | 1 ms |
+| 20 parallel reads (5 runs) | p50 0.96–1.06 s, 100/100 OK |
+| app.uniswap.org/explore/tokens | 13/13 RPC calls protected, 0 failed closed |
+| Kill the busiest gateway (×2), retry only | 1 failed read per kill, 20–36 s until reads were normal |
+| Same, hedged (3 s) on a fresh circuit | 1 failed read per kill (11–13 s), 19–21 s gap, then normal |
+
+The hedge shortens the stall but can't remove it: for a few seconds after a gateway dies, tor-js still builds the new circuit through it, because it only marks a gateway cooling after a failure. Getting this to zero needs a change in tor-js's gateway health checks, not in Canary.
+
+### Found along the way
+
+- **Shim race (fixed):** if the wallet handed out an address before the extension's config reply arrived, `applyConfig` replaced the address list and dropped it, so every leak check failed (e2e 20/24 on Chrome for Testing 156, also on the old code). Now merged. e2e 26/26, twice.
+- **app.uniswap.org failed closed (fixed):** its RPC proxy (`/rpc/<chainId>`) answers HTTP 401 to the `eth_chainId` probe over Tor (it wants Cloudflare cookies; even the real site's first request gets 401), so Canary couldn't learn the chain and every call failed closed. Fixed by taking the chain from the URL for that host (and as a hint for `/rpc/<n>`-style URLs after a failed probe), so reads are substituted to our read endpoint: 13/13 protected, 0 failed closed.
+- Claude in Chrome can't load an unpacked extension (`chrome://extensions` isn't scriptable), so live runs used Chrome for Testing 156 with `--load-extension`.

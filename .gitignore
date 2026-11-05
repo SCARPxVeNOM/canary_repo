@@ -1,7 +1,12 @@
-node_modules/
+node_modules
 dist/
+dist-*/
 dist-live/
-test/out/
+**/test/out/
+scanner/scans/
+scanner/canary-offline-dist/
 .DS_Store
 *.tgz
 .env
+__pycache__/
+.tor-bootstrap/
