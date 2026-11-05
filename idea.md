@@ -19,6 +19,7 @@ ETHGlobal Mumbai 2026 · team working doc · v2 · 5 Nov 2026 (updated after the
 - **Our edge:** no fork + declared vs observed + enforcement + measured coverage. Each piece exists somewhere already; nobody has built the full loop.
 - **Status (5 Nov, evening):** the core mechanism works. The spike in `canary-spike/` ran live over tor-js on the unmodified **app.ens.domains**: 8/8 of its RPC batches to its own keyed provider were answered via anon-rpc instead, and the page still worked (1.3–2.8 s per batch). Details: test-repo.md §10.
 - **Part 1 (enforcement extension) is built:** `extension/`. It covers fetch, XHR, WebSocket and sendBeacon, blocks third-party requests carrying your address, fails closed, and has a coverage popup. Its end-to-end test passes 24/24 (`extension/README.md`).
+- **Canary for agents is built too (6 Nov):** gateway, SDK, ENSv2 records and two example agents in `packages/` and `examples/`, sharing `@canary/core` with the extension. 61 tests pass on the passthrough worker and mock ENSv2 contracts; not yet run live over tor-js or on ENS's Sepolia deployment. Status and differences from the plan: agent-sdk.md §0.
 - **Biggest remaining risk:** scope, not feasibility. The scanner and the ENSv2 Sepolia setup are now the unknowns; start both at hour 0.
 - **Before hacking starts:** take the open questions in section 12 to the EF and ENS mentors (EF's anon-rpc workshop was 5:00 PM IST, Thu 5 Nov, Workshop Room 2).
 

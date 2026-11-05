@@ -1,0 +1,24 @@
+{
+  "name": "@canary/ens",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "license": "MIT",
+  "description": "ENSv2 side of Canary: read an agent's privacy.manifest, publish signed privacy.report records with a one-key role, detect revocation.",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": { ".": { "types": "./dist/index.d.ts", "default": "./dist/index.js" } },
+  "bin": { "canary-ens": "./dist/cli.js" },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "node --test --test-concurrency=1 \"test/*.test.mjs\""
+  },
+  "dependencies": {
+    "@canary/core": "0.1.0",
+    "viem": "^2.57.0"
+  },
+  "devDependencies": {
+    "ganache": "^7.9.2",
+    "solc": "^0.8.30"
+  }
+}

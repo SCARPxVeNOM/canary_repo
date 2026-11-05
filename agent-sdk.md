@@ -2,7 +2,7 @@
 
 **Wrap any autonomous agent so its chain reads go through anon-rpc, and its address doesn't leak to third parties without being declared.**
 
-Draft v1 · 5 Nov 2026 · brainstorm first, then the blueprint. v1 applies the review findings listed under "Changes in v1". Companion to [idea.md](idea.md) (the browser extension).
+Draft v1.1 · 6 Nov 2026 · brainstorm first, then the blueprint. v1 applies the review findings listed under "Changes in v1"; v1.1 adds what has been built (§0) and where the build differs from the plan. Companion to [idea.md](idea.md) (the browser extension).
 
 ---
 
@@ -27,6 +27,40 @@ Draft v1 · 5 Nov 2026 · brainstorm first, then the blueprint. v1 applies the r
 - **Node harness facts checked** against test-repo.md and npm (TL;DR, 3.1, §10).
 - **Gateway default port is 18545:** 8545 clashes with anvil and Hardhat.
 - **§9 decisions proposed; staffing for 2–4 people** (§6).
+
+---
+
+## 0. Implementation status (6 Nov 2026)
+
+Everything below is in `packages/` and `examples/`; each package README has the API and config reference. **Tests:** 61 pass (`npm test` at the repo root), plus the extension's 24/24 now that it runs on `@canary/core`. They run against EF's passthrough reference worker (hash-verified as on chain), local fixtures, and a local chain with mock ENSv2 contracts. **Not yet run live over tor-js, nor on ENS's Sepolia deployment.** Those are the first two things to do with a network.
+
+| Blueprint part | Where | Status |
+|---|---|---|
+| `@canary/core` (§5) | `packages/core` | done; the extension's `shared.ts` re-exports it |
+| Chromium AnonBackend + loopback bridge (§3.1) | `packages/gateway/src/backend/` | done: streaming in ≤256 KB frames with backpressure, abort, crash and boot-failure relaunch with backoff |
+| JSON-RPC endpoint (§3.2) | `packages/gateway/src/rpc.ts` | done: substitute / forward / local / refuse signing / fail closed; batches split per wallet; `eth_getCode` cache; write modes; timing jitter |
+| HTTP(S) proxy (§3.3) | `packages/gateway/src/http.ts` | done: host rules, CONNECT direct/block, undeclared handling |
+| MITM CA (option C) | `packages/gateway/src/mitm.ts` | done, opt-in: `canary-gateway ca`, per-host certs, passthrough list, bundle for Python/curl |
+| SDK (§3.4) | `packages/agent` | done: `viemTransport`, `ethersProvider`, `fetch`, `llmFetch`/`wrapLLM`, `wrapTools`, events, report, embedded mode |
+| Ledger, signed report, coarse form (§3.5) | `packages/gateway/src/ledger.ts`, `report.ts` | done |
+| ENSv2: manifest as policy, report role, revocation (§4) | `packages/ens`, `packages/gateway/src/ens.ts` | done against mocks: policy read over anon-rpc and re-read live, signed `privacy.report` published over anon-rpc, revocation detected, `canary-ens` CLI |
+| Demo agent with leaky mode, Python agent (§6, §7) | `examples/viem-agent`, `examples/python-agent` | done; Python tested end to end |
+| AgentKit / Eliza / LangChain adapters, verifier role, Sepolia swap | — | not built |
+
+**Where the build differs from the plan:**
+
+1. **ENSv2 delegation API.** The ENS docs currently describe two ways to delegate one text key:
+   - `authorizeTextRoles(name, key, account, grant)` in the Permissioned Resolver guide;
+   - `grantSetterRoles(setterCalldata, account)` / `revokeRoles` in the contracts reference.
+
+   `@canary/ens` tries both and uses the one the resolver accepts. It detects revocation by simulating `setText` from the report key, which doesn't depend on either API. Both variants are tested.
+2. **`reporter` in the manifest.** The manifest declares the report key's address, so a reader can check that the report's signer is the declared reporter, and that the reporter still has the role.
+3. **What `privacy.report` holds.** It holds the coarse report itself plus an EIP-712 signature over it, not only a hash and URI. Readers can verify it without fetching anything. `reportHash` commits to the full report, and `evidenceUri` is optional.
+4. **One policy engine.** The SDK sends non-RPC requests through the gateway's `/canary/fetch`, so the policy is enforced in one place (with bodies visible), not re-implemented in the SDK.
+5. **Precedence.** A local manifest overrides ENS when both are configured; ENS is then used for reports only. Until an ENS manifest loads, undeclared hosts are blocked (fail closed).
+6. **Small API changes.** `ethersProvider(chainId)` is async (ethers is an optional dependency). Hashes become `HASH_n`. Raw SSE streams are not restored in place (see §3.4).
+7. **Not built from §3:** coalescing of separate RPC requests (clients batch instead), the `roundAmounts` pseudonymizer option, and the framework-level `canary.wrap()` adapters.
+8. **Sandboxes that set `HTTPS_PROXY`** need Chromium's `--no-proxy-server`, or Chrome sends the anon backend's traffic through that proxy. The test fixtures pass it.
 
 ---
 
@@ -141,7 +175,7 @@ The same policy as the extension, from `@canary/core`:
   - `anon` (default): via anon-rpc to a public RPC, so the IP is hidden;
   - `private`: to a private relay over the anon path;
   - `direct`: declared in the manifest, counted as Direct.
-- **Batching and caching:** cache `eth_chainId` / `eth_getCode`; batch reads that arrive within a few ms. This matters more for agents that poll.
+- **Batching and caching:** `eth_chainId` is answered locally and `eth_getCode` cached (built). Coalescing separate requests that arrive within a few ms is **not built**: use the client's own batching (`canary.viemTransport({ batch: true })`), which the gateway splits per wallet.
 - **Per-wallet isolation:** `isolationKey = "addr:<address>"` for every request that contains one of the agent's addresses. Two wallets of the same operator should not look linked at the exit.
   - A JSON-RPC batch touching more than one agent address is split per address and reassembled in order.
   - A single call that contains two agent addresses (e.g. one Multicall `eth_call`) can't be split. It goes with the first address's key, and the report notes it as linking wallets. The SDK's viem transport can avoid this by not batching Multicalls across wallets.
@@ -169,24 +203,25 @@ Many APIs (Cloudflare-fronted ones, some LLM providers) refuse or challenge Tor 
 import { createCanary } from "@canary/agent";
 
 const canary = await createCanary({
-  gateway: "http://127.0.0.1:18545",      // or { embedded: true } to run the gateway in-process
-  agent: "trader-01.agents.canary.eth",  // ENSv2 name: policy is read from its manifest
-  wallets: [account.address],            // the agent's addresses (or learned from signers)
-});
+  gateway: "http://127.0.0.1:18545",      // or embedded: <gateway config> to run the gateway in-process
+  wallets: [account.address],            // the agent's addresses
+});                                       // the policy comes from the gateway (its manifest, local or from the agent's ENS name)
 
 // 1. viem / ethers: one line
 const client = createPublicClient({ chain: mainnet, transport: canary.viemTransport() });
-const provider = canary.ethersProvider();
+const provider = await canary.ethersProvider(1);
 
 // 2. everything else that uses fetch
 globalThis.fetch = canary.fetch;          // or pass canary.fetch to SDKs that accept one
                                           // (canary.fetch keeps the original fetch; wrapLLM's calls are tagged so they aren't handled twice)
 
 // 3. LLM calls: addresses never reach the provider
-const llm = canary.wrapLLM(openaiClient);  // Anthropic, OpenAI, Vercel AI SDK adapters
+const llm = canary.wrapLLM(openaiClient);  // any client with a fetch: OpenAI, Anthropic SDKs; Vercel AI SDK: createOpenAI({ fetch: canary.llmFetch })
 
-// 4. or wrap a whole framework agent
-const agent = canary.wrap(agentKitAgent);  // AgentKit / Eliza / LangChain adapters
+// 4. tool calls: real addresses back before a tool runs
+const safeTools = canary.wrapTools(tools);
+
+// (planned, not built: canary.wrap(agentKitAgent) for AgentKit / Eliza / LangChain)
 
 canary.on("egress", (e) => log(e));        // every decision, live
 const report = await canary.report();      // coverage + signed egress report
@@ -195,7 +230,7 @@ const report = await canary.report();      // coverage + signed egress report
 **Prompt pseudonymizer (`wrapLLM`):**
 - Before a request leaves, every agent address (and any address it has seen on chain) is replaced with a stable ASCII alias: `0x5Ca1…FfEe` → `WALLET_1`, another counterparty → `ADDR_7`. (Not `⟨wallet:1⟩`: models often mangle unusual brackets.)
 - Also replaced: the agent's own ENS name(s) → `AGENT_NAME`, and 32-byte hashes (mostly the agent's own transaction hashes) → `HASH_3`.
-- Not replaced, and declared in coverage: amounts and balances. An exact balance can identify a wallet; an optional `roundAmounts` mode is off by default because it changes what the model reasons about.
+- Not replaced (a documented gap): amounts and balances, and addresses inside longer hex blobs such as calldata. An exact balance can identify a wallet; a `roundAmounts` option is planned, not built, and would be off by default because it changes what the model reasons about.
 - Well-known contracts the model needs to reason about (USDC, WETH, the Uniswap routers) are allow-listed and pass through unchanged.
 - On the response, aliases in text and tool calls are mapped back before the agent acts:
   - text-delta streams go through `restoreTextStream()`, which holds back a partial alias split across chunks. Raw SSE/JSON streams can't be restored in place (an alias can be split across events), so for streamed responses tool arguments are restored by `wrapTools()` and the final text by `restore()`;
@@ -214,7 +249,7 @@ The extension's categories (`Protected`, `Protected (IP only)`, `Blocked`, `Dete
 - **`Pseudonymized`**: addresses replaced before reaching an LLM or tool;
 - **`Undeclared`**: egress to a host not in the manifest.
 
-Every N minutes (or on demand), the gateway builds an **egress report**:
+On demand (`GET /canary/report`), and when it publishes (daily by default, or `POST /canary/publish`), the gateway builds an **egress report**:
 
 ```json
 { "agent": "trader-01.agents.canary.eth", "policyHash": "0x…", "gatewayVersion": "0.1.0",
@@ -240,13 +275,13 @@ Wording rules from idea.md §4 apply: never "private" or "leak-free"; always "ob
 
 | Record on `trader-01.agents.canary.eth` | Written by | Content |
 |---|---|---|
-| `privacy.manifest` | operator | the policy: per-host rules (`anon`/`direct`/`block`), RPC write mode, strict mode, latency tradeoffs |
-| `privacy.report` | the gateway's report key (one-key EAC role) | hash + URI of the latest signed egress report (daily or on demand, coarse; see 3.5) |
+| `privacy.manifest` | operator | the policy: per-host rules (`anon`/`direct`/`block`), undeclared handling, RPC write mode, the `reporter` address (schema: `packages/core/README.md`) |
+| `privacy.report` | the gateway's report key (one-key EAC role) | the coarse report plus its EIP-712 signature, with `reportHash` committing to the full report (daily or on demand; see 3.5 and `packages/ens/README.md`) |
 | `privacy.verdict.<verifier>` | independent verifier (one-key EAC role) | verifier's signed opinion, as in idea.md §3.3 |
 | `addr` | operator | the agent's wallet(s), or deliberately absent |
 
 **Why this beats the dapp version:**
-- **The manifest is enforced, not just compared.** The SDK loads its policy from the agent's own name and refuses anything outside it. Changing the policy is an onchain, versioned event.
+- **The manifest is enforced, not just compared.** The gateway loads its policy from the agent's own name (over anon-rpc), re-reads it, and refuses anything outside it. Changing the policy is an onchain, versioned event, and it applies live.
 - **One-key delegation fits naturally.** The operator grants the gateway's report key only `privacy.report`, and a verifier only its own key. That's the brief's own example: "letting an account edit only certain text records on a name".
 - **Fleets are natural:**
   - `agents.canary.eth` as a subname registry (one subname per agent);
@@ -260,16 +295,18 @@ Optional: whether `addr` is set on the agent's name is itself a privacy choice. 
 
 ## 5. Repo layout (monorepo)
 
+As built (npm workspaces at the repo root):
+
 ```
 packages/
-  core/        ← extension/src/shared.ts, generalized (classifier, address matching, chain detection, categories, policy types)
-  extension/   ← today's extension/, importing @canary/core
-  gateway/     ← Node: JSON-RPC endpoint, HTTP(S) proxy, policy, ledger, reports, AnonBackend (chromium | node)
-  agent/       ← @canary/agent: createCanary, viemTransport, ethersProvider, fetch, wrapLLM, adapters
-  ens/         ← manifest/report schemas, EIP-712 signer, ENSv2 reader/writer (shared with the extension's verdicts)
+  core/        ← @canary/core: classifier, address matching, chain detection, categories, manifest
+  ens/         ← @canary/ens: manifest/report records, coarse-report signing, one-key role, revocation, canary-ens CLI
+  gateway/     ← @canary/gateway: AnonBackend (chromium), JSON-RPC endpoint, HTTP(S) proxy, MITM CA, ledger, reports, ENS binding, canary-gateway CLI
+  agent/       ← @canary/agent: createCanary, viemTransport, ethersProvider, fetch, llmFetch/wrapLLM, wrapTools
+extension/     ← unchanged location; src/shared.ts re-exports @canary/core (bundled by esbuild)
 examples/
-  agentkit-trader/   ← a small agent: reads pool state, asks an LLM, swaps on Sepolia
-  python-agent/      ← same idea via the Gateway only (RPC URL + HTTPS_PROXY)
+  viem-agent/    ← Sepolia agent: reads balances, asks an LLM; --leaky for the before/after; local or ENS policy
+  python-agent/  ← same idea via the gateway only (RPC_URL + HTTPS_PROXY), standard library
 ```
 
 ---
@@ -277,6 +314,12 @@ examples/
 ## 6. Hackathon build plan (agent track, on top of what's done)
 
 The extension is done. This replaces the scanner work in idea.md §6 if we choose to pivot (see §9).
+
+**Progress (6 Nov):** every cell below is built and tested (§0) except these:
+- live tor-js and ENS Sepolia runs (hour-3 checkpoints);
+- the Sepolia swap;
+- the AgentKit adapter;
+- the verifier role.
 
 | Hours | Gateway + backend | SDK | ENSv2 | Demo agent |
 |---|---|---|---|---|
@@ -352,5 +395,6 @@ The extension is done. This replaces the scanner work in idea.md §6 if we choos
 - Can we run our own KPS gateway?
 
 **ENS:**
+- Which one-key delegation API is deployed on Sepolia: `authorizeTextRoles(name, key, account, grant)` or `grantSetterRoles(setter, account)` / `revokeRoles`? (`@canary/ens` handles both; we want to demo the live one.) Which Universal Resolver address should clients use?
 - Fastest path to a subname registry under one name on Sepolia, with a Permissioned Resolver per subname?
 - Can a one-key text role be granted per subname rather than per resolver instance?

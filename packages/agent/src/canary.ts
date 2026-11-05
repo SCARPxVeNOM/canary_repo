@@ -2,6 +2,7 @@
 
    const canary = await createCanary({ gateway: "http://127.0.0.1:18545", wallets: [account.address] });
    const client = createPublicClient({ chain: sepolia, transport: canary.viemTransport() });
+   const provider = await canary.ethersProvider(11155111);  // ethers v6, if you use it
    globalThis.fetch = canary.fetch;                      // or pass canary.fetch to SDKs that take one
    const openai = new OpenAI({ fetch: canary.llmFetch }); // or canary.wrapLLM(existingClient)
    const tools = canary.wrapTools(myTools);              // restores aliases in tool-call arguments
@@ -123,6 +124,19 @@ export async function createCanary(opts: CanaryOptions = {}) {
         // Don't batch across wallets: the gateway splits batches per wallet anyway.
         return http(`${gateway}/${chainId}`, { fetchFn: realFetch, ...config })(params);
       } as ReturnType<typeof http>;
+    },
+
+    /** An ethers v6 provider whose every call goes to the gateway (ethers is an optional peer dependency). */
+    async ethersProvider(chainId?: number): Promise<import("ethers").JsonRpcProvider> {
+      const id = chainId ?? opts.chainId;
+      if (id === undefined) throw new Error("canary.ethersProvider(): pass a chainId (or createCanary({ chainId }))");
+      let ethers: typeof import("ethers");
+      try {
+        ethers = await import("ethers");
+      } catch {
+        throw new Error('canary.ethersProvider() needs "ethers" v6 installed');
+      }
+      return new ethers.JsonRpcProvider(`${gateway}/${id}`, ethers.Network.from(id), { staticNetwork: true });
     },
 
     /** Point an existing OpenAI/Anthropic-style client's fetch at llmFetch. */

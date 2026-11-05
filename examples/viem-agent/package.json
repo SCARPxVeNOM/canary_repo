@@ -4,11 +4,14 @@
   "type": "module",
   "scripts": {
     "gateway": "canary-gateway --config canary.config.json",
-    "agent": "node agent.mjs"
+    "gateway:ens": "canary-gateway --config canary.ens.config.json",
+    "agent": "node agent.mjs",
+    "agent:leaky": "node agent.mjs --leaky"
   },
   "dependencies": {
     "@canary/agent": "0.1.0",
     "@canary/gateway": "0.1.0",
-    "viem": "^2.57.0"
+    "viem": "^2.57.0",
+    "@canary/ens": "0.1.0"
   }
 }

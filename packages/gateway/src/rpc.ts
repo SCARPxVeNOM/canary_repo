@@ -39,6 +39,8 @@ export type RpcContext = {
   timeoutMs: number;
   codeCacheMs: number;
   codeCache: Map<string, { at: number; result: unknown }>;
+  /** random 0..jitterMs delay before substituted reads (blurs polling schedules) */
+  jitterMs?: number;
 };
 
 type Route = { via: "anon" | "direct"; url: string; category: Category; note?: string };
@@ -118,6 +120,7 @@ export async function handleRpc(ctx: RpcContext, chainId: string, text: string):
       const route = group[0]!.route!;
       // Our own ids, so answers map back even if the agent reused ids across groups.
       const wire = group.map((p, j) => ({ ...p.call, jsonrpc: "2.0" as const, id: j + 1 }));
+      if (ctx.jitterMs && route.category === "protected") await new Promise((r) => setTimeout(r, Math.random() * ctx.jitterMs!));
       const t0 = Date.now();
       let answers: RpcResponse[] | undefined;
       let failure: string | undefined;

@@ -41,6 +41,8 @@ test("manifest: defaults, validation, host rules", () => {
   assert.throws(() => parseManifest({ v: 2, hosts: {} }), /manifest\.v/);
   assert.throws(() => parseManifest({ v: 1, hosts: { "a.com": "maybe" } }), /a\.com/);
   assert.throws(() => parseManifest({ v: 1, hosts: {}, llm: { allow: ["0x12"] } }), /llm\.allow/);
+  assert.throws(() => parseManifest({ v: 1, hosts: {}, reporter: "nope" }), /reporter/);
+  assert.equal(parseManifest({ v: 1, hosts: {}, reporter: "0x70997970C51812dc3A010C7d01b50e0d17dc79C8" }).reporter, "0x70997970C51812dc3A010C7d01b50e0d17dc79C8");
 });
 
 test("canonicalJson is key-order independent", () => {

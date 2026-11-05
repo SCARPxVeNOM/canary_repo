@@ -9,6 +9,7 @@
 import { keccak256, recoverTypedDataAddress, toBytes, type Hex } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { canonicalJson } from "@canary/core";
+import type { CoarseReport } from "@canary/ens";
 import type { Ledger } from "./ledger.js";
 
 export const GATEWAY_VERSION = "0.1.0";
@@ -38,7 +39,7 @@ const TYPES = {
   ],
 } as const;
 
-export const policyHashOf = (manifest: unknown): Hex => keccak256(toBytes(canonicalJson(manifest)));
+export { policyHashOf } from "@canary/ens";
 
 export function buildReport(ledger: Ledger, agent: string, policyHash: Hex): Report {
   return {
@@ -85,15 +86,15 @@ const bucket = (n: number) => (n === 0 ? "0" : n < 100 ? "1-99" : n < 1000 ? "10
 const pct5 = (num: number, den: number) => (den === 0 ? undefined : Math.floor((100 * num) / den / 5) * 5);
 const DAY = 86400;
 
-/** The form that goes in the agent's ENS `privacy.report` record. */
-export function coarseReport(s: SignedReport) {
+/** The form that goes in the agent's ENS `privacy.report` record (signed separately, see @canary/ens). */
+export function coarseReport(s: SignedReport, evidenceUri?: string): CoarseReport {
   const r = s.report;
   const rpcAnon = r.rpc.protected + r.rpc.ipOnly;
   return {
     agent: r.agent,
     policyHash: r.policyHash,
     reportHash: s.reportHash,
-    days: [Math.floor(r.window[0] / DAY) * DAY, Math.ceil(r.window[1] / DAY) * DAY],
+    days: [Math.floor(r.window[0] / DAY) * DAY, Math.ceil(r.window[1] / DAY) * DAY] as [number, number],
     rpcViaAnonPct: pct5(rpcAnon, r.rpc.total),
     rpcVolume: bucket(r.rpc.total),
     failedClosed: bucket(r.rpc.failedClosed + r.http.failedClosed),
@@ -101,5 +102,6 @@ export function coarseReport(s: SignedReport) {
     undeclared: bucket(r.http.undeclared),
     notInspected: bucket(r.http.notInspected),
     llmAddressesPseudonymized: bucket(r.llm.addressesPseudonymized),
+    ...(evidenceUri ? { evidenceUri } : {}),
   };
 }

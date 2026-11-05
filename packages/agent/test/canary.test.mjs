@@ -45,6 +45,17 @@ test("viem: one line, and reads go through anon-rpc to the read endpoint", async
   assert.ok(fx.logs.read.every((l) => l.origin === "null"));
 });
 
+test("ethers: the provider talks to the gateway, reads go through anon-rpc", async () => {
+  fx.reset();
+  const provider = await canary.ethersProvider(CHAIN_ID);
+  assert.equal(await provider.getBalance(W1.toLowerCase()), 2n);
+  assert.equal(await provider.getBlockNumber(), 0x222);
+  assert.equal((await provider.getNetwork()).chainId, BigInt(CHAIN_ID));
+  assert.ok(fx.logs.read.length >= 2 && fx.logs.read.every((l) => l.origin === "null"));
+  await assert.rejects(canary.ethersProvider(), /chainId/);
+  provider.destroy();
+});
+
 test("canary.fetch: anon hosts via anon-rpc, undeclared hosts refused", async () => {
   fx.reset();
   const r = await canary.fetch(fx.url("anon-api.test", "/price?for=" + W1));

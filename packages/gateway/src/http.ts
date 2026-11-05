@@ -4,7 +4,8 @@
    Per destination host, from the manifest:
      anon    → worker.fetch (Tor exit). Needs the request in the clear: the SDK
                route, plain HTTP through the proxy, or HTTPS with the MITM CA
-               (not built yet). An `anon` HTTPS host through CONNECT is blocked.
+               (mitm.ts, opt-in). Without the CA, an `anon` HTTPS host through
+               CONNECT is blocked.
      direct  → sent normally. Declared, counted.
      block   → refused.
      (none)  → manifest.undeclared: "block" (default) refuses; "report" sends
@@ -13,6 +14,8 @@
 
 import { createServer, type IncomingMessage, type Server } from "node:http";
 import { connect, type Socket } from "node:net";
+import { TLSSocket } from "node:tls";
+import type { Mitm } from "./mitm.js";
 import { findAddress, isolationKeyFor, ruleFor, type AddressNeedles, type Category, type Channel, type Manifest } from "@canary/core";
 import type { AnonBackend } from "./backend/types.js";
 import type { Ledger } from "./ledger.js";
@@ -117,7 +120,17 @@ export async function writeResponse(res: import("node:http").ServerResponse, r: 
 }
 
 /** The HTTP(S) proxy agents point HTTPS_PROXY / HTTP_PROXY at. */
-export function startProxy(ctx: HttpContext, port: number, hostname = "127.0.0.1"): Promise<Server> {
+export function startProxy(ctx: HttpContext, port: number, hostname = "127.0.0.1", mitm?: Mitm): Promise<Server> {
+  // Requests decrypted by the MITM CA arrive here, one TLS socket per CONNECT.
+  const targets = new WeakMap<object, { host: string; port: number }>();
+  const inner = createServer(async (req, res) => {
+    const t = targets.get(req.socket);
+    if (!t) return res.writeHead(500).end();
+    const url = `https://${t.host}${t.port === 443 ? "" : `:${t.port}`}${req.url ?? "/"}`;
+    const r = await sendHttp(ctx, { url, method: req.method ?? "GET", headers: headersFrom(req), ...(await readBody(req).then((b) => (b ? { body: b } : {}))) }, "proxy");
+    await writeResponse(res, r);
+  });
+
   const server = createServer(async (req, res) => {
     if (!req.url || !/^http:\/\//i.test(req.url)) {
       return res.writeHead(400, { "content-type": "text/plain" }).end("Canary proxy: send absolute-form http:// requests, or CONNECT for https.\n");
@@ -126,7 +139,12 @@ export function startProxy(ctx: HttpContext, port: number, hostname = "127.0.0.1
     await writeResponse(res, r);
   });
 
+  // CONNECT sockets leave the HTTP server's bookkeeping: track them so close() ends every tunnel.
+  const tunnels = new Set<Socket>();
+  const track = (s: Socket) => (tunnels.add(s), s.once("close", () => tunnels.delete(s)));
+
   server.on("connect", (req: IncomingMessage, client: Socket, head: Buffer) => {
+    track(client);
     const [h, p] = (req.url ?? "").split(":");
     const target = req.url ?? "";
     const rule = ruleFor(ctx.manifest, h ?? "");
@@ -135,8 +153,19 @@ export function startProxy(ctx: HttpContext, port: number, hostname = "127.0.0.1
       client.end(`HTTP/1.1 403 Forbidden\r\nx-canary-decision: blocked\r\nx-canary-reason: ${reason}\r\ncontent-length: 0\r\n\r\n`);
     };
     if (rule === "block") return deny("blocked by the manifest", "declared block");
-    if (rule === "anon") return deny("anon HTTPS needs the MITM CA (not enabled); use the SDK or declare this host direct", "anon over CONNECT needs the MITM CA");
     if (rule === undefined && ctx.manifest.undeclared === "block") return deny("not declared in the manifest", "undeclared");
+    if (mitm && !mitm.passthrough.has((h ?? "").toLowerCase())) {
+      // Terminate TLS with a certificate from Canary's CA; each request then gets the full policy.
+      client.write("HTTP/1.1 200 Connection Established\r\nx-canary-decision: inspected\r\n\r\n");
+      if (head?.length) client.unshift(head);
+      const tls = new TLSSocket(client, { isServer: true, secureContext: mitm.contextFor(h!), ALPNProtocols: ["http/1.1"] });
+      targets.set(tls, { host: h!, port: Number(p || 443) });
+      tls.on("error", () => client.destroy());
+      client.on("error", () => tls.destroy());
+      inner.emit("connection", tls);
+      return;
+    }
+    if (rule === "anon") return deny("anon HTTPS needs the MITM CA (not enabled); use the SDK or declare this host direct", "anon over CONNECT needs the MITM CA");
 
     const upstream = connect(Number(p || 443), h!, () => {
       client.write("HTTP/1.1 200 Connection Established\r\nx-canary-decision: " + (rule ?? "undeclared") + "\r\n\r\n");
@@ -144,11 +173,20 @@ export function startProxy(ctx: HttpContext, port: number, hostname = "127.0.0.1
       upstream.pipe(client);
       client.pipe(upstream);
     });
+    track(upstream);
     ctx.ledger.record({ category: rule === undefined ? "undeclared" : "direct", channel: "connect", host: target, note: "HTTPS body not inspected" });
     const kill = () => (upstream.destroy(), client.destroy());
     upstream.on("error", () => (client.writable && client.end("HTTP/1.1 502 Bad Gateway\r\ncontent-length: 0\r\n\r\n"), kill()));
     client.on("error", kill);
   });
 
+  // server.close() waits for every connection, tunnels included: end those first.
+  const close = server.close.bind(server);
+  server.close = ((cb?: (err?: Error) => void) => {
+    for (const s of tunnels) s.destroy();
+    inner.closeAllConnections();
+    inner.close();
+    return close(cb);
+  }) as typeof server.close;
   return new Promise((ok) => server.listen(port, hostname, () => ok(server)));
 }

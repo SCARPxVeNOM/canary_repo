@@ -235,3 +235,20 @@ test("report: EIP-712 signed by the report key, coarse form for ENS, rotate", as
   await gw.report({ rotate: true });
   assert.equal(gw.ledger.counts.rpc.total, 0);
 });
+
+test("timing jitter delays substituted reads (and only those)", async () => {
+  const g2 = await createGateway({ backend, port: 0, proxyPort: false, jitterMs: 300, chains: { [CHAIN_ID]: { read: fx.url("read.test") } } });
+  const time = async (method) => {
+    const t0 = Date.now();
+    await fetch(g2.rpcUrl(CHAIN_ID), { method: "POST", body: JSON.stringify(call(1, method)) });
+    return Date.now() - t0;
+  };
+  const reads = [];
+  for (let i = 0; i < 8; i++) reads.push(await time("eth_blockNumber"));
+  assert.ok(Math.max(...reads) - Math.min(...reads) > 50, `read latencies vary: ${reads}`);
+  const local = [];
+  for (let i = 0; i < 5; i++) local.push(await time("eth_chainId"));
+  assert.ok(Math.max(...local) < 100, `local answers are not delayed: ${local}`);
+  assert.equal((await (await fetch(g2.url + "/canary/status")).json()).jitterMs, 300);
+  await g2.close();
+});

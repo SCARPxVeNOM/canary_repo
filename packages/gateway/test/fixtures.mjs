@@ -122,7 +122,8 @@ export async function startFixtures() {
     state,
     reset: () => Object.values(logs).forEach((l) => (l.length = 0)),
     network: { id: "passthrough", label: "passthrough (test)", specifier: SPECIFIER, bootstrapRpc: url("chain.test") },
-    chromiumArgs: ["--host-resolver-rules=MAP *.test 127.0.0.1"],
+    // --no-proxy-server: sandboxes that set HTTPS_PROXY would otherwise send the fixtures through it
+    chromiumArgs: ["--host-resolver-rules=MAP *.test 127.0.0.1", "--no-proxy-server"],
     close: () => new Promise((r) => server.close(r)),
   };
 }

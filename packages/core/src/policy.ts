@@ -19,6 +19,8 @@ export type Manifest = {
     /** how eth_sendRawTransaction leaves: anon (public RPC over anon-rpc), private (relay over anon-rpc), direct */
     write: WriteMode;
   };
+  /** the gateway's report key address: the only account meant to write privacy.report (agent-sdk.md §4) */
+  reporter?: string;
   /** whether the agent's wallets are published on its name; a declaration, not enforced here */
   wallets?: "disclosed" | "undisclosed";
   llm?: {
@@ -46,6 +48,7 @@ export function parseManifest(input: string | unknown): Manifest {
   if (undeclared !== "block" && undeclared !== "report") throw new TypeError(`manifest.undeclared: expected block | report`);
   const write = m.rpc?.write ?? "anon";
   if (!["anon", "private", "direct"].includes(write)) throw new TypeError(`manifest.rpc.write: expected anon | private | direct`);
+  if (m.reporter !== undefined && !isAddress(m.reporter)) throw new TypeError("manifest.reporter: expected an address");
   const allow = m.llm?.allow ?? [];
   if (!Array.isArray(allow) || !allow.every(isAddress)) throw new TypeError("manifest.llm.allow: expected an array of addresses");
   return {
@@ -54,6 +57,7 @@ export function parseManifest(input: string | unknown): Manifest {
     hosts,
     undeclared,
     rpc: { write },
+    ...(m.reporter ? { reporter: m.reporter } : {}),
     ...(m.wallets === "disclosed" || m.wallets === "undisclosed" ? { wallets: m.wallets } : {}),
     ...(allow.length ? { llm: { allow: allow.map((a: string) => a.toLowerCase()) } } : {}),
   };

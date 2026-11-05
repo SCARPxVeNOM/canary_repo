@@ -58,6 +58,10 @@ offscreen document → null-origin sandbox → anon-rpc worker (tor-js) → KPS 
 | `timeoutMs` | per request over the anon path |
 | `matches`, `hostPermissions` | where the content scripts run |
 
+## Shared core
+
+`src/shared.ts` re-exports [`@canary/core`](../packages/core/) (JSON-RPC classifier, address matching, chain detection). The agent gateway and SDK use the same code; esbuild bundles it from source, so building the extension needs nothing outside `extension/`. The popup labels and the page-side `Observation` type stay here. After the switch the e2e still passes 24/24.
+
 ## Known gaps (next)
 
 - `eth_subscribe` and other WebSocket methods that can't be substituted go out as-is and are reported "detected".
