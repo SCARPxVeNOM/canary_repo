@@ -194,11 +194,11 @@ const report = await canary.report();      // coverage + signed egress report
 
 **Prompt pseudonymizer (`wrapLLM`):**
 - Before a request leaves, every agent address (and any address it has seen on chain) is replaced with a stable ASCII alias: `0x5Ca1…FfEe` → `WALLET_1`, another counterparty → `ADDR_7`. (Not `⟨wallet:1⟩`: models often mangle unusual brackets.)
-- Also replaced: the agent's own ENS name(s) → `AGENT_NAME`, and hashes of the agent's own transactions → `TX_3`.
+- Also replaced: the agent's own ENS name(s) → `AGENT_NAME`, and 32-byte hashes (mostly the agent's own transaction hashes) → `HASH_3`.
 - Not replaced, and declared in coverage: amounts and balances. An exact balance can identify a wallet; an optional `roundAmounts` mode is off by default because it changes what the model reasons about.
 - Well-known contracts the model needs to reason about (USDC, WETH, the Uniswap routers) are allow-listed and pass through unchanged.
 - On the response, aliases in text and tool calls are mapped back before the agent acts:
-  - streamed output is buffered so an alias split across chunks is restored whole;
+  - text-delta streams go through `restoreTextStream()`, which holds back a partial alias split across chunks. Raw SSE/JSON streams can't be restored in place (an alias can be split across events), so for streamed responses tool arguments are restored by `wrapTools()` and the final text by `restore()`;
   - tool-call arguments are restored before the framework validates them (tool schemas often regex-check `0x` addresses);
   - an alias with no mapping (the model invented `WALLET_9`) fails the tool call; it is never guessed.
 - The mapping lives only in memory, per session.

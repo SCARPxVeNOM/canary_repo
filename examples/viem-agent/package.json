@@ -1,0 +1,14 @@
+{
+  "name": "canary-example-viem-agent",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "gateway": "canary-gateway --config canary.config.json",
+    "agent": "node agent.mjs"
+  },
+  "dependencies": {
+    "@canary/agent": "0.1.0",
+    "@canary/gateway": "0.1.0",
+    "viem": "^2.57.0"
+  }
+}

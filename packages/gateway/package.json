@@ -1,0 +1,27 @@
+{
+  "name": "@canary/gateway",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "license": "MIT",
+  "description": "Canary Gateway: a local JSON-RPC endpoint and HTTP(S) proxy that sends an agent's chain reads through anon-rpc and enforces its privacy manifest.",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": { ".": { "types": "./dist/index.d.ts", "default": "./dist/index.js" } },
+  "bin": { "canary-gateway": "./dist/cli.js" },
+  "scripts": {
+    "build": "tsc -p tsconfig.json && node build-page.mjs",
+    "test": "node --test --test-concurrency=1 \"test/*.test.mjs\""
+  },
+  "dependencies": {
+    "@anon-rpc/browser-harness": "0.4.0",
+    "@canary/core": "0.1.0",
+    "playwright-core": "^1.56.0",
+    "viem": "^2.57.0",
+    "ws": "^8.18.0"
+  },
+  "devDependencies": {
+    "@noble/hashes": "^1.8.0",
+    "esbuild": "^0.28.0"
+  }
+}
