@@ -36,6 +36,8 @@ Everything below is in `packages/` and `examples/`; each package README has the 
 
 **Live over tor-js (test-repo.md round 4):** works when EF's demo KPS gateway lets circuits through. On 5 Nov, 18/19 live checks passed (reads ~0.9 s once warm; the only fail was a 180 s boot limit). On 6 Nov, one run reached its first read at ~229 s, and another got nothing through in 10 min. The bottleneck is the demo gateway ("limited capacity"), not Canary, which failed closed throughout. Readiness is now reported as `path.serving` from call outcomes, because tor-js signals `ready` minutes before it can carry a call. **ENS on Sepolia is not yet run live.**
 
+**Next:** run our own tor-js gateway (it's open source, in `ethereum/tor-js`) and repeat the live check: [own-gateway.md](own-gateway.md).
+
 | Blueprint part | Where | Status |
 |---|---|---|
 | `@canary/core` (§5) | `packages/core` | done; the extension's `shared.ts` re-exports it |
