@@ -9,7 +9,7 @@ let connected = false;
 
 async function siteConfig() {
   const r = await chrome.runtime.sendMessage({ type: "config", origin: location.origin, top: window === window.top });
-  return r as { enabled: boolean; addresses: string[] };
+  return r as { enabled: boolean; addresses: string[]; blockHosts: string[] };
 }
 
 window.addEventListener("message", (ev) => {

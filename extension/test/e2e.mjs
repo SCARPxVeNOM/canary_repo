@@ -6,8 +6,9 @@
 //   CHROME_BIN=/path/to/chromium node test/e2e.mjs
 //
 // Runs: (1) baseline without Canary, (2) with Canary, (3) read endpoint down →
-// fail closed, (4) same with "allow direct" on, (5) protection off for the site.
-// Saves a popup screenshot to test/out/popup.png.
+// fail closed, (4) same with "allow direct" on, (5) protection off for the site,
+// (6) undeclared recipient blocked on the site. Saves popup and dashboard
+// screenshots to test/out/.
 
 import { build } from "esbuild";
 import { chromium } from "playwright";
@@ -283,12 +284,32 @@ let tab;
   const pop = await c.ctx.newPage();
   await pop.setViewportSize({ width: 400, height: 900 });
   await pop.goto(`chrome-extension://${id}/popup.html?tabId=${tab.tabId}`);
-  await pop.waitForTimeout(800);
-  check("popup shows the verdict", (await pop.locator("#declared").innerText()).includes("Verdict by verifier.canary.eth (signed): undeclared recipients: tracker.test"), await pop.locator("#declared").innerText());
-  check("popup lists the undeclared tracker", (await pop.locator("#declaredRows").innerText()).includes("tracker.test\nnot declared"), await pop.locator("#declaredRows").innerText());
+  await pop.waitForTimeout(1200);
   await mkdir(resolve(HERE, "out"), { recursive: true });
-  await pop.screenshot({ path: resolve(HERE, "out/popup.png"), fullPage: true });
+  check("popup headline: reads go through anon-rpc", (await pop.locator("#headline").innerText()).includes("going through anon-rpc"), await pop.locator("#headline").innerText());
+  await pop.screenshot({ path: resolve(HERE, "out/popup.png") });
+  check("events recorded: a blocked request to tracker.test", tab?.events?.some((e) => e.category === "blocked" && e.host === "tracker.test"), tab?.events?.length);
+  await pop.getByRole("tab", { name: "Activity" }).click();
+  await pop.waitForTimeout(300);
+  check("popup Activity lists the blocked tracker request", (await pop.locator("body").innerText()).includes("tracker.test"));
+  await pop.screenshot({ path: resolve(HERE, "out/popup-activity.png") });
+  await pop.getByRole("tab", { name: "Manifest" }).click();
+  await pop.waitForTimeout(300);
+  check("popup shows the verdict", (await pop.locator("#declared").innerText()).includes("Signed verdict by verifier.canary.eth: Found undeclared recipients: tracker.test"), await pop.locator("#declared").innerText());
+  check("popup lists the undeclared tracker", /tracker\.test[\s\S]*Undeclared recipient/.test(await pop.locator("#declaredRows").innerText()), await pop.locator("#declaredRows").innerText());
+  await pop.screenshot({ path: resolve(HERE, "out/popup-manifest.png") });
   await pop.close();
+  const dash = await c.ctx.newPage();
+  await dash.setViewportSize({ width: 1280, height: 900 });
+  await dash.goto(`chrome-extension://${id}/dashboard.html?tabId=${tab.tabId}#manifest`);
+  await dash.waitForTimeout(1200);
+  check("dashboard manifest page flags tracker.test as undeclared", /not in the manifest[\s\S]*tracker\.test/.test(await dash.locator("main").innerText()));
+  await dash.screenshot({ path: resolve(HERE, "out/dashboard-manifest.png"), fullPage: true });
+  await dash.goto(`chrome-extension://${id}/dashboard.html?tabId=${tab.tabId}#overview`);
+  await dash.waitForTimeout(1200);
+  check("dashboard overview shows the coverage count", /\d+ of \d+\s*observed requests protected or blocked/.test(await dash.locator("main").innerText()));
+  await dash.screenshot({ path: resolve(HERE, "out/dashboard.png"), fullPage: true });
+  await dash.close();
   await page.close();
 }
 
@@ -328,6 +349,23 @@ console.log("\n5. Protection off for this site");
   check("everything behaves like baseline (reads to provider, tracker gets the address)", result.balance === "1" && reads(logs.provider).length > 0 && leaked(logs.tracker.filter((e) => !e.path.startsWith("/pixel"))).length >= 4, { result, tracker: logs.tracker.map((e) => e.path) });
   check("DNR pixel rule exempts the disabled site", result.trackerPixel === "loaded", result.trackerPixel);
   await page.close();
+}
+
+/* --- 6. undeclared recipient blocked ------------------------------------- */
+console.log("\n6. \"Block undeclared recipients\" on this site");
+{
+  reset();
+  await ext(c, { type: "setSite", origin: new URL(DAPP).origin, patch: { enabled: true } });
+  await ext(c, { type: "blockHosts", origin: new URL(DAPP).origin, hosts: ["tracker.test"] });
+  const { page, result } = await runPage(c.ctx);
+  const t = await tabStateOf(c.sw);
+  check("tracker received nothing at all, not even the clean pageview", logs.tracker.length === 0, logs.tracker.map((e) => e.path));
+  check("the dapp still works", result.balance === "2", result);
+  check("blocked as undeclared, and said so", t?.events?.some((e) => e.host === "tracker.test" && e.category === "blocked" && e.note?.includes("manifest")), t?.events?.filter((e) => e.host === "tracker.test"));
+  await page.close();
+  const ov = await ext(c, { type: "overview" });
+  check("earlier page loads kept in history", ov.history.filter((h) => h.origin.includes("leakydash")).length >= 3, ov.history.length);
+  await ext(c, { type: "unblockHost", origin: new URL(DAPP).origin, host: "tracker.test" });
 }
 
 await c.close();

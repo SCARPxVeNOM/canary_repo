@@ -4,9 +4,29 @@ Part 1 of Canary (idea.md §3.1). An MV3 extension that:
 
 1. **Answers a dapp's own RPC reads through anon-rpc.** Standard read methods are *substituted*: answered by Canary's read endpoint for the same chain, so the dapp's (often keyed) provider never sees them. Other methods are *forwarded* to the dapp's URL over the anon path (IP hidden, dapp still learned).
 2. **Blocks third-party requests that carry your address**, through fetch, XHR, `sendBeacon`, WebSocket frames, and (via `declarativeNetRequest`) any URL: pixels, scripts, iframes.
-3. **Measures coverage per page** using the categories in idea.md §4, and shows it in the popup.
+3. **Measures coverage per page** using the categories in idea.md §4, and shows it in the popup and the dashboard.
 
 The dapp itself can always see your address and IP. Canary is about third parties.
+
+## Popup and dashboard
+
+Both are React with [HeroUI](https://heroui.com) v3 components and Tailwind v4 (`src/ui/`), bundled by `build.mjs` into `popup.js`, `dashboard.js` and one `ui.css`. Fonts (Syne, Instrument Sans, JetBrains Mono) are packaged in `fonts/`; nothing is fetched.
+
+People get four outcomes instead of nine categories (`src/ui/model.ts`):
+
+| Outcome | Categories | Means |
+|---|---|---|
+| Protected | `protected` | answered over anon-rpc by Canary's read endpoint; the dapp's provider never got it |
+| Partial | `protectedIpOnly` | sent to the dapp's provider over anon-rpc: it saw the request, not your IP |
+| Blocked | `blocked`, `failedClosed` | stopped in the browser, or held back while anon-rpc was down |
+| Exposed | `detected`, `direct` | went out with your address in it, or from your IP |
+
+`notInspected` is shown apart ("not assumed safe"), and `backend` / `localNode` as requests that carried none of your addresses.
+
+- **Popup:** Overview (a one-line answer, "N of M observed requests protected or blocked", the bar), Activity (every request, latest first, with filter chips; each expands to one plain sentence and its technical evidence), Manifest (declared vs observed, the verifier's verdict, *Block undeclared recipients*).
+- **Dashboard** (`dashboard.html`, from *Open dashboard*): Overview with what Canary did on the page, Activity with sessions, technical evidence by destination, a before/after worked out from the session, and JSON export; the ENS manifest page; Settings.
+- **Block undeclared recipients** adds the hosts to the site's `blockHosts`: the shim refuses requests to them and a `declarativeNetRequest` rule catches the rest (pixels, scripts, frames), for that site only. Undone from the manifest page or Settings.
+- **History:** a page's numbers and its latest 150 observations are archived when the tab leaves the page or closes (`chrome.storage.local`, this device only, kept 1–90 days, default 30).
 
 ## Build and load
 
@@ -25,7 +45,7 @@ Default network is **tor-js** with EF's demonstration gateway. The first boot ta
 CHROME_BIN=/path/to/chromium npm test
 ```
 
-`test/e2e.mjs` loads the extension into Chromium against a deliberately leaky fixture dapp on six fake domains (`*.test`, mapped to 127.0.0.1). The worker is EF's passthrough reference bundle, hash-verified exactly as on chain. Five runs: baseline, with Canary, anon path down (fail closed), "allow direct" on, protection off. 32 checks, including LeakyDash's ENS manifest and verdict answered by a fake Universal Resolver on the read endpoint; latest output is in `test/e2e.log` and the popup screenshot in `test/out/popup.png`.
+`test/e2e.mjs` loads the extension into Chromium against a deliberately leaky fixture dapp on six fake domains (`*.test`, mapped to 127.0.0.1). The worker is EF's passthrough reference bundle, hash-verified exactly as on chain. Six runs: baseline, with Canary, anon path down (fail closed), "allow direct" on, protection off, undeclared recipient blocked. 41 checks, including LeakyDash's ENS manifest and verdict answered by a fake Universal Resolver on the read endpoint, and the popup's and dashboard's Overview, Activity and Manifest views; latest output is in `test/e2e.log` and screenshots in `test/out/`.
 
 Needs the full Chromium build or Chrome for Testing: branded Chrome 137+ ignores `--load-extension`, and Playwright's headless shell has no extension support. In sandboxes that set `HTTPS_PROXY`, the test passes `--no-proxy-server` so WebSockets reach the local server.
 

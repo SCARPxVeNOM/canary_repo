@@ -63,5 +63,5 @@ src/
   ui.tsx, format.ts  shared pieces, category labels and colours (same as the extension popup)
   placeholder.ts     all placeholder content
   types.ts           data shapes, mirrored from packages/
-  styles.css         palette from extension/static/popup.css
+  styles.css         palette from the extension UI (extension/src/ui/app.css)
 ```

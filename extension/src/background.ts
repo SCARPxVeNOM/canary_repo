@@ -42,8 +42,14 @@ const CFG = __CANARY_CONFIG__;
 
 /* --- settings (chrome.storage.local) ------------------------------------ */
 
-type Site = { enabled: boolean; allowDirect: boolean };
-const DEFAULT_SITE: Site = { enabled: true, allowDirect: false };
+/** Per site. blockHosts: recipients you blocked here (from "Block undeclared recipients"). */
+type Site = { enabled: boolean; allowDirect: boolean; blockHosts: string[] };
+const DEFAULT_SITE: Site = { enabled: true, allowDirect: false, blockHosts: [] };
+
+/** Global. Kept on this device only. */
+type Settings = { historyDays: number; theme: "system" | "light" | "dark" };
+const DEFAULT_SETTINGS: Settings = { historyDays: 30, theme: "system" };
+const getSettings = async (): Promise<Settings> => ({ ...DEFAULT_SETTINGS, ...(await local<Partial<Settings>>("settings", {})) });
 
 async function local<T>(key: string, fallback: T): Promise<T> {
   return ((await chrome.storage.local.get(key))[key] as T) ?? fallback;
@@ -96,9 +102,23 @@ async function syncBlockRules() {
       resourceTypes: ["sub_frame", "stylesheet", "script", "image", "font", "object", "xmlhttprequest", "ping", "media", "websocket", "other"],
     },
   }));
+  // Hosts you blocked on a site: any request that site's pages start to them.
+  const hostRules = Object.entries(sites)
+    .filter(([, s]) => s.blockHosts?.length)
+    .map(([o, s], i) => ({
+      id: 5000 + i,
+      priority: 2,
+      action: { type: "block" },
+      condition: {
+        requestDomains: s.blockHosts,
+        initiatorDomains: [new URL(o).hostname],
+        excludedTabIds: [-1],
+        resourceTypes: ["sub_frame", "stylesheet", "script", "image", "font", "object", "xmlhttprequest", "ping", "media", "websocket", "other"],
+      },
+    }));
   await chrome.declarativeNetRequest.updateSessionRules({
     removeRuleIds: existing.map((r: any) => r.id),
-    addRules: rules,
+    addRules: [...rules, ...hostRules],
   });
 }
 
@@ -111,7 +131,7 @@ chrome.declarativeNetRequest.onRuleMatchedDebug?.addListener((info: any) => {
   } catch {
     /* ignore */
   }
-  void record(req.tabId, { category: "blocked", channel: "url", host, firstParty: false });
+  void record(req.tabId, { category: "blocked", channel: "url", host, firstParty: false, note: info.rule?.ruleId >= 5000 ? "not in the site's manifest; you blocked it on this site" : "its URL carried your address" });
 });
 
 /* --- per-tab coverage (chrome.storage.session) --------------------------- */
@@ -138,13 +158,18 @@ export type TabState = {
   noRequest: number;
   /** the site's declared recipients (ENS privacy.manifest), for declared vs observed */
   declared?: Declared;
+  /** the latest observations, newest last (the counts above cover all of them) */
+  events: Ev[];
 };
+/** One observation as the Activity view shows it. n: how many JSON-RPC calls it covered. */
+export type Ev = Observation & { t: number; n: number };
+const MAX_EVENTS = 400;
 
 const emptyCounts = (): Record<Category, number> => ({
   protected: 0, protectedIpOnly: 0, blocked: 0, detected: 0, backend: 0, notInspected: 0, failedClosed: 0, direct: 0, localNode: 0,
 });
 const freshTab = (origin: string): TabState => ({
-  origin, since: Date.now(), counts: emptyCounts(), rpcCalls: 0, recipients: {}, latencies: [], notes: [], noRequest: 0,
+  origin, since: Date.now(), counts: emptyCounts(), rpcCalls: 0, recipients: {}, latencies: [], notes: [], noRequest: 0, events: [],
 });
 
 const tabs = new Map<number, TabState>();
@@ -173,7 +198,7 @@ function persist(tabId: number) {
   if (s) {
     const n = s.counts.protected + s.counts.protectedIpOnly;
     chrome.action.setBadgeText({ tabId, text: n ? String(n) : "" }).catch(() => {});
-    chrome.action.setBadgeBackgroundColor({ tabId, color: s.counts.failedClosed ? "#b45309" : "#15803d" }).catch(() => {});
+    chrome.action.setBadgeBackgroundColor({ tabId, color: s.counts.failedClosed ? "#865601" : "#0a6b72" }).catch(() => {});
   }
 }
 
@@ -189,13 +214,59 @@ async function record(tabId: number, o: Observation, calls = 1) {
   if (o.address) r.carriedAddress = true;
   if (o.ms !== undefined) s.latencies = [...s.latencies.slice(-199), o.ms];
   if (o.note && !s.notes.includes(o.note) && s.notes.length < 20) s.notes.push(o.note);
+  (s.events ??= []).push({ ...o, t: Date.now(), n: calls });
+  if (s.events.length > MAX_EVENTS) s.events.splice(0, s.events.length - MAX_EVENTS);
   persist(tabId);
 }
 
-chrome.tabs.onRemoved.addListener((tabId: number) => {
+chrome.tabs.onRemoved.addListener(async (tabId: number) => {
+  const s = await tabState(tabId);
+  if (s) await archive(s);
   tabs.delete(tabId);
   void chrome.storage.session.remove(`tab:${tabId}`);
 });
+
+/* --- history (chrome.storage.local, this device only) --------------------
+   A page's coverage is archived when the tab leaves it or closes, so the
+   dashboard can show earlier sessions. Pruned to the "keep history for" setting. */
+
+export type Session = TabState & { id: string; until: number };
+const MAX_SESSIONS = 60;
+const ARCHIVED_EVENTS = 150;
+
+const observed = (s: TabState) => Object.values(s.counts).some((n) => n > 0);
+
+async function archive(s: TabState) {
+  if (!observed(s) || !/^https?:/.test(s.origin)) return;
+  const { historyDays } = await getSettings();
+  const cutoff = Date.now() - historyDays * 86_400_000;
+  const history = (await local<Session[]>("history", [])).filter((h) => h.until >= cutoff);
+  const id = `${s.since.toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
+  history.unshift({ ...s, id, until: Date.now(), latencies: s.latencies.slice(-50), events: (s.events ?? []).slice(-ARCHIVED_EVENTS) });
+  await chrome.storage.local.set({ history: history.slice(0, MAX_SESSIONS) });
+}
+
+async function pruneHistory() {
+  const { historyDays } = await getSettings();
+  const cutoff = Date.now() - historyDays * 86_400_000;
+  const history = await local<Session[]>("history", []);
+  const kept = history.filter((h) => h.until >= cutoff);
+  if (kept.length !== history.length) await chrome.storage.local.set({ history: kept });
+}
+
+/** Open tabs Canary has numbers for, newest first. */
+async function liveTabs(): Promise<{ tabId: number; state: TabState }[]> {
+  const all = await chrome.storage.session.get(null);
+  const out: { tabId: number; state: TabState }[] = [];
+  for (const [k, v] of Object.entries(all)) {
+    if (!k.startsWith("tab:")) continue;
+    const tabId = Number(k.slice(4));
+    out.push({ tabId, state: tabs.get(tabId) ?? (v as TabState) });
+  }
+  return out.filter((t) => /^https?:/.test(t.state.origin)).sort((a, b) => b.state.since - a.state.since);
+}
+
+const summary = (s: TabState) => ({ origin: s.origin, since: s.since, counts: s.counts, ens: s.declared && "ens" in s.declared ? s.declared.ens : undefined });
 
 /* --- the anon-rpc worker ------------------------------------------------- */
 
@@ -582,6 +653,8 @@ chrome.runtime.onMessage.addListener((msg: any, sender: any, respond: (r: unknow
       case "config": {
         // A new top-level document: start this tab's coverage over.
         if (tabId !== undefined && sender.frameId === 0) {
+          const prev = await tabState(tabId);
+          if (prev) await archive(prev);
           tabs.set(tabId, freshTab(msg.origin));
           persist(tabId);
           void lookUpDeclared(tabId, msg.origin);
@@ -589,7 +662,10 @@ chrome.runtime.onMessage.addListener((msg: any, sender: any, respond: (r: unknow
           void getWorker().then(() => prewarmKnown(), () => {});
         }
         const site = await getSite(msg.origin);
-        return { enabled: site.enabled, addresses: (await getAddresses()).all };
+        // A frame inherits the blocks set on the page it's in.
+        const top = tabId !== undefined && sender.frameId !== 0 ? (await tabState(tabId))?.origin : undefined;
+        const blockHosts = [...new Set([...site.blockHosts, ...(top && top !== msg.origin ? (await getSite(top)).blockHosts : [])])];
+        return { enabled: site.enabled, addresses: (await getAddresses()).all, blockHosts };
       }
       case "rpc":
         return handleRpc(tabId ?? -1, msg.origin, msg.url, msg.body, msg.channel);
@@ -610,6 +686,7 @@ chrome.runtime.onMessage.addListener((msg: any, sender: any, respond: (r: unknow
       case "state": {
         const s = await tabState(msg.tabId);
         return {
+          settings: await getSettings(),
           worker: status,
           tab: s ?? null,
           site: s ? await getSite(s.origin) : null,
@@ -621,6 +698,56 @@ chrome.runtime.onMessage.addListener((msg: any, sender: any, respond: (r: unknow
       case "setSite":
         await setSite(msg.origin, msg.patch);
         return null;
+      // dashboard
+      case "overview": {
+        const settings = await getSettings();
+        return {
+          worker: status,
+          live: (await liveTabs()).map((t) => ({ key: `tab:${t.tabId}`, tabId: t.tabId, live: true, ...summary(t.state) })),
+          history: (await local<Session[]>("history", [])).map((h) => ({ key: `h:${h.id}`, live: false, until: h.until, ...summary(h) })),
+          settings,
+          sites: await getSites(),
+          addresses: await getAddresses(),
+          readEndpoints: CFG.readEndpoints,
+          network: CFG.network.label,
+          pipeline: pipeline.stats,
+        };
+      }
+      case "session": {
+        const key: string = msg.key;
+        if (key.startsWith("tab:")) {
+          const s = await tabState(Number(key.slice(4)));
+          return s ? { key, live: true, tabId: Number(key.slice(4)), state: s, site: await getSite(s.origin) } : null;
+        }
+        const h = (await local<Session[]>("history", [])).find((x) => `h:${x.id}` === key);
+        return h ? { key, live: false, state: h, site: await getSite(h.origin) } : null;
+      }
+      case "blockHosts": {
+        const site = await getSite(msg.origin);
+        await setSite(msg.origin, { blockHosts: [...new Set([...site.blockHosts, ...msg.hosts])] });
+        return null;
+      }
+      case "unblockHost": {
+        const site = await getSite(msg.origin);
+        await setSite(msg.origin, { blockHosts: site.blockHosts.filter((h: string) => h !== msg.host) });
+        return null;
+      }
+      case "setSettings": {
+        await chrome.storage.local.set({ settings: { ...(await getSettings()), ...msg.patch } });
+        await pruneHistory();
+        return null;
+      }
+      case "clearHistory":
+        await chrome.storage.local.set({ history: [] });
+        return null;
+      case "removeAddress": {
+        for (const k of ["walletAddresses", "manualAddresses"] as const) {
+          const cur = await local<string[]>(k, []);
+          await chrome.storage.local.set({ [k]: cur.filter((a) => a !== msg.address) });
+        }
+        await syncBlockRules();
+        return null;
+      }
       case "addAddress":
         if (/^0x[0-9a-fA-F]{40}$/.test(msg.address)) await addAddresses("manualAddresses", [msg.address]);
         return null;

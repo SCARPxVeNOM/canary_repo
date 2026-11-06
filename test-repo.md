@@ -567,7 +567,7 @@ Fresh clone of `main` at `83d52aa`, plus live runs in a real Chrome with the Can
 | `@canary/ens` (mock ENSv2) | 8/8 |
 | `@canary/gateway` (passthrough worker) | 39/39 |
 | `@canary/agent` | 13/13 |
-| `extension` unit + e2e | 20/20 + 32/32 checks |
+| `extension` unit + e2e | 20/20 + 41/41 checks |
 | `leakydash` | 4/4 |
 
 The root suite is 71 tests; the README says 61.

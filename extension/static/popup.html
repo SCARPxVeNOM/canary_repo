@@ -3,54 +3,10 @@
 <head>
   <meta charset="utf-8" />
   <title>Canary</title>
-  <link rel="stylesheet" href="popup.css" />
+  <link rel="stylesheet" href="ui.css" />
 </head>
 <body>
-  <header>
-    <div class="brand"><span class="bird" aria-hidden="true">◆</span> Canary</div>
-    <div id="worker" class="pill">…</div>
-  </header>
-
-  <section id="site">
-    <div id="origin" class="origin">—</div>
-    <label class="row"><input type="checkbox" id="enabled" /> Protect this site <span class="muted">(reload the page to apply)</span></label>
-    <label class="row sub"><input type="checkbox" id="allowDirect" /> If the anon path is down, send directly from my IP</label>
-  </section>
-
-  <section>
-    <h2>Coverage on this page</h2>
-    <div id="headline" class="headline">—</div>
-    <table id="counts" class="counts"></table>
-    <div id="latency" class="muted"></div>
-  </section>
-
-  <section>
-    <h2>Declared vs observed</h2>
-    <div id="declared" class="muted">—</div>
-    <table id="declaredRows" class="recipients"></table>
-  </section>
-
-  <section>
-    <h2>Requests by destination</h2>
-    <p class="muted" style="margin:0 0 4px">What the page tried to send, and what Canary did with it.</p>
-    <table id="recipients" class="recipients"></table>
-  </section>
-
-  <section id="notesSec" hidden>
-    <h2>Notes</h2>
-    <ul id="notes"></ul>
-  </section>
-
-  <section>
-    <h2>Your addresses</h2>
-    <ul id="addresses" class="mono"></ul>
-    <form id="addForm"><input id="addInput" class="mono" placeholder="0x… add an address to watch" /><button>Add</button></form>
-  </section>
-
-  <footer>
-    <p><strong>This dapp can always see your address and your IP.</strong> Canary keeps them from third parties: RPC providers, analytics, trackers.</p>
-    <p class="muted">Not inspected: service workers, WebRTC, binary bodies, hashed or encrypted payloads. "Nothing observed" is not "nothing sent".</p>
-  </footer>
+  <div id="root"></div>
   <script src="popup.js"></script>
 </body>
 </html>

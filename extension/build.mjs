@@ -7,6 +7,8 @@
 // build (see the harness README: a stale copy fails silently otherwise).
 
 import { build } from "esbuild";
+import { compile, optimize } from "@tailwindcss/node";
+import { Scanner } from "@tailwindcss/oxide";
 import { cp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { createRequire } from "node:module";
 import { dirname, resolve } from "node:path";
@@ -53,10 +55,18 @@ export async function buildExtension(cfg, out) {
   }
   const common = { bundle: true, platform: "browser", target: "es2022", logLevel: "warning", sourcemap: "linked", plugins: [sharedPackages] };
   await build({ ...common, format: "esm", entryPoints: [resolve(HERE, "src/background.ts")], outfile: resolve(out, "background.js"), define: { __CANARY_CONFIG__: JSON.stringify(runtime) } });
-  for (const name of ["shim", "bridge", "popup"]) {
+  for (const name of ["shim", "bridge"]) {
     await build({ ...common, format: "iife", entryPoints: [resolve(HERE, `src/${name}.ts`)], outfile: resolve(out, `${name}.js`) });
   }
-  for (const f of ["popup.html", "popup.css"]) await cp(resolve(HERE, "static", f), resolve(out, f));
+  // The popup and the dashboard: React + HeroUI, one stylesheet for both.
+  for (const name of ["popup", "dashboard"]) {
+    await build({
+      ...common, format: "iife", entryPoints: [resolve(HERE, `src/ui/${name}.tsx`)], outfile: resolve(out, `${name}.js`),
+      jsx: "automatic", minify: true, sourcemap: false, define: { "process.env.NODE_ENV": '"production"' },
+    });
+    await cp(resolve(HERE, "static", `${name}.html`), resolve(out, `${name}.html`));
+  }
+  await buildCss(out);
 
   const manifest = {
     manifest_version: 3,
@@ -80,6 +90,23 @@ export async function buildExtension(cfg, out) {
   };
   await writeFile(resolve(out, "manifest.json"), JSON.stringify(manifest, null, 2) + "\n");
   return out;
+}
+
+/** Tailwind v4 + HeroUI styles → ui.css, and the three packaged fonts. */
+async function buildCss(out) {
+  const entry = resolve(HERE, "src/ui/app.css");
+  const base = dirname(entry);
+  const compiler = await compile(await readFile(entry, "utf8"), { base, onDependency: () => {} });
+  const root = compiler.root === "none" ? [] : compiler.root === null ? [{ base, pattern: "**/*", negated: false }] : [{ ...compiler.root, negated: false }];
+  const css = compiler.build(new Scanner({ sources: [...root, ...compiler.sources] }).scan());
+  await writeFile(resolve(out, "ui.css"), optimize(css, { minify: true }).code);
+  await mkdir(resolve(out, "fonts"), { recursive: true });
+  const fonts = {
+    "instrument-sans.woff2": "@fontsource-variable/instrument-sans/files/instrument-sans-latin-standard-normal.woff2",
+    "syne.woff2": "@fontsource-variable/syne/files/syne-latin-wght-normal.woff2",
+    "jetbrains-mono.woff2": "@fontsource-variable/jetbrains-mono/files/jetbrains-mono-latin-wght-normal.woff2",
+  };
+  for (const [name, file] of Object.entries(fonts)) await cp(resolve(HERE, "node_modules", file), resolve(out, "fonts", name));
 }
 
 /**

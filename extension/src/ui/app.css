@@ -1,0 +1,171 @@
+/* Canary's look: HeroUI v3 components on Canary's palette.
+   Fonts are packaged with the extension (static/fonts), never fetched. */
+
+@import "@heroui/styles";
+@source "./";
+
+@font-face {
+  font-family: "Instrument Sans";
+  src: url("fonts/instrument-sans.woff2") format("woff2-variations");
+  font-weight: 400 700;
+  font-stretch: 75% 100%;
+  font-display: block;
+}
+@font-face {
+  font-family: "Syne";
+  src: url("fonts/syne.woff2") format("woff2-variations");
+  font-weight: 400 800;
+  font-display: block;
+}
+@font-face {
+  font-family: "JetBrains Mono";
+  src: url("fonts/jetbrains-mono.woff2") format("woff2-variations");
+  font-weight: 100 800;
+  font-display: block;
+}
+
+@theme {
+  --font-sans: "Instrument Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Syne", "Instrument Sans", ui-sans-serif, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  /* the four outcomes */
+  --color-protect: var(--c-protect);
+  --color-protect-soft: var(--c-protect-soft);
+  --color-partial: var(--c-partial);
+  --color-partial-soft: var(--c-partial-soft);
+  --color-block: var(--c-block);
+  --color-block-soft: var(--c-block-soft);
+  --color-expose: var(--c-expose);
+  --color-expose-soft: var(--c-expose-soft);
+  --color-ink: var(--foreground);
+  --color-ink-2: var(--c-ink-2);
+  --color-line: var(--border);
+  --color-wash: var(--c-wash);
+  --color-inset: var(--c-inset);
+}
+
+:root,
+.light,
+[data-theme="light"] {
+  color-scheme: light;
+  --background: #f5fafd;
+  --foreground: #112a33;
+  --c-ink-2: #485d64;
+  --muted: #6b8089;
+  --surface: #ffffff;
+  --surface-foreground: var(--foreground);
+  --surface-secondary: #eaf2f5;
+  --surface-tertiary: #e1ecf0;
+  --overlay: #ffffff;
+  --default: #eaf2f5;
+  --default-foreground: #112a33;
+  --border: #d7e4ea;
+  --separator: #e3edf1;
+  --accent: #0e6b80;
+  --accent-foreground: #ffffff;
+  --focus: #0e6b80;
+  --success: #0a6b72;
+  --success-foreground: #ffffff;
+  --warning: #865601;
+  --warning-foreground: #ffffff;
+  --danger: #ae381c;
+  --danger-foreground: #ffffff;
+  --field-background: #ffffff;
+  --field-border: #c9d9e0;
+  --field-border-width: 1px;
+  --radius: 0.625rem;
+  --surface-shadow: 0 1px 0 rgb(17 42 51 / 0.04);
+  --segment: #ffffff;
+  --segment-foreground: var(--foreground);
+  --link: #0e6b80;
+
+  --c-protect: #0a6b72;
+  --c-protect-soft: #dcefef;
+  --c-partial: #865601;
+  --c-partial-soft: #f6ead0;
+  --c-block: #2e5b9e;
+  --c-block-soft: #e3eaf6;
+  --c-expose: #ae381c;
+  --c-expose-soft: #fbe5de;
+  --c-wash: #dcecf0;
+  --c-inset: #f0f6f8;
+}
+
+.dark,
+[data-theme="dark"] {
+  color-scheme: dark;
+  --background: #091c23;
+  --foreground: #e8f3f8;
+  --c-ink-2: #b4cbd3;
+  --muted: #8eaab5;
+  --surface: #102c37;
+  --surface-foreground: var(--foreground);
+  --surface-secondary: #163843;
+  --surface-tertiary: #1a3d49;
+  --overlay: #12303b;
+  --default: #173743;
+  --default-foreground: #e8f3f8;
+  --border: #1f4250;
+  --separator: #1b3a46;
+  --accent: #4fb7c0;
+  --accent-foreground: #06151c;
+  --focus: #4fb7c0;
+  --success: #4fb7c0;
+  --success-foreground: #06151c;
+  --warning: #e0b25a;
+  --warning-foreground: #06151c;
+  --danger: #eb9882;
+  --danger-foreground: #06151c;
+  --field-background: #06151c;
+  --field-border: #2a4d5a;
+  --surface-shadow: none;
+  --segment: #24505f;
+  --segment-foreground: var(--foreground);
+  --link: #6fcad2;
+
+  --c-protect: #4fb7c0;
+  --c-protect-soft: #133f47;
+  --c-partial: #e0b25a;
+  --c-partial-soft: #3a3118;
+  --c-block: #8fb0ea;
+  --c-block-soft: #1d3150;
+  --c-expose: #eb9882;
+  --c-expose-soft: #4a2a24;
+  --c-wash: #123845;
+  --c-inset: #06151c;
+}
+
+html,
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  font-feature-settings: "ss01";
+}
+
+/* a few HeroUI defaults, tuned to the design */
+@layer components {
+  .card {
+    border: 1px solid var(--border);
+    box-shadow: var(--surface-shadow);
+  }
+  .chip {
+    font-weight: 500;
+  }
+}
+
+/* the coverage bar */
+.bar > span + span {
+  margin-left: 2px;
+}
+
+/* "not inspected" outline */
+.dashed {
+  border: 1px dashed currentColor;
+}
+
+::selection {
+  background: color-mix(in oklab, var(--accent) 25%, transparent);
+}

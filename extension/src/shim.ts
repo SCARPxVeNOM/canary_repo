@@ -36,7 +36,7 @@ import {
 
   /* --- channel to the bridge ------------------------------------------- */
 
-  type Config = { enabled: boolean; addresses: string[] };
+  type Config = { enabled: boolean; addresses: string[]; blockHosts?: string[] };
   let port: MessagePort | null = null;
   let config: Config | null = null;
   let needles: AddressNeedles[] = [];
@@ -158,6 +158,10 @@ import {
       if (calls) return { kind: "rpc", url, body, methods: calls.map((c) => c.method) };
     }
     const taint = findAddress(url + "\n" + (body ?? ""), needles);
+    // A recipient you chose to block on this site (not in its ENS manifest).
+    if (third && config?.blockHosts?.includes(h)) {
+      return { kind: "block", obs: { category: "blocked", channel, host: h, firstParty: false, address: taint?.address, encoding: taint?.encoding, note: "not in the site's manifest; you blocked it on this site" } };
+    }
     if (taint && third) {
       return { kind: "block", obs: { category: "blocked", channel, host: h, firstParty: false, address: taint.address, encoding: taint.encoding } };
     }
