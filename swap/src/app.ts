@@ -28,7 +28,8 @@ let account: Address | undefined;
 let provider: Provider | undefined;
 let current: { amountIn: bigint; best: Quote | null; impact?: number } | null = null;
 let busy = false;
-let seq = 0;
+let seq = 0; // bumped whenever the amount, direction or chain changes: a quote that comes back after is dropped
+let quoting = false;
 let sent: { to: string; body: string }[] = [];
 
 const market = () => MARKETS[chainId as keyof typeof MARKETS];
@@ -138,7 +139,7 @@ async function requote() {
   } catch {
     amountIn = 0n;
   }
-  if (amountIn <= 0n) return (current = null), render();
+  if (amountIn <= 0n) return (quoting = false), (current = null), render();
   sent = [];
   $("amountOut").textContent = "…";
   const c = client();
@@ -155,6 +156,7 @@ async function requote() {
     }
   }
   if (my !== seq) return;
+  quoting = false;
   current = { amountIn, best, impact };
   render();
 }
@@ -173,7 +175,7 @@ function render() {
   $("mint").textContent = `Get 1,000 test ${m.tokens.find((t: Token) => t.mintable)?.symbol ?? ""}`;
 
   const q = current?.best;
-  $("amountOut").textContent = q ? fmt(q.amountOut, tOut.decimals, 8) : current ? "—" : "0";
+  $("amountOut").textContent = q ? fmt(q.amountOut, tOut.decimals, 8) : current ? "—" : quoting ? "…" : "0";
   $("details").hidden = !q;
   if (q && current) {
     const rate = Number(formatUnits(q.amountOut, tOut.decimals)) / Number(formatUnits(current.amountIn, tIn.decimals));
@@ -187,7 +189,7 @@ function render() {
   const btn = $<HTMLButtonElement>("swap");
   const label =
     !m.swap ? `Quote only on ${m.name}: swaps run on Sepolia`
-    : !current ? "Enter an amount"
+    : !current ? (quoting ? "Quoting…" : "Enter an amount")
     : !q ? "No liquidity for this amount"
     : !account ? "Connect wallet to swap"
     : balances[tIn.symbol] !== undefined && balances[tIn.symbol] < current.amountIn ? `Not enough ${tIn.symbol}`
@@ -289,8 +291,18 @@ async function mint() {
 /* --- wiring ---------------------------------------------------------------- */
 
 let timer: ReturnType<typeof setTimeout> | undefined;
-$("amountIn").addEventListener("input", () => (clearTimeout(timer), (timer = setTimeout(requote, 350))));
-$("flip").addEventListener("click", () => ((zeroForOne = !zeroForOne), ($<HTMLInputElement>("amountIn").value = ""), (current = null), (sent = []), render()));
+// The quote on screen, and the swap it arms, are for the amount last quoted: drop them as soon as
+// the amount changes, so Swap can't send an amount that is no longer in the box.
+$("amountIn").addEventListener("input", () => {
+  clearTimeout(timer);
+  ++seq;
+  current = null;
+  sent = [];
+  quoting = $<HTMLInputElement>("amountIn").value.trim() !== "";
+  render();
+  timer = setTimeout(requote, 350);
+});
+$("flip").addEventListener("click", () => (clearTimeout(timer), ++seq, (quoting = false), (zeroForOne = !zeroForOne), ($<HTMLInputElement>("amountIn").value = ""), (current = null), (sent = []), render()));
 $("connect").addEventListener("click", () => void connect());
 $("swap").addEventListener("click", () => void swap());
 $("mint").addEventListener("click", () => void mint());
@@ -299,8 +311,11 @@ $("chain").addEventListener("change", async (e) => {
   chainId = Number((e.target as HTMLSelectElement).value);
   history.replaceState(null, "", chainId === 11155111 ? location.pathname : `?chain=${chainId}`);
   zeroForOne = true;
+  clearTimeout(timer);
+  ++seq;
   current = null;
   sent = [];
+  quoting = $<HTMLInputElement>("amountIn").value.trim() !== "";
   await refreshBalances();
   void requote();
 });
