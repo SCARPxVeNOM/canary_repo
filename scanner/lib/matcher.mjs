@@ -77,7 +77,9 @@ export function isJsonRpc(body) {
   if (!body || !/^\s*[[{]/.test(body)) return null;
   try {
     const v = JSON.parse(body);
-    const one = (x) => x && typeof x === "object" && x.jsonrpc === "2.0" && typeof x.method === "string";
+    // Also JSON-RPC methods in a custom envelope, e.g. {chainId, method, params} to a dapp's own RPC proxy.
+    const wrapped = (x) => /^(eth|net|web3)_\w+$/.test(x.method) && Array.isArray(x.params);
+    const one = (x) => x && typeof x === "object" && typeof x.method === "string" && (x.jsonrpc === "2.0" || wrapped(x));
     if (Array.isArray(v)) return v.length && v.every(one) ? v.map((x) => x.method) : null;
     return one(v) ? [v.method] : null;
   } catch {

@@ -67,7 +67,11 @@ function waitPort(port, ms = 20000) {
 
 async function connectFlow(page, log) {
   const btn = page.locator("button, [role=button], a").filter({ hasText: /^\s*(connect( wallet)?|sign in|log ?in)\s*$/i });
-  if ((await btn.count()) === 0) return log("connect: no connect button found");
+  // Dapps that call eth_accounts on load get the address without a click.
+  const given = () => page.evaluate(() => !!window.__canaryScannerWallet?.accountsGiven).catch(() => false);
+  if (!(await given())) await btn.first().waitFor({ state: "visible", timeout: 10000 }).catch(() => {});
+  if ((await btn.count()) === 0)
+    return log((await given()) ? "connect: no connect button; the dapp already read the account (eth_accounts)" : "connect: no connect button found");
   await btn.first().click({ timeout: 5000 }).catch(() => {});
   log("connect: clicked");
   await page.waitForTimeout(1500);
@@ -166,8 +170,9 @@ function analyze({ address, records, canaryStats, steps }, manifest, withCanary)
   const fp = [];
 
   for (const rec of records) {
-    if (rec.respSha256 && site(rec.host) === site(pageHost)) fp.push(`${new URL(rec.url).pathname} ${rec.respSha256}`);
     const cls = classify(rec, pageHost);
+    // The build is what the dapp served its own pages, not what Canary fetched (e.g. /.well-known/canary.json).
+    if (rec.respSha256 && cls.party !== "canary" && site(rec.host) === site(pageHost)) fp.push(`${new URL(rec.url).pathname} ${rec.respSha256}`);
     const hits = [
       ...match(rec.url, n).map((e) => `${e} in URL`),
       ...match(rec.body, n).map((e) => `${e} in ${rec.type === "ws" ? "WS frame" : "body"}`),

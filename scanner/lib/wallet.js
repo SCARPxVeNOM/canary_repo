@@ -16,6 +16,7 @@
       switch (method) {
         case "eth_requestAccounts":
         case "eth_accounts":
+          provider.accountsGiven = true;
           setTimeout(() => emit("connect", { chainId: CHAIN }), 0);
           return [ADDR];
         case "eth_chainId":

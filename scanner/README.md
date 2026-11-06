@@ -10,6 +10,7 @@ npx playwright install chromium   # or point --chrome / CHROME_BIN at Chromium /
 node scan.mjs https://some-dapp.xyz                                   # baseline
 node scan.mjs https://some-dapp.xyz --canary ../extension/dist        # with Canary
 node scan.mjs https://some-dapp.xyz --compare --canary ../extension/dist --manifest manifest.json --keep
+node summary.mjs scans/ > scans/RESULTS.md                           # one table across every site compared
 ```
 
 Output in `scans/`: `<host>.baseline.md/.json`, `<host>.canary.md/.json`, `<host>.compare.md`, and with `--keep` the raw captured requests (`.flows.jsonl`). The identity is synthetic, so the evidence is safe to publish.
@@ -31,7 +32,7 @@ Output in `scans/`: `<host>.baseline.md/.json`, `<host>.canary.md/.json`, `<host
 2. Launches Chromium through it (`--proxy-bypass-list=<-loopback>` so localhost goes through the proxy too; QUIC off so nothing bypasses it), injects the fake wallet (`lib/wallet.js`: EIP-1193 + EIP-6963, approves connection, rejects every signature).
 3. Flow: load → click "Connect" (and pick "Canary Scanner" in a wallet modal if one opens) → wait → scroll. Short on purpose.
 4. Matches the canary address in every request (`lib/matcher.mjs`): hex (covers lowercase, checksummed, no-`0x`, ABI-padded, URL-encoded), base64/base64url of the raw bytes and of each text form, keccak256 and sha256 of each, and raw bytes in binary bodies.
-5. Classifies each destination: first/third party, `rpc` (JSON-RPC body), `analytics` (known hosts and paths), `backend`. Traffic from the extension itself is listed separately.
+5. Classifies each destination: first/third party, `rpc` (JSON-RPC body, or JSON-RPC methods in a custom envelope such as `{chainId, method, params}` to a dapp's own RPC proxy), `analytics` (known hosts and paths), `backend`. Traffic from the extension itself is listed separately.
 
 **Coverage** = RPC calls Canary answered via anon-rpc ÷ (those + JSON-RPC calls the proxy saw leave the page directly).
 
