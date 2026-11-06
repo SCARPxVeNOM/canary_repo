@@ -8,7 +8,7 @@ import {
   activeTabId, applyTheme, coverage, declaredCount, hostOf, manifestOf, send,
   type Coverage, type Filter, type ManifestView, type Settings, type Site, type TabState, type Worker,
 } from "./model.js";
-import { CoverageBlock, Empty, EventRow, FILTER_LABEL, FilterChips, headline, LabelCard, Logo, manifestStatusFor, ManifestStatus, ProtectionSwitch, RowStatus, Summary, useFiltered, cx } from "./parts.js";
+import { CoverageBlock, Empty, EventRow, FILTER_LABEL, FilterChips, headline, LabelCard, Logo, manifestStatusFor, ManifestStatus, ProtectionSwitch, RowStatus, Summary, ThemeButton, useFiltered, cx } from "./parts.js";
 import { verdictOf } from "./model.js";
 import { privacyLabel } from "../privacy-label.js";
 
@@ -45,6 +45,11 @@ function App() {
     await send({ type: "setSite", origin: tab.origin, patch });
     setSt(await send<State>({ type: "state", tabId }));
   };
+  const setTheme = async (theme: Settings["theme"]) => {
+    applyTheme(theme);
+    setSt((s) => s && { ...s, settings: { ...s.settings, theme } });
+    await send({ type: "setSettings", patch: { theme } });
+  };
   const openDashboard = (hash = "") => {
     chrome.tabs.create({ url: chrome.runtime.getURL(`dashboard.html${tabId !== undefined && tab ? `?tabId=${tabId}` : ""}${hash}`) });
     window.close();
@@ -55,7 +60,10 @@ function App() {
       <header className="shrink-0 border-b border-line bg-surface px-4 pb-3 pt-3.5">
         <div className="flex items-center justify-between">
           <Logo />
-          <ProtectionSwitch on={!!st?.site?.enabled} disabled={!tab} onChange={(v) => setSite({ enabled: v })} />
+          <div className="flex items-center gap-2">
+            <ThemeButton theme={st?.settings?.theme} onChange={setTheme} />
+            <ProtectionSwitch on={!!st?.site?.enabled} disabled={!tab} onChange={(v) => setSite({ enabled: v })} />
+          </div>
         </div>
         <div className="mt-3 flex items-center gap-2 rounded-xl bg-surface-secondary px-3 py-2">
           <Globe size={15} className="shrink-0 text-ink-2" />

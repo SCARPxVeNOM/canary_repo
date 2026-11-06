@@ -345,9 +345,13 @@ export async function activeTabId(): Promise<number | undefined> {
   return t?.id;
 }
 
+/** Whether the theme setting shows dark: "system" follows the OS. */
+export const isDark = (theme: Settings["theme"] | undefined) =>
+  theme === "dark" || ((theme ?? "system") === "system" && matchMedia("(prefers-color-scheme: dark)").matches);
+
 /** Apply the theme setting to <html>. */
 export function applyTheme(theme: Settings["theme"] | undefined) {
-  const dark = theme === "dark" || ((theme ?? "system") === "system" && matchMedia("(prefers-color-scheme: dark)").matches);
+  const dark = isDark(theme);
   document.documentElement.classList.toggle("dark", dark);
   document.documentElement.dataset.theme = dark ? "dark" : "light";
 }

@@ -3,10 +3,10 @@
 import { Button, Chip, Disclosure, Switch, Tag, TagGroup } from "@heroui/react";
 import { useMemo, type ReactNode } from "react";
 import { CATEGORY_LABEL } from "../shared.js";
-import { Check, Chevron, Copy, Dotted, Eye, Half, Hatch, Shield, Slash, Warn } from "./icons.js";
+import { Check, Chevron, Copy, Dotted, Eye, Half, Hatch, Moon, Shield, Slash, Sun, Warn } from "./icons.js";
 import {
-  ago, BUCKET_LABEL, BUCKETS, channelLabel, clock, filterOf, ipVisible, labelBadge, manifestBadge, receiptsOf, sentenceOf, short, titleOf,
-  type Bucket, type Coverage, type Ev, type Filter, type ManifestView, type Site, type TabState, type Worker,
+  ago, BUCKET_LABEL, BUCKETS, channelLabel, clock, filterOf, ipVisible, isDark, labelBadge, manifestBadge, receiptsOf, sentenceOf, short, titleOf,
+  type Bucket, type Coverage, type Ev, type Filter, type ManifestView, type Settings, type Site, type TabState, type Worker,
 } from "./model.js";
 import type { PrivacyLabel } from "../privacy-label.js";
 
@@ -36,6 +36,17 @@ export function ProtectionSwitch({ on, disabled, onChange }: { on: boolean; disa
         <span className="text-sm font-medium text-ink">{disabled ? "No site" : on ? "Protection on" : "Protection off"}</span>
       </Switch.Content>
     </Switch>
+  );
+}
+
+/** Sun or moon: switches between light and dark in one click. Settings also offers "System". */
+export function ThemeButton({ theme, onChange }: { theme: Settings["theme"] | undefined; onChange: (t: Settings["theme"]) => void }) {
+  const dark = isDark(theme);
+  const label = dark ? "Switch to light mode" : "Switch to dark mode";
+  return (
+    <button type="button" onClick={() => onChange(dark ? "light" : "dark")} aria-label={label} title={label} className="grid size-8 place-items-center rounded-lg text-ink-2 transition-colors hover:bg-surface-secondary hover:text-ink">
+      {dark ? <Sun size={17} /> : <Moon size={17} />}
+    </button>
   );
 }
 

@@ -13,7 +13,7 @@ import {
 } from "./model.js";
 import {
   CopyText, CoverageBar, CoverageBlock, cx, Empty, EventRow, Eyebrow, FILTER_LABEL, FilterChips, LabelCard, Logo, manifestStatusFor, ManifestStatus,
-  Outcome, ProtectionSwitch, RowStatus, Tone, useFiltered,
+  Outcome, ProtectionSwitch, RowStatus, ThemeButton, Tone, useFiltered,
 } from "./parts.js";
 import { privacyLabel } from "../privacy-label.js";
 
@@ -84,6 +84,12 @@ function App() {
     await refresh();
   };
 
+  const setTheme = async (theme: Settings["theme"]) => {
+    applyTheme(theme);
+    await send({ type: "setSettings", patch: { theme } });
+    await refresh();
+  };
+
   const tab = ses?.state ?? null;
   const cov = useMemo(() => coverage(tab?.counts), [tab]);
   const m = useMemo(() => manifestOf(tab), [tab]);
@@ -106,7 +112,8 @@ function App() {
               </button>
             ))}
           </nav>
-          <div className="ml-auto">
+          <div className="ml-auto flex items-center gap-3">
+            <ThemeButton theme={ov?.settings.theme} onChange={setTheme} />
             {ses?.live ? <ProtectionSwitch on={ses.site.enabled} onChange={(v) => setSite({ enabled: v })} /> : <span className="text-[13px] text-muted">{ses ? "Earlier session" : ""}</span>}
           </div>
         </div>

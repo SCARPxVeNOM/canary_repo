@@ -98,6 +98,17 @@ export const External = (p: P) => (
     <path d="M9.5 2.75h3.75V6.5M13.25 2.75 7.5 8.5M11.5 9.5v2.25a1.5 1.5 0 0 1-1.5 1.5H4.25a1.5 1.5 0 0 1-1.5-1.5V6a1.5 1.5 0 0 1 1.5-1.5H6.5" />
   </svg>
 );
+export const Sun = (p: P) => (
+  <svg {...base(p)}>
+    <circle cx="8" cy="8" r="2.75" />
+    <path d="M8 1.5v1.25M8 13.25v1.25M1.5 8h1.25M13.25 8h1.25M3.4 3.4l.9.9M11.7 11.7l.9.9M3.4 12.6l.9-.9M11.7 4.3l.9-.9" />
+  </svg>
+);
+export const Moon = (p: P) => (
+  <svg {...base(p)}>
+    <path d="M13.25 9.6A5.5 5.5 0 0 1 6.4 2.75a5.5 5.5 0 1 0 6.85 6.85Z" />
+  </svg>
+);
 export const Download = (p: P) => (
   <svg {...base(p)}>
     <path d="M8 2.5v7.5M4.75 7 8 10.25 11.25 7M3 13.25h10" />
