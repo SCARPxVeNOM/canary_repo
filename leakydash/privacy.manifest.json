@@ -1,0 +1,8 @@
+{
+  "name": "leakydash.eth",
+  "origin": "http://leakydash.localhost:3000",
+  "recipients": [
+    { "host": "rpc.provider.localhost", "kind": "rpc", "purpose": "reads balances and token data" }
+  ],
+  "rpc": { "anonByDefault": false }
+}

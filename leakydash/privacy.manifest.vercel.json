@@ -1,0 +1,8 @@
+{
+  "name": "leakydash.eth",
+  "origin": "https://canary-leakydash.vercel.app",
+  "recipients": [
+    { "host": "canary-leakydash-rpc.vercel.app", "kind": "rpc", "purpose": "reads balances and token data" }
+  ],
+  "rpc": { "anonByDefault": false }
+}

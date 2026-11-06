@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>LeakyDash · Sepolia token dashboard</title>
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+  <header class="bar">
+    <div class="logo">💧 LeakyDash</div>
+    <div class="right">
+      <span class="chip" id="mode">…</span>
+      <a href="/logs" target="_blank">What the other parties saw →</a>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero">
+      <h1>Your Sepolia tokens, at a glance</h1>
+      <p class="muted">A demo dapp for <strong>Canary</strong>. It's built the way many dapps are, so it leaks your address to its RPC provider and to analytics. Open the log viewer to watch.</p>
+      <div class="actions">
+        <button id="connect" class="primary">Connect wallet</button>
+        <form id="watchForm"><input id="watchInput" placeholder="…or watch any 0x address" /><button>Watch</button></form>
+      </div>
+      <div id="status" class="status"></div>
+    </section>
+
+    <section class="grid">
+      <div class="card"><div class="label">Account</div><div class="value" id="who">—</div></div>
+      <div class="card"><div class="label">ETH</div><div class="value" id="eth">—</div></div>
+      <div class="card"><div class="label">Points</div><div class="value" id="points">—</div></div>
+      <div class="card"><div class="label">Block</div><div class="value" id="block">—</div></div>
+      <div class="card"><div class="label">Gas</div><div class="value" id="gas">—</div></div>
+    </section>
+
+    <section class="card wide">
+      <div class="label">Tokens</div>
+      <table id="tokens"><tr><td class="muted">Connect a wallet or watch an address.</td></tr></table>
+      <div class="muted small" id="updated"></div>
+    </section>
+
+    <section class="card wide muted small">
+      <button id="modeToggle" class="link">…</button>
+      <p><strong>Leaky mode</strong>: reads go from your browser to <code>rpc.provider.localhost</code>. Connecting sends your address to <code>tracker.localhost</code> as an event, a pixel and a base64 "uid". <code>/api/points</code> (first party) gets it too.</p>
+      <p><strong>Native mode</strong>: LeakyDash routes every read through anon-rpc (tor-js, in a sandbox) to a public Sepolia endpoint, and ships without the trackers.</p>
+    </section>
+  </main>
+  <script type="module" src="/app.js"></script>
+</body>
+</html>

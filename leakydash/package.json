@@ -1,0 +1,18 @@
+{
+  "name": "leakydash",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "license": "MIT",
+  "description": "LeakyDash: a deliberately leaky demo dapp for Canary. Its RPC provider, tracker and backend log what they receive.",
+  "scripts": {
+    "start": "node server.mjs",
+    "build": "node build.mjs",
+    "test": "node --test \"test/*.test.mjs\""
+  },
+  "dependencies": {
+    "@anon-rpc/browser-harness": "0.4.0",
+    "esbuild": "^0.28.0",
+    "viem": "^2.57.0"
+  }
+}

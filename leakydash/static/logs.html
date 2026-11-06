@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>LeakyDash · what the other parties saw</title>
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+  <header class="bar">
+    <div class="logo">💧 LeakyDash · logs</div>
+    <div class="right"><button id="clear">Clear</button> <a href="/">← dapp</a></div>
+  </header>
+  <p class="muted pad">Everything the RPC provider, the tracker and LeakyDash's own backend received, newest first. Addresses are highlighted. Live.</p>
+  <main class="panes">
+    <section class="pane"><h2>RPC provider <span class="muted">rpc.provider.localhost</span></h2><div id="provider"></div></section>
+    <section class="pane"><h2>Tracker <span class="muted">tracker.localhost</span></h2><div id="tracker"></div></section>
+    <section class="pane"><h2>LeakyDash backend <span class="muted">first party</span></h2><div id="backend"></div></section>
+  </main>
+  <p class="muted pad small">In native mode, or with Canary on, reads go through Tor to a public Sepolia endpoint instead of the provider above. Locally we can't log that endpoint; deployed, a fourth pane shows only Tor exit IPs.</p>
+  <script>
+    // this browser's id, shared with the dapp page (same origin); deployed, the server shows only its entries
+    const sid = localStorage.getItem("leakydash.sid") || crypto.randomUUID();
+    localStorage.setItem("leakydash.sid", sid);
+    const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+    const hl = (s) => esc(s).replace(/0x[0-9a-fA-F]{40}/g, (a) => `<mark>${a}</mark>`);
+    function row(e, party) {
+      const t = new Date(e.at).toLocaleTimeString();
+      const what = party === "provider" ? (e.methods || []).join(", ") || e.path : `${e.kind ? e.kind + " " : ""}${e.path}`;
+      const addr = e.addresses.length ? `<div class="addr">your address: ${e.addresses.map((a) => `<mark>${a.slice(0, 10)}…${a.slice(-6)}</mark>`).join(" ")}</div>` : "";
+      return `<div class="entry ${e.addresses.length ? "leak" : ""}"><div class="meta">${t} · IP ${esc(e.ip)} · Origin ${esc(e.origin)}</div><div class="what">${hl(what)}</div>${addr}</div>`;
+    }
+    async function tick() {
+      try {
+        const { logs } = await (await fetch(`/api/logs?sid=${sid}`)).json();
+        for (const party of ["provider", "tracker", "backend"]) {
+          const list = logs[party].slice().reverse();
+          document.getElementById(party).innerHTML = list.length ? list.map((e) => row(e, party)).join("") : `<div class="muted empty">Nothing received.</div>`;
+        }
+      } catch {}
+    }
+    document.getElementById("clear").onclick = async () => { await fetch(`/api/logs/clear?sid=${sid}`); tick(); };
+    tick(); setInterval(tick, 1000);
+  </script>
+</body>
+</html>
