@@ -93,7 +93,7 @@ Every record above is on ENSv2 Sepolia, written by these commands. Addresses and
 
 | Name | What it is | ENSv2 parts used |
 |---|---|---|
-| `leakydash.eth` | the demo dapp (`leakydash/`): `url`, `privacy.manifest`, and `privacy.verdict.canary` | ETHRegistrar (commit/register, paid in MockUSDC); its own Permissioned Resolver from the Verifiable Factory; a one-key EAC grant (`grantSetterRoles`) to the verifier |
+| `leakydash.eth` | the demo dapp (`leakydash/`, live at https://canary-leakydash.vercel.app): `url`, `privacy.manifest`, and `privacy.verdict.canary` | ETHRegistrar (commit/register, paid in MockUSDC); its own Permissioned Resolver from the Verifiable Factory; a one-key EAC grant (`grantSetterRoles`) to the verifier |
 | `canary.eth` | Canary's namespace: `url`, `description` | a UserRegistry as its subregistry (`setParent` → the .eth registry) |
 | `verifier.canary.eth` | the verifier: a subname owned by the verifier key, `addr` = that key | a subname in that registry, resolved through the Universal Resolver |
 
@@ -104,7 +104,7 @@ node scripts/sepolia-setup.mjs --owner-key-file ../../keys.txt --verifier-key-fi
 canary-ens read-dapp leakydash.eth --rpc https://ethereum-sepolia-rpc.publicnode.com
 ```
 
-The verdict was made from a real baseline scan of LeakyDash ([`test-artifacts/sepolia/`](../../test-artifacts/sepolia/): the report, and the signed verdict as published). It says `undeclared`: `tracker.localhost` received the address in three encodings and isn't in the manifest. Checked live: the signer is `verifier.canary.eth`'s `addr`; the verifier holds `ROLE_SET_TEXT` on that key only; after `revoke-verifier`, both `read-dapp` and the extension's reader (`extension/test/ens-live.mjs`) show the verifier can no longer write, and after `grant-verifier` again, that it can. The verdict's origin is the local LeakyDash (`http://leakydash.localhost:3000`); a deployed LeakyDash needs `set-dapp` with its origin and a new scan.
+The verdict was made from a real baseline scan of the deployed LeakyDash ([`test-artifacts/sepolia/`](../../test-artifacts/sepolia/): the report, and the signed verdict as published). It says `undeclared`: `canary-leakydash-tracker.vercel.app` received the address in three encodings and isn't in the manifest. (The first verdict, from a scan of the local LeakyDash, is `leakydash.localhost.verdict.json`.) Checked live: the signer is `verifier.canary.eth`'s `addr`; the verifier holds `ROLE_SET_TEXT` on that key only; after `revoke-verifier`, both `read-dapp` and the extension's reader (`extension/test/ens-live.mjs`) show the verifier can no longer write, and after `grant-verifier` again, that it can. The name's `url` and the verdict's origin are the deployed site, so a LeakyDash run locally (`npm start`) reads as unbound; point the name back with `set-dapp leakydash.eth leakydash/privacy.manifest.json` to demo it offline.
 
 ## Test
 

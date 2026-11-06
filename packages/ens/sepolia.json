@@ -49,7 +49,7 @@
         "0xa3f383f80edb5adbf557e76606666c06f4bbb43d6ce9791950ab018193015107",
         "0x47230559ab9d1d865c7d08153ead17436f275ea9f12df2df840b4579d1ab0c16"
       ],
-      "grant-verifier privacy.verdict.canary → verifier.canary.eth": "0xa30bcc8cfe743f2a5d2f9f36bd35b98fc30131770fb627b73c8e50290453a71a",
+      "grant-verifier privacy.verdict.canary \u2192 verifier.canary.eth": "0xa30bcc8cfe743f2a5d2f9f36bd35b98fc30131770fb627b73c8e50290453a71a",
       "publish-verdict (signed by verifier.canary.eth, sent by its key)": "0x0fe1f2839cd75551ad6959d5676a6968afa0600613b4ec21e74c14527fe719e7",
       "revoke-verifier (readers see delegated: false)": [
         "0xcf2a0ce1c9fc1ca410e6bf3e255c762f9633400991f7829f1601a6f4098bd4d2",
@@ -58,7 +58,12 @@
       "grant-verifier again": [
         "0x520287baa1d882c03ed7271823b4fc8d372fb167bde89ff053889acf1038b112",
         "0x9e0761080a9349c6fca1e518edd9e8cfb2ff5e51ed64d135f9f54c9e6b9db348"
-      ]
+      ],
+      "set-dapp for the deployed LeakyDash (url = https://canary-leakydash.vercel.app)": [
+        "0xcf2d203f1f481c3c1d16bbf46eb62fef20a91d4743dba619dbfe047a52dd73d4",
+        "0xb9ed8b0b5e1deefb3b815917adcc0f535b688cbe473ff6a7862615185757e114"
+      ],
+      "publish-verdict from a scan of the deployed LeakyDash (current record)": "0xd8f641db3dd01b6a205883925f78bbefd4d47199a0574b8f1402918da91a1aa1"
     }
   }
 }

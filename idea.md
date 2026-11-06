@@ -20,8 +20,10 @@ ETHGlobal Mumbai 2026 · team working doc · v2 · 5 Nov 2026 (updated after the
 - **Status (5 Nov, evening):** the core mechanism works. The spike in `canary-spike/` ran live over tor-js on the unmodified **app.ens.domains**: 8/8 of its RPC batches to its own keyed provider were answered via anon-rpc instead, and the page still worked (1.3–2.8 s per batch). Details: test-repo.md §10.
 - **Part 1 (enforcement extension) is built:** `extension/`. It covers fetch, XHR, WebSocket and sendBeacon, blocks third-party requests carrying your address, fails closed, and has a coverage popup. It also reads the dapp's ENSv2 manifest and verifier's verdict over anon-rpc and shows declared vs observed (6 Nov). Its end-to-end test passes 32/32 (`extension/README.md`).
 - **Canary for agents is built too (6 Nov):** gateway, SDK, ENSv2 records and two example agents in `packages/` and `examples/`, sharing `@canary/core` with the extension. 61 tests pass on the passthrough worker and mock ENSv2 contracts; not yet run live over tor-js or on ENS's Sepolia deployment. Status and differences from the plan: agent-sdk.md §0.
+- **Demo dapp and scanner are built:** `leakydash/` (provider, tracker, first-party backend, live log viewer, native anon-rpc mode) and `scanner/` (Playwright + mitmproxy + synthetic canary address). On LeakyDash, third parties receiving the address went **2 → 0** with Canary and RPC coverage **0% → 100%**; the undeclared tracker is flagged against LeakyDash's manifest (`test-artifacts/scans/`). Same result live, over tor-js through our own gateways, against the deployed LeakyDash (6 Nov).
 - **ENSv2 is live on Sepolia (6 Nov):** `leakydash.eth` has its own Permissioned Resolver, `url` and `privacy.manifest` records, and a one-key `grantSetterRoles` grant to the verifier. `canary.eth` has a UserRegistry as its subregistry, holding `verifier.canary.eth`, whose key signed and published a verdict from a real LeakyDash baseline scan (`undeclared`: the tracker). Revoking the verifier's role shows in `canary-ens read-dapp` and in the extension's reader. Names and transactions: `packages/ens/README.md` (*Live on Sepolia*).
-- **Biggest remaining risk:** the live demo. LeakyDash runs locally, and its name's `url` is `http://leakydash.localhost:3000`; a deployed LeakyDash (the live demo link, real IPs in the logs) needs `canary-ens set-dapp` with its origin and a new scan. Then real-dapp scans, and the agents' names on Sepolia.
+- **Live demo: https://canary-leakydash.vercel.app** (LeakyDash on Vercel; its provider and tracker are `canary-leakydash-rpc` and `canary-leakydash-tracker.vercel.app`, separate sites since `vercel.app` is a public suffix). `leakydash.eth`'s `url` and manifest point at it, and the published verdict comes from a scan of it. `/logs` shows each visitor only their own entries (a random per-browser id), with real IPs.
+- **Biggest remaining risk:** the deployed LeakyDash's code isn't in the repo yet (`leakydash/`), and the open-source rule needs it. Then real-dapp scans, and the agents' names on Sepolia.
 - **Before hacking starts:** take the open questions in section 12 to the EF and ENS mentors (EF's anon-rpc workshop was 5:00 PM IST, Thu 5 Nov, Workshop Room 2).
 
 ### 30-second pitch
@@ -202,9 +204,9 @@ Record a backup video by hour 30.
 
 | Hours | A: Extension | B: Scanner | C: ENSv2 + LeakyDash | D: only with 4 people |
 |---|---|---|---|---|
-| 0–3 | ~~Spike~~ **done** (`canary-spike/`) | **Spike:** Playwright + mitmproxy + fake wallet catches the canary | ~~Spike: register an ENSv2 Sepolia name; set a text record; `authorizeTextRoles` on a second key~~ **done** (`grantSetterRoles`: Sepolia has no `authorizeTextRoles`) | Spike: v4 Quoter quote on Sepolia |
-| 3–12 | ~~Substitution, method allowlist, chain-id learning, DNR rules~~ **done** (`extension/`) | Matcher (all encodings), flows, report JSON | ~~Manifest/verdict schema, EIP-712 signer, reader library~~ **done** (`packages/ens/src/verdict.ts`) | Private-quote widget |
-| 12–20 | ~~Blocking, labels, popup~~ **done**; next: live tor-js runs on real dapps, popup polish | Runs with and without Canary, coverage %, build fingerprint | LeakyDash + observer RPC + tracker + log viewer | Sepolia swap tx, FEEDBACK.md |
+| 0–3 | ~~Spike~~ **done** (`canary-spike/`) | ~~Spike: Playwright + mitmproxy + fake wallet catches the canary~~ **done** (`scanner/`) | ~~Spike: register an ENSv2 Sepolia name; set a text record; `authorizeTextRoles` on a second key~~ **done** (`grantSetterRoles`: Sepolia has no `authorizeTextRoles`) | Spike: v4 Quoter quote on Sepolia |
+| 3–12 | ~~Substitution, method allowlist, chain-id learning, DNR rules~~ **done** (`extension/`) | ~~Matcher (all encodings), flows, report JSON~~ **done** | ~~Manifest/verdict schema, EIP-712 signer, reader library~~ **done** (`packages/ens/src/verdict.ts`) | Private-quote widget |
+| 12–20 | ~~Blocking, labels, popup~~ **done**; next: live tor-js runs on real dapps, popup polish | ~~Runs with and without Canary, coverage %, build fingerprint~~ **done** (`--compare`) | ~~LeakyDash + observer RPC + tracker + log viewer~~ **done locally** (`leakydash/`, incl. native anon-rpc mode) | Sepolia swap tx, FEEDBACK.md |
 | 20–28 | ~~Fail-closed mode, isolation keys, ENS lookups via anon-rpc~~ **done** (declared vs observed in the popup) | Real-dapp scans (3–5) | ~~Verdict write + revocation detection~~ **done, live on Sepolia** (`canary-ens`) | UI polish |
 | 28–33 | Bug bash, latency numbers | Results table | README (CROPS section), architecture diagram | Demo video draft |
 | 33–36 | Final demo, video, submissions (everyone) | | | |
@@ -266,7 +268,7 @@ Record a backup video by hour 30.
 **ENS: Best Use of ENSv2** ($3,000 / $2,000 / $1,000 / $1,000)
 - [x] ENSv2 on Sepolia (or mainnet), central to the product: `leakydash.eth`, `canary.eth`, `verifier.canary.eth` (`packages/ens/README.md`)
 - [x] Permissioned Resolver + EAC one-key delegation (and its revocation, read by the extension)
-- [ ] Functional demo, no hard-coded values, live demo link, open-source repo (still needed: the live demo link)
+- [ ] Functional demo, no hard-coded values, live demo link, open-source repo (live demo: https://canary-leakydash.vercel.app; still needed: LeakyDash's code in the repo)
 
 **Uniswap: Build with Uniswap** ($4,000 / $3,000 / $2,000 / $1,000), stretch goal
 - [ ] Public repo, FEEDBACK.md, the Developer Feedback Form linking to it, a README pointing to the contracts and lines of code

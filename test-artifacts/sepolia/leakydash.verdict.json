@@ -1,17 +1,17 @@
 {
   "name": "leakydash.eth",
-  "origin": "http://leakydash.localhost:3000",
+  "origin": "https://canary-leakydash.vercel.app",
   "verifier": "verifier.canary.eth",
-  "buildHash": "e36522b683b8",
+  "buildHash": "0678454eabf8",
   "scannerHash": "296015c80bdd",
   "flows": [
-    "load http://leakydash.localhost:3000/",
+    "load https://canary-leakydash.vercel.app/",
     "connect: clicked",
     "scroll"
   ],
   "result": "undeclared",
   "undeclaredHosts": [
-    "tracker.localhost"
+    "canary-leakydash-tracker.vercel.app"
   ],
   "notInspected": [
     "service workers' own traffic",
@@ -19,9 +19,9 @@
     "encrypted or arbitrarily obfuscated payloads",
     "flows beyond load → connect → scroll"
   ],
-  "issuedAt": 1793930333,
-  "expiresAt": 1796522333,
-  "evidenceURI": "https://github.com/SCARPxVeNOM/canary_repo/blob/main/test-artifacts/sepolia/leakydash.localhost_3000.baseline.md",
+  "issuedAt": 1793932671,
+  "expiresAt": 1796524671,
+  "evidenceURI": "https://github.com/SCARPxVeNOM/canary_repo/blob/main/test-artifacts/sepolia/canary-leakydash.vercel.app.baseline.md",
   "signer": "0x0f17A972C98f06BB128d8d8B971c33E631b351De",
-  "signature": "0xef2bf464bc4e7ca527163dff267359fc1c8f6328cc26cc200da6a9ec65bab2fa0aec902fd44f25ead0a0c3968ad345851dabc6158d6539b56656bb0a3d50430f1c"
+  "signature": "0x05326df1f79adf75d48c1fa35393f3d177c9d3d36064db12d724f3e92404538166d13faf7003852fd39f57f80ad170a74cfd69d620f88b4e196bdd9e8cddc38a1b"
 }

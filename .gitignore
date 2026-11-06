@@ -16,3 +16,7 @@ test-artifacts/latency/out/
 keys.txt
 *.key
 .env
+
+# Vercel
+.vercel
+leakydash/public/

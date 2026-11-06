@@ -1,11 +1,11 @@
 // The extension's ENS reader (src/ens.ts) against live ENSv2 on Sepolia: the
 // site ↔ name binding, the manifest, and the verifier's signed verdict.
-// Needs LeakyDash running with LEAKYDASH_ENS=leakydash.eth (leakydash/README.md).
+// Default: the deployed LeakyDash (leakydash.eth's url record points at it).
 //   node test/ens-live.mjs [origin] [rpc]
 import { build } from "esbuild";
 import { sharedPackages } from "../build.mjs";
 
-const [origin = "http://leakydash.localhost:3000", rpc = "https://ethereum-sepolia-rpc.publicnode.com"] = process.argv.slice(2);
+const [origin = "https://canary-leakydash.vercel.app", rpc = "https://ethereum-sepolia-rpc.publicnode.com"] = process.argv.slice(2);
 const out = new URL("out/ens-live-bundle.mjs", import.meta.url).pathname;
 await build({ entryPoints: [new URL("../src/ens.ts", import.meta.url).pathname], bundle: true, format: "esm", platform: "node", outfile: out, logLevel: "warning", plugins: [sharedPackages] });
 const { readDeclared, UNIVERSAL_RESOLVER } = await import(out);
