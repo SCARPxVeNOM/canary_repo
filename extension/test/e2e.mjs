@@ -45,7 +45,7 @@ const strArr = (ss) => {
 };
 
 const CORS = { "access-control-allow-origin": "*", "access-control-allow-headers": "content-type", "access-control-allow-methods": "POST, GET, OPTIONS" };
-const logs = { provider: [], ws: [], hostile: [], tracker: [], read: [], points: [], indexer: [] };
+const logs = { provider: [], ws: [], hostile: [], own: [], tracker: [], read: [], points: [], indexer: [] };
 const reset = () => Object.values(logs).forEach((l) => (l.length = 0));
 let readDown = false;
 
@@ -141,6 +141,10 @@ const server = createServer((req, res) => {
         // Refuses anonymized traffic (the worker's requests carry Origin: null), like Tenderly over Tor.
         if (origin === "null") return logs.hostile.push({ method: "(refused)", origin, body: raw }), json(403, { error: "anonymous traffic not allowed" });
         return rpc(ANSWERS.provider, logs.hostile);
+      case "rpc.leakydash.test":
+        // The dapp's own RPC proxy, refusing anonymized traffic too (1inch's answers 403 over Tor).
+        if (origin === "null") return logs.own.push({ method: "(refused)", origin, body: raw }), json(403, { error: "anonymous traffic not allowed" });
+        return rpc(ANSWERS.provider, logs.own);
       case "read.canary.test":
         if (readDown) return json(503, { error: "down" });
         return rpc(ANSWERS.read, logs.read);
@@ -278,13 +282,17 @@ let tab;
   check("provider saw no read methods", reads(logs.provider).length === 0, logs.provider);
   check("nothing reached the provider from the page's origin", !logs.provider.some((l) => l.origin.includes("leakydash")), logs.provider);
   check("non-standard method forwarded over anon path (IP only)", JSON.stringify(result.custom) === '{"from":"provider"}' && logs.provider.some((l) => l.method === "alchemy_getTokenBalances" && l.origin === "null"));
-  check("Tor-hostile provider: read still answered (chain from wallet, labelled)", result.hostileBalance === "2" && tab?.notes.some((n) => n.includes("assumed from the wallet")), { r: result.hostileBalance, notes: tab?.notes });
+  // An endpoint refusing Tor: its chain is never guessed from the wallet (dapps read chains the wallet isn't on).
+  const asked = logs.own.filter((l) => l.origin !== "null");
+  check("dapp's own Tor-refusing proxy: the page asked its chain (no address), the read endpoint answered", result.ownBalance === "2" && asked.length >= 1 && asked.every((l) => l.method === "eth_chainId" && !l.body.toLowerCase().includes(ADDR_HEX)) && tab?.notes.some((n) => n.includes("dapp's own server")), { r: result.ownBalance, own: logs.own, notes: tab?.notes });
+  check("eth_accounts to a remote node answered [] by Canary, nothing sent", result.ownAccounts === "[[],[]]" && !logs.own.some((l) => l.method === "eth_accounts"), { r: result.ownAccounts, own: logs.own });
+  check("third-party Tor-refusing provider: chain unknown, so failed closed, never sent directly", String(result.hostileBalance).startsWith("ERR") && logs.hostile.every((l) => l.origin === "null") && tab?.notes.some((n) => n.includes("couldn't tell which chain torblock.provider.test serves")) && !tab?.notes.some((n) => n.includes("wallet")), { r: result.hostileBalance, hostile: logs.hostile, notes: tab?.notes });
   check("tracker received NO request carrying the address", leaked(logs.tracker).length === 0, leaked(logs.tracker));
   check("tracker's clean pageview still went through", logs.tracker.some((e) => e.path === "/event"));
   check("leaks blocked: fetch, base64 fetch, XHR, pixel all failed for the page", String(result.trackerFetch).startsWith("failed") && String(result.trackerBase64).startsWith("failed") && result.trackerXhr === 0 && result.trackerPixel === "error", result);
   check("first-party /api/points allowed and reported as detected", logs.points.length === 1 && tab?.recipients["leakydash.test"]?.categories.detected >= 1);
   check("indexer traffic allowed and reported as backend", logs.indexer.length === 1 && tab?.recipients["indexer.test"]?.categories.backend >= 1);
-  check("coverage counts: blocked ≥ 5, protected ≥ 8, failedClosed 0", tab?.counts.blocked >= 5 && tab?.counts.protected >= 8 && tab?.counts.failedClosed === 0, tab?.counts);
+  check("coverage counts: blocked ≥ 5, protected ≥ 9, failed closed only for the Tor-refusing provider", tab?.counts.blocked >= 5 && tab?.counts.protected >= 9 && tab?.counts.failedClosed === tab?.recipients["torblock.provider.test"]?.categories.failedClosed, tab?.counts);
   check("wallet address learned via EIP-1193/6963", (await c.sw.evaluate(() => chrome.storage.local.get("walletAddresses"))).walletAddresses?.includes(ADDR));
   check("eth_chainId answered from Canary's cache: the read endpoint was never asked", result.chainId === 11155111 && !logs.read.some((l) => l.method === "eth_chainId") && tab?.noRequest >= 1, { read: logs.read.map((l) => l.method), noRequest: tab?.noRequest });
   const st = await ext(c, { type: "state", tabId: tab.tabId });

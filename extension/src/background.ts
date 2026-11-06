@@ -161,7 +161,6 @@ export type TabState = {
   rpcCalls: number;
   recipients: Record<string, Recipient>;
   latencies: number[];
-  walletChain?: number;
   /** when the page first learned a wallet address (connect, or eth_accounts on load) */
   connectedAt?: number;
   notes: string[];
@@ -499,46 +498,51 @@ async function prewarmKnown(chainId?: number) {
 
 /* --- which chain is the dapp's endpoint on ------------------------------- */
 
+/* Never a guess from the wallet: dapps read chains the wallet isn't on (1inch
+   reads mainnet with the wallet on Sepolia), and a read answered with another
+   chain's data is worse than one held back. */
+
 const chainCache = new Map<string, number>();
-const chainInflight = new Map<string, Promise<{ id: number; assumed: boolean; from?: "wallet" | "url" } | undefined>>();
-/** One probe per URL at a time: concurrent first reads share it. */
-function chainOf(w: AnonRpcWorker | undefined, url: string, walletChain?: number) {
+const chainInflight = new Map<string, Promise<number | undefined>>();
+// Endpoints whose anon-rpc probe failed (most of them refuse Tor): later reads don't wait on another one.
+const probeFailed = new Map<string, number>();
+const PROBE_RETRY_MS = 10 * 60_000;
+
+/** The chain a well-known provider's URL names, or the endpoint's own eth_chainId. One probe per URL at a time: concurrent first reads share it. */
+function probedChain(w: AnonRpcWorker | undefined, url: string) {
   let p = chainInflight.get(url);
   if (!p) {
-    p = chainOfUncached(w, url, walletChain).finally(() => chainInflight.delete(url));
+    p = probedChainUncached(w, url).finally(() => chainInflight.delete(url));
     chainInflight.set(url, p);
   }
   return p;
 }
-async function chainOfUncached(w: AnonRpcWorker | undefined, url: string, walletChain?: number): Promise<{ id: number; assumed: boolean; from?: "wallet" | "url" } | undefined> {
+async function probedChainUncached(w: AnonRpcWorker | undefined, url: string): Promise<number | undefined> {
   const cached = chainCache.get(url) ?? ((await chrome.storage.session.get("chains")).chains ?? {})[url];
-  if (cached) return { id: cached, assumed: false };
-  let id = knownChain(url);
-  if (id === undefined) {
-    try {
-      // A node on this machine can't be reached through Tor, and asking it
-      // directly tells no third party anything.
-      const probe = JSON.stringify({ jsonrpc: "2.0", id: 1, method: "eth_chainId", params: [] });
-      const r = isLocalHost(new URL(url).hostname)
-        ? await fetch(url, { method: "POST", headers: { "content-type": "application/json" }, body: probe }).then(async (x) => ({ status: x.status, text: await x.text() }))
-        : await anonFetch(w!, url, probe);
-      const j = JSON.parse(r.text);
-      if (r.status === 200 && j.result) id = Number(j.result);
-    } catch {
-      /* fall through */
-    }
+  if (cached) return cached;
+  const known = knownChain(url);
+  if (known !== undefined) return rememberChain(url, known);
+  if (Date.now() - (probeFailed.get(url) ?? 0) < PROBE_RETRY_MS) return undefined;
+  try {
+    // A node on this machine can't be reached through Tor, and asking it
+    // directly tells no third party anything.
+    const probe = JSON.stringify({ jsonrpc: "2.0", id: 1, method: "eth_chainId", params: [] });
+    const r = isLocalHost(new URL(url).hostname)
+      ? await fetch(url, { method: "POST", headers: { "content-type": "application/json" }, body: probe }).then(async (x) => ({ status: x.status, text: await x.text() }))
+      : await anonFetch(w!, url, probe);
+    const id = Number(JSON.parse(r.text).result);
+    if (r.status === 200 && Number.isSafeInteger(id) && id > 0) return rememberChain(url, id);
+  } catch {
+    /* below */
   }
-  if (id !== undefined) {
-    chainCache.set(url, id);
-    const chains = (await chrome.storage.session.get("chains")).chains ?? {};
-    await chrome.storage.session.set({ chains: { ...chains, [url]: id } });
-    return { id, assumed: false };
-  }
-  // The probe failed (e.g. the provider refuses Tor). A chain id the URL names
-  // beats the wallet's: dapps read chains other than the one the wallet is on.
-  const hint = chainHintFromUrl(url);
-  if (hint !== undefined && CFG.readEndpoints[String(hint)]) return { id: hint, assumed: true, from: "url" };
-  return walletChain ? { id: walletChain, assumed: true, from: "wallet" } : undefined;
+  probeFailed.set(url, Date.now());
+  return undefined;
+}
+async function rememberChain(url: string, id: number) {
+  chainCache.set(url, id);
+  const chains = (await chrome.storage.session.get("chains")).chains ?? {};
+  await chrome.storage.session.set({ chains: { ...chains, [url]: id } });
+  return id;
 }
 
 /* --- handling one intercepted JSON-RPC request --------------------------- */
@@ -549,7 +553,17 @@ function errorBody(body: string, message: string) {
   return JSON.stringify(Array.isArray(v) ? v.map(err) : err(v));
 }
 
-async function handleRpc(tabId: number, origin: string, url: string, body: string, channel: Observation["channel"]) {
+/** What the shim can do about an endpoint's chain: ask it from the page (fetch and XHR, not WebSocket), and what that got
+    (null: no answer). */
+type ChainAsk = { canAsk?: boolean; pageChain?: number | null };
+
+/* A remote node holds no keys: to eth_accounts it always answers []. Canary
+   gives that answer without a request (1inch polls its own proxy, which refuses
+   Tor, with batches of them). A local node can hold accounts: passed through. */
+const NODE_ANSWERS = new Map<string, unknown>([["eth_accounts", []]]);
+const isRead = (c: { method: string }) => SUBSTITUTABLE.has(c.method) || NODE_ANSWERS.has(c.method);
+
+async function handleRpc(tabId: number, origin: string, url: string, body: string, channel: Observation["channel"], ask: ChainAsk = {}) {
   const t0 = Date.now();
   const calls = parseJsonRpc(body) ?? [];
   const methods = calls.map((c) => c.method);
@@ -564,32 +578,52 @@ async function handleRpc(tabId: number, origin: string, url: string, body: strin
   // A local node (anvil, hardhat, a devnet) that we have no public read
   // endpoint for: no third party on the other end, and Tor couldn't reach it.
   if (isLocalHost(host)) {
-    const chain = calls.every((c) => SUBSTITUTABLE.has(c.method)) ? await chainOf(undefined, url, tab?.walletChain).catch(() => undefined) : undefined;
-    if (!(chain && CFG.readEndpoints[String(chain.id)])) {
+    const chain = calls.every((c) => SUBSTITUTABLE.has(c.method)) ? await probedChain(undefined, url).catch(() => undefined) : undefined;
+    if (!(chain && CFG.readEndpoints[String(chain)])) {
       await record(tabId, { ...base, category: "localNode" }, calls.length);
       return { passthrough: true };
     }
   }
 
+  if (calls.length && calls.every((c) => NODE_ANSWERS.has(c.method))) {
+    if (tab) tab.noRequest = (tab.noRequest ?? 0) + calls.length;
+    await record(tabId, { ...base, category: "protected" }, calls.length);
+    const answers = calls.map((c) => ({ jsonrpc: "2.0", id: c.id ?? null, result: NODE_ANSWERS.get(c.method) }));
+    return { status: 200, body: JSON.stringify(/^\s*\[/.test(body) ? answers : answers[0]) };
+  }
+
+  // Why reads went to the dapp's own endpoint as written: for the note, if that fails too.
+  let asWritten: string | undefined;
   try {
     const w = await getWorker();
     let target = url;
     let category: Category = "protectedIpOnly";
     let note: string | undefined;
     let via: string | undefined;
-    if (calls.every((c) => SUBSTITUTABLE.has(c.method))) {
-      const chain = await chainOf(w, url, tab?.walletChain);
-      const read = chain && CFG.readEndpoints[String(chain.id)];
+    if (calls.every(isRead)) {
+      let chain = await probedChain(w, url);
+      if (chain === undefined && typeof ask.pageChain === "number") {
+        chain = await rememberChain(url, ask.pageChain);
+        note = `chain of ${host} (${chain}) asked of the dapp's own server by the page, as anon-rpc couldn't; the question carries no address`;
+      } else if (chain === undefined && firstParty && ask.canAsk && ask.pageChain === undefined) {
+        // The dapp's own server (1inch's proxy refuses Tor): the page can ask it, with its own headers and cookies.
+        return { askChain: true };
+      }
+      if (chain === undefined) {
+        const hint = chainHintFromUrl(url);
+        if (hint !== undefined && CFG.readEndpoints[String(hint)]) (chain = hint), (note = `chain of ${host} read from its URL (${hint})`);
+      }
+      const read = chain !== undefined && CFG.readEndpoints[String(chain)];
       if (read) {
         target = read;
         category = "protected";
         via = new URL(read).hostname;
-        if (chain.assumed) note = `chain of ${host} assumed from ${chain.from === "url" ? "its URL" : "the wallet"} (${chain.id})`;
         // The read endpoint's chain is known, so these never need a request.
-        pipeline.seed(read, "eth_chainId", [], "0x" + chain.id.toString(16));
-        pipeline.seed(read, "net_version", [], String(chain.id));
-      } else if (chain) {
-        note = `no read endpoint configured for chain ${chain.id}; forwarded instead`;
+        pipeline.seed(read, "eth_chainId", [], "0x" + chain!.toString(16));
+        pipeline.seed(read, "net_version", [], String(chain));
+      } else {
+        asWritten = chain !== undefined ? `no read endpoint configured for chain ${chain}` : `couldn't tell which chain ${host} serves`;
+        note = `${asWritten}; sent to ${host} as written, over anon-rpc`;
       }
     }
     // Per-address isolation: tor-js puts calls under different keys on
@@ -599,13 +633,13 @@ async function handleRpc(tabId: number, origin: string, url: string, body: strin
     // Only read methods go through the pipeline. Anything else (sends, custom
     // methods) is forwarded exactly as the dapp wrote it: never batched with
     // other calls, deduped, cached or retried, so a write can't be sent twice.
-    if (!calls.every((c) => SUBSTITUTABLE.has(c.method))) {
+    if (!calls.every(isRead)) {
       const r = await anonFetch(w, target, body, key);
       if (r.status >= 400) throw new Error(`HTTP ${r.status} from ${new URL(target).hostname}`);
       await record(tabId, { ...base, category, ms: Date.now() - t0, note, via }, calls.length);
       return { status: r.status, body: r.text };
     }
-    const outs = await Promise.all(calls.map((c) => pipeline.call(target, c, key)));
+    const outs = await Promise.all(calls.map((c) => (NODE_ANSWERS.has(c.method) ? Promise.resolve({ answer: { result: NODE_ANSWERS.get(c.method) }, source: "cache" as const }) : pipeline.call(target, c, key))));
     const answers = calls.map((c, i) => ({ jsonrpc: "2.0", id: c.id ?? null, ...outs[i].answer }));
     const noRequest = outs.filter((o) => o.source !== "network").length;
     if (noRequest && tab) tab.noRequest = (tab.noRequest ?? 0) + noRequest;
@@ -619,7 +653,8 @@ async function handleRpc(tabId: number, origin: string, url: string, body: strin
       await record(tabId, { ...base, category: "direct", note: `anon path failed (${why}); sent directly because you allowed it` }, calls.length);
       return { passthrough: true };
     }
-    await record(tabId, { ...base, category: "failedClosed", note: `anon path failed: ${why}` }, calls.length);
+    const note = asWritten ? `${asWritten}, and the anon path to ${host} failed (${why}): not sent` : `anon path failed: ${why}`;
+    await record(tabId, { ...base, category: "failedClosed", note }, calls.length);
     return { status: 200, body: errorBody(body, `Canary: anon path unavailable (${why}). Not sent directly.`) };
   }
 }
@@ -699,18 +734,16 @@ chrome.runtime.onMessage.addListener((msg: any, sender: any, respond: (r: unknow
         await syncing; // the page treats these addresses as already blocked in URLs
         return { enabled: site.enabled, addresses: (await getAddresses()).all, blockHosts };
       }
-      case "rpc":
-        return handleRpc(tabId ?? -1, msg.origin, msg.url, msg.body, msg.channel);
+      case "rpc": {
+        const pageChain = msg.pageChain === null || (Number.isSafeInteger(msg.pageChain) && msg.pageChain > 0) ? msg.pageChain : undefined;
+        return handleRpc(tabId ?? -1, msg.origin, msg.url, msg.body, msg.channel, { canAsk: msg.canAsk === true, pageChain });
+      }
       case "obs":
         if (tabId !== undefined) await record(tabId, msg.obs);
         return null;
       case "wallet": {
         if (msg.addresses?.length) await addAddresses("walletAddresses", msg.addresses);
         if (msg.addresses?.length && tabId !== undefined && sender.frameId === 0) void noticeConnect(tabId, msg.origin);
-        if (tabId !== undefined && Number.isFinite(msg.chainId)) {
-          const s = await tabState(tabId);
-          if (s) (s.walletChain = msg.chainId), persist(tabId);
-        }
         // Build each address's circuit now, before the dapp's first read about it.
         for (const a of msg.addresses ?? []) if (/^0x[0-9a-fA-F]{40}$/.test(a)) void prewarm(keyFor(a), Number.isFinite(msg.chainId) ? msg.chainId : undefined);
         return null;

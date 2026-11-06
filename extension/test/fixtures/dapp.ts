@@ -9,6 +9,7 @@ declare const __P__: string; // port
 const U = (h: string) => `http://${h}:${__P__}`;
 const PROVIDER = U("rpc.provider.test") + "/";
 const HOSTILE = U("torblock.provider.test") + "/";
+const OWN = U("rpc.leakydash.test") + "/";
 const TRACKER = U("tracker.test");
 const INDEXER = U("indexer.test");
 const ADDR = "0x5Ca1ab1e00000000000000000000000000C0FfEe";
@@ -71,6 +72,10 @@ const img = (src: string) =>
   const ws = createPublicClient({ transport: webSocket(PROVIDER.replace("http", "ws") + "ws", { keepAlive: false, reconnect: false }), cacheTime: 0 });
   out.wsBlockNumber = await settle(ws.getBlockNumber({ cacheTime: 0 }).then(String));
   out.hostileBalance = await settle(createPublicClient({ transport: http(HOSTILE), cacheTime: 0 }).getBalance({ address: acct as `0x${string}` }).then(String));
+  out.ownBalance = await settle(createPublicClient({ transport: http(OWN), cacheTime: 0 }).getBalance({ address: acct as `0x${string}` }).then(String));
+  // A batch of eth_accounts to its own RPC proxy, as 1inch's app sends
+  const accounts = JSON.stringify([1, 2].map((id) => ({ jsonrpc: "2.0", id, method: "eth_accounts", params: [] })));
+  out.ownAccounts = await fetch(OWN, { method: "POST", headers: { "content-type": "application/json" }, body: accounts }).then((r) => r.json()).then((j) => JSON.stringify(j.map((x: any) => x.result ?? null)), (e) => `ERR ${e.message}`);
   out.rpcMs = Math.round(performance.now() - t0);
 
   if (opts.leaks !== false) {

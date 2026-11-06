@@ -28,7 +28,7 @@ window.addEventListener("message", (ev) => {
     const m = e.data;
     if (m?.type === "rpc") {
       chrome.runtime
-        .sendMessage({ type: "rpc", url: m.url, body: m.body, channel: m.channel, origin: location.origin })
+        .sendMessage({ type: "rpc", url: m.url, body: m.body, channel: m.channel, canAsk: m.canAsk, pageChain: m.pageChain, origin: location.origin })
         .then(
           (r: any) => port.postMessage({ type: "res", id: m.id, ...r }),
           (err: Error) =>

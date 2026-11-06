@@ -287,8 +287,32 @@ import {
     return null; // ReadableStream and friends
   }
 
-  async function rpcViaCanary(url: string, body: string, channel: Observation["channel"]) {
-    return ask({ type: "rpc", url, body, channel, pageHost });
+  /* Which chain a dapp's own endpoint serves, when anon-rpc couldn't ask it
+     (1inch's proxy answers 403 over Tor): the service worker asks the page to,
+     once per URL, with the headers and cookies of the page's own request. An
+     eth_chainId carries no address; the dapp already has your IP. */
+  const pageChains = new Map<string, Promise<number | null>>();
+  function askChainId(url: string, opts: () => RequestInit): Promise<number | null> {
+    let c = pageChains.get(url);
+    if (!c) {
+      c = (async () => {
+        const o = opts();
+        if (findAddress(JSON.stringify([...new Headers(o.headers)]), needles)) return null;
+        const body = JSON.stringify({ jsonrpc: "2.0", id: 1, method: "eth_chainId", params: [] });
+        const r = await origFetch(url, { ...o, method: "POST", body, signal: AbortSignal.timeout(8000) });
+        const id = r.ok ? Number((await r.json())?.result) : NaN;
+        return Number.isSafeInteger(id) && id > 0 ? id : null;
+      })().catch(() => null);
+      pageChains.set(url, c);
+    }
+    return c;
+  }
+
+  /** `probe`: how the page would ask the endpoint its chain itself (none for WebSocket). */
+  async function rpcViaCanary(url: string, body: string, channel: Observation["channel"], probe?: () => RequestInit) {
+    const r = await ask({ type: "rpc", url, body, channel, pageHost, canAsk: !!probe });
+    if (!r.askChain || !probe) return r;
+    return ask({ type: "rpc", url, body, channel, pageHost, pageChain: await askChainId(url, probe) });
   }
 
   const isStatic = (url: string) => /\.(js|mjs|css|png|jpe?g|gif|svg|webp|woff2?|ttf|ico|map|wasm)(\?|$)/i.test(url);
@@ -311,7 +335,10 @@ import {
     if (method === "GET" && isStatic(url)) return origFetch(input as RequestInfo, init);
     const v = classify("fetch", url, body, method === "POST");
     if (v.kind === "rpc") {
-      const r = await rpcViaCanary(v.url, v.body, "fetch");
+      const r = await rpcViaCanary(v.url, v.body, "fetch", () => ({
+        headers: init?.headers ?? (input instanceof Request ? input.headers : undefined),
+        credentials: init?.credentials ?? (input instanceof Request ? input.credentials : undefined),
+      }));
       if (r.passthrough) return origFetch(input as RequestInfo, init);
       return new Response(r.body, { status: r.status, headers: { "content-type": "application/json" } });
     }
@@ -361,7 +388,7 @@ import {
       if (m.method === "GET" && isStatic(m.url)) return origSend.call(xhr, body as any);
       const v = classify("xhr", m.url, text, m.method === "POST");
       if (v.kind === "rpc") {
-        const r = await rpcViaCanary(v.url, v.body, "xhr");
+        const r = await rpcViaCanary(v.url, v.body, "xhr", () => ({ headers: m.headers, credentials: xhr.withCredentials ? "include" : "same-origin" }));
         if (r.passthrough) return origSend.call(xhr, body as any);
         return settleXhr(xhr, r.status, r.body, m.url);
       }
