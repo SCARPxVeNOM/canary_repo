@@ -462,30 +462,61 @@ tor-js patched to reuse HTTP/1.1 connections per isolation key ([tor-js-patches/
 
 | | stock 0.4.4 | keep-alive |
 |---|---|---|
-| warm read, no key (75) | p50 775 ms, p90 1,000, mean 794 | **p50 252 ms, p90 326, mean 259** |
-| warm read, isolation key (45) | p50 921 ms, p90 1,934, mean 1,090 | **p50 262 ms, p90 322, mean 291** |
-| first read after 40 s idle (new connection) | p50 832 ms | p50 985 ms |
-| 20 separate parallel reads | p50 1,250 ms | p50 1,478 ms |
-| boot | 2.46 s | 2.49 s |
+| warm read, no key (75) | p50 827 ms, p90 1,255, mean 875 | **p50 234 ms, p90 325, mean 255** |
+| warm read, isolation key (45) | p50 1,140 ms, p90 1,626, mean 1,121 | **p50 203 ms, p90 250, mean 217** |
+| first read after 40 s idle (new connection) | p50 1,043 ms | p50 1,014 ms |
+| 20 separate parallel reads | p50 2,008 ms | **p50 982 ms** |
+| boot | 2.5 s | 3.0 s |
 | failed | 0 | 0 |
+
+This is the final build (`0xd80132ce…`, after the review fixes below); raw: `res-keepalive.json`. Stock varies with the circuit (warm-read p50 0.56, 1.12 and 0.83 s in its three rounds; 0.78 s in the first run, which had keep-alive at 0.25 s). Against the first patched build (`res-keepalive-old-vs-final.json`): warm reads the same (p50 259 vs 244 ms), 20 parallel reads faster (p50 1.2 vs 1.9 s).
 
 - A warm read now costs about one circuit round trip instead of three: about 3× faster.
 - After 30 s idle the pool drops the connection, so the next read pays full price again.
-- 20 separate parallel requests don't benefit (the pool keeps 4 per key). Canary sends those as one batch anyway.
+- 20 separate parallel requests gain less (the pool keeps 4 per key). Canary sends those as one batch anyway.
 - It can't ship from Canary alone: the worker is pinned on chain by hash. It has to land upstream in tor-js, or run under a specifier we publish.
 
 ### Gateway liveness check in tor-js (`fo-bench.mjs`, 6 Nov)
 
-The patched worker (keep-alive + liveness check, [tor-js-patches/](tor-js-patches/)) vs stock 0.4.4. 3 own gateways, a read every 500 ms, the busiest gateway killed twice per build.
+The patched worker (keep-alive + liveness check, [tor-js-patches/](tor-js-patches/)) vs stock 0.4.4. 3 own gateways, a read every 500 ms, the busiest gateway killed twice per build and run. Final build (`0xd80132ce…`); raw: `res-failover-patched.json` (stock vs final), `res-failover-final-x4.json` (final only).
 
-| | stock | patched |
+| | stock 0.4.4 | patched (0001 + 0002) |
 |---|---|---|
-| failed reads per kill | 2, 2 | **0, 0** |
-| until reads were normal again | 17.4 s, 18.2 s | **12.5 s, 10.0 s** |
-| read in flight at the kill | failed (10 s), the next failed too | answered after 11.6 s / 8.5 s |
-| reads afterwards | 0.5–1.6 s | 0.23–0.55 s |
+| failed reads per kill | 2, every time | **1, every time** |
+| until reads were normal again | 17–31 s (17.4, 18.2, 18.3, 23.9, 25.0, 30.8) | **10.5–14.0 s** in 5 of 6 (10.5, 11.2, 12.5, 12.9, 14.0); once 31.5 s |
+| the read in flight at the kill | failed after 10 s, and so did the next one | failed after 7.9–8.9 s; the next one was answered |
+| reads afterwards | 0.5–1.6 s | 0.2–0.6 s |
 
-What's left: the one read in flight still waits about 5–9 s for detection plus a new circuit. A shorter check would cut that, but it would also drop slow gateways that are still working.
+Stock: 6 kills over 3 runs (raw: this run's 2 in `res-failover-patched.json`, the first run's 17.4/18.2 in its git history; the second run's file was overwritten). Patched: 6 kills over 2 runs (`res-failover-patched.json`, `res-failover-final-x4.json`).
+- The 31.5 s kill: the read after the failed one took 22 s. Not explained yet; there's no worker log from that run.
+- The read in flight fails because it was already sent: the server may have received it, so it isn't resent (RFC 9112 §9.3.1). The first patched build re-sent it and showed 0 failed reads, but that's unsafe for anything that isn't a read, so it's gone.
+
+What's left: the read in flight still fails (about 8 s for detection), and one kill in six still took 31.5 s.
+
+### Patched tor-js through the whole extension (`ext-ka-bench.mjs`, 6 Nov)
+
+`dist-local` (on-chain tor-js) vs `dist-patched` (`config/local-patched.json`: the patched worker as a dev worker, hash pinned at build time). Same 3 own gateways, 3 interleaved rounds, fresh profile each, a dapp-style page reading through Canary.
+
+| | on-chain tor-js | patched |
+|---|---|---|
+| warm read (90) | p50 653 ms, p90 877, mean 715 | **p50 222 ms, p90 451, mean 305** |
+| 20 parallel reads (Canary batches them) | mean 723 ms | **mean 355 ms** |
+| first read after 40 s idle | mean 882 ms | mean 1,108 ms (new connection) |
+| failed | 0 | 0 |
+
+- One patched session was slower (p50 434 ms against ~215 ms in the other two), probably a slower circuit.
+- Extension overhead (batch window, messaging) is a fixed slice, so the gain is ~2.3× here vs ~3× on the bare worker.
+- The 3.0 vs 4.1 s browser-to-ready difference isn't from the patch, which doesn't touch boot.
+
+This run used the first patched build (`0x4f4812b9…`), before the review fixes below.
+
+A review of the patches turned up issues, now fixed in the final build:
+- the pool never evicted keys it wouldn't see again: expired keys are now swept, with at most 32 idle connections in all (the longest idle goes first);
+- the chunked decoder could leave the final CRLF or trailers on a reused connection: a connection is now pooled only if its body ended exactly at its framed end, trailers read;
+- the gateway check ran for the whole session: a gateway is now pinged only when it has owed us bytes for 2 s, and never while its traffic flows;
+- the patch re-sent a POST after any failure on a reused connection: it now resends only when the connection closed before any response byte (RFC 9112 §9.3.1), never after a timeout or a partial response.
+
+Also: idle connections respect the server's `Keep-Alive: timeout`, HTTP/1.0 responses without `Connection: keep-alive` aren't pooled, and connections retire 2 min after opening (was 10). A check before reuse that the idle connection was still open was tried and dropped: it slowed 20 parallel reads to 2.3–2.7 s.
 
 ### Found along the way
 

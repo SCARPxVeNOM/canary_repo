@@ -1,0 +1,39 @@
+{
+ "note": "both runs are the final patched build (0xd80132ce…), 2 kills each",
+ "final-a": [
+  {
+   "victim": "canary-gateway-12300",
+   "failed": 1,
+   "slowOver2s": 0,
+   "recoveredAfterMs": 10510,
+   "gapMs": 12731,
+   "reads": "✗8713 1063 362 392 424 359 361 380 470 464 445 351 359 356"
+  },
+  {
+   "victim": "canary-gateway-12299",
+   "failed": 1,
+   "slowOver2s": 1,
+   "recoveredAfterMs": 12865,
+   "gapMs": 14379,
+   "reads": "✗8553 2375 608 541 620 500 515 504 489 496 504 499 558 532"
+  }
+ ],
+ "final-b": [
+  {
+   "victim": "canary-gateway-12299",
+   "failed": 1,
+   "slowOver2s": 0,
+   "recoveredAfterMs": 11150,
+   "gapMs": 12148,
+   "reads": "✗8724 1153 397 602 614 393 402 387 393 393 384 390 445 412"
+  },
+  {
+   "victim": "canary-gateway",
+   "failed": 1,
+   "slowOver2s": 1,
+   "recoveredAfterMs": 12543,
+   "gapMs": 13854,
+   "reads": "✗8947 2150 256 372 336 258 253 271 298 250 267 529 266 558"
+  }
+ ]
+}

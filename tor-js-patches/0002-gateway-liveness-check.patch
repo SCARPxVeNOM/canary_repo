@@ -1,16 +1,64 @@
+From 3bd3a108a6bfa06b2728d964f90e391ebd6855c0 Mon Sep 17 00:00:00 2001
+From: SCARPxVeNOM <pratikkumar56778@gmail.com>
+Date: Fri, 6 Nov 2026 07:48:17 +0530
+Subject: [PATCH] fix: drop a gateway that stops answering instead of waiting
+ for the transport
+
+A gateway that vanishes without closing its connection (crash, power,
+network) sends nothing, so the client only learned it was gone when the
+WebRTC transport timed out (~20-30 s); every tunnel through it hung until
+then. Ping a gateway only when it has gone quiet while owing us bytes
+(tunnel bytes sent, nothing back for 2 s), with a one-round-trip
+GET /metadata.json (KpsGateway.ping). After 2 missed pings in a row (3 s
+each), cool it off and drop its connection (KpsGateway.reset), so its
+tunnels close at once and arti rebuilds through another gateway. Gateways
+whose traffic flows, or that are idle, are never pinged. Relay choice is
+unchanged.
+
+With 3 gateways, killing the busiest (6 kills): 1 failed read per kill
+(was 2), reads normal again after 10.5-14 s in 5 of 6 kills (once
+31.5 s); was 17-31 s.
+---
+ src/kpsGateway.ts                 | 102 +++++++++++++++++++++++++++---
+ src/socketProvider.ts             |  73 ++++++++++++++++++++-
+ test/unit/socketProvider.test.mjs |  93 ++++++++++++++++++++++++++-
+ 3 files changed, 256 insertions(+), 12 deletions(-)
+
 diff --git a/src/kpsGateway.ts b/src/kpsGateway.ts
-index 2333b92..d18787e 100644
+index 2333b92..ac6540a 100644
 --- a/src/kpsGateway.ts
 +++ b/src/kpsGateway.ts
-@@ -290,6 +290,58 @@ export class KpsGateway {
+@@ -290,6 +290,82 @@ export class KpsGateway {
      }
    }
  
++  /** When tunnel bytes were first sent with nothing received since (ms epoch). */
++  #awaitingSince: number | null = null;
++
++  /**
++   * How long the gateway has been silent while owing us bytes: ms since
++   * tunnel bytes were sent with nothing received on any tunnel since; 0 if
++   * it isn't. A long silence is a reason to {@link ping}, not proof of death:
++   * the target may just be slow.
++   */
++  silentMs(now = Date.now()): number {
++    return this.#awaitingSince === null ? 0 : now - this.#awaitingSince;
++  }
++
++  #sent(): void {
++    this.#awaitingSince ??= Date.now();
++  }
++
++  #received(): void {
++    this.#awaitingSince = null;
++  }
++
 +  /**
 +   * One round trip on the current connection: resolves when the gateway
 +   * answers a request head (any status; an older gateway may 404). Used as a
 +   * liveness check — a gateway that vanished sends no close, so its
-+   * connection otherwise looks open until the transport gives up.
++   * connection otherwise looks open until the transport gives up. An answer
++   * ends the current silence (see {@link silentMs}).
 +   */
 +  async ping(opts: { signal?: AbortSignal } = {}): Promise<void> {
 +    const { signal } = opts;
@@ -33,6 +81,7 @@ index 2333b92..d18787e 100644
 +          await writer.write(enc.encode(`GET /metadata.json HTTP/1.1\r\nHost: ${this.#certhash}\r\n\r\n`));
 +          await writer.close();
 +          await readHead(reader);
++          this.#received();
 +        })(),
 +        signal,
 +        () => timedOut(`ping ${this.#address}`),
@@ -50,6 +99,7 @@ index 2333b92..d18787e 100644
 +  reset(): void {
 +    const p = this.#connPromise;
 +    this.#connPromise = null;
++    this.#awaitingSince = null;
 +    p?.then((conn) => {
 +      const teardowns = this.#teardowns.get(conn);
 +      this.#teardowns.delete(conn);
@@ -61,20 +111,70 @@ index 2333b92..d18787e 100644
    /**
     * Open a TCP tunnel to a Tor relay via CONNECT (PROTOCOL.md §4). After
     * the gateway's 200 the stream is the raw byte pipe to the target.
+@@ -329,21 +405,31 @@ export class KpsGateway {
+     }
+ 
+     // The CONNECT exchange is done; hand the raw tunnel to the consumer as
+-    // WHATWG streams. Release the writer we used for the request line so
+-    // ArtiSocket.writable is available; keep `reader` (it holds any body
+-    // bytes that arrived with the head) and expose it, extra bytes first,
+-    // as a pull-based readable that only pulls from the network on demand.
+-    writer.releaseLock();
++    // WHATWG streams. Keep `reader` (it holds any body bytes that arrived
++    // with the head) and expose it, extra bytes first, as a pull-based
++    // readable that only pulls from the network on demand. Both directions
++    // note activity for the liveness check (see silentMs).
++    const writable = new WritableStream<Uint8Array>({
++      write: (chunk) => {
++        this.#sent();
++        return writer.write(chunk);
++      },
++      close: () => writer.close(),
++      abort: (reason) => writer.abort(reason),
++    });
+ 
+     const readable = new ReadableStream<Uint8Array>({
+       start(controller) {
+         if (head.extra.length) controller.enqueue(new Uint8Array(head.extra));
+       },
+-      async pull(controller) {
++      pull: async (controller) => {
+         try {
+           const { done, value } = await reader.read();
+           if (done) controller.close(); // server FIN — target closed its write half
+-          else if (value?.length) controller.enqueue(new Uint8Array(value));
++          else if (value?.length) {
++            this.#received();
++            controller.enqueue(new Uint8Array(value));
++          }
+         } catch (e) {
+           controller.error(e);
+         }
+@@ -372,7 +458,7 @@ export class KpsGateway {
+ 
+     return new ArtiSocket({
+       readable,
+-      writable: stream.writable,
++      writable,
+       closed,
+       closeWrite: () => stream.closeWrite(),
+       close: () => { stream.close().catch(() => {}); },
 diff --git a/src/socketProvider.ts b/src/socketProvider.ts
-index 1fa92a9..c9f5810 100644
+index 1fa92a9..25d8c62 100644
 --- a/src/socketProvider.ts
 +++ b/src/socketProvider.ts
-@@ -43,12 +43,27 @@ export interface GatewayTiming {
+@@ -43,12 +43,32 @@ export interface GatewayTiming {
    cooldownBaseMs: number;
    /** Ceiling on the cooldown. */
    cooldownMaxMs: number;
-+  /** Liveness check interval while a gateway carries tunnels; 0 disables. */
-+  heartbeatMs: number;
-+  /** Deadline for one liveness check. */
-+  heartbeatTimeoutMs: number;
-+  /** Consecutive missed checks before the gateway's connection is dropped. */
-+  heartbeatMisses: number;
++  /** How often a gateway carrying tunnels is looked at; 0 disables the liveness check. */
++  livenessCheckMs: number;
++  /** Silence (bytes sent, nothing received) after which a gateway is pinged. */
++  suspectAfterMs: number;
++  /** Deadline for one ping. */
++  pingTimeoutMs: number;
++  /** Consecutive missed pings before the gateway's connection is dropped. */
++  pingMisses: number;
  }
  
  const DEFAULT_TIMING: GatewayTiming = {
@@ -83,28 +183,31 @@ index 1fa92a9..c9f5810 100644
    cooldownMaxMs: 60_000,
 +  // A gateway that dies without closing (crash, power, network) leaves its
 +  // tunnels hanging until the transport times out, ~20-30 s for WebRTC; Arti
-+  // only rebuilds circuits once their channels close. Checking a busy gateway
-+  // every 1.5 s and dropping it after two 3 s misses bounds that to ~5-9 s.
-+  // Generous on purpose: dropping a slow but working gateway tears down every
-+  // circuit through it.
-+  heartbeatMs: 1_500,
-+  heartbeatTimeoutMs: 3_000,
-+  heartbeatMisses: 2,
++  // only rebuilds circuits once their channels close. A gateway is pinged
++  // only when it has gone quiet while owing us bytes (nothing at all comes
++  // back over any of its tunnels for 2 s after a send), and dropped after two
++  // missed 3 s pings: ~6-9 s after it died. Traffic that flows, or an idle
++  // gateway, costs no pings. Generous on purpose: dropping a slow but working
++  // gateway tears down every circuit through it.
++  livenessCheckMs: 1_000,
++  suspectAfterMs: 2_000,
++  pingTimeoutMs: 3_000,
++  pingMisses: 2,
  };
  
  /** Liveness and load bookkeeping for one configured gateway. */
-@@ -60,6 +75,10 @@ interface GatewayState {
+@@ -60,6 +80,10 @@ interface GatewayState {
    failures: number;
    /** Epoch ms before which this gateway is passed over. */
    notBefore: number;
 +  /** Consecutive missed liveness checks. */
 +  misses: number;
 +  /** Liveness check timer, running while the gateway carries tunnels. */
-+  heartbeat?: ReturnType<typeof setInterval>;
++  watch?: ReturnType<typeof setInterval>;
  }
  
  /**
-@@ -250,6 +269,7 @@ export class ArtiSocketProvider {
+@@ -250,6 +274,7 @@ export class ArtiSocketProvider {
          inFlight: 0,
          failures: 0,
          notBefore: 0,
@@ -112,7 +215,7 @@ index 1fa92a9..c9f5810 100644
        });
      }
      this.#strategies = options.strategies ?? defaultStrategies(this.#states.length > 0);
-@@ -334,7 +354,45 @@ export class ArtiSocketProvider {
+@@ -334,7 +359,52 @@ export class ArtiSocketProvider {
  
    /** Close all KPS gateway connections and release resources. */
    close(): void {
@@ -124,42 +227,49 @@ index 1fa92a9..c9f5810 100644
 +  }
 +
 +  /**
-+   * Check a gateway that carries tunnels; after `heartbeatMisses` misses in a
-+   * row, cool it off and drop its connection, so its tunnels close now and
-+   * Arti rebuilds their circuits through another gateway. Relay choice is
-+   * untouched: the same targets are reached through whichever gateway is up.
++   * While a gateway carries tunnels, ping it when it goes quiet (see
++   * `GatewayTiming`). After `pingMisses` misses in a row, cool it off and
++   * drop its connection, so its tunnels close now and Arti rebuilds their
++   * circuits through another gateway. Relay choice is untouched: the same
++   * targets are reached through whichever gateway is up.
 +   */
 +  #watch(s: GatewayState): void {
-+    const { heartbeatMs, heartbeatTimeoutMs, heartbeatMisses } = this.#timing;
-+    if (!heartbeatMs || s.heartbeat) return;
++    const { livenessCheckMs, suspectAfterMs, pingTimeoutMs, pingMisses } = this.#timing;
++    if (!livenessCheckMs || s.watch) return;
 +    let busy = false;
-+    s.heartbeat = setInterval(() => {
++    const check = (): void => {
 +      if (busy) return;
 +      if (s.inFlight === 0) return this.#unwatch(s);
++      if (!s.misses && s.gw.silentMs() < suspectAfterMs) return;
 +      busy = true;
-+      s.gw.ping({ signal: AbortSignal.timeout(heartbeatTimeoutMs) }).then(
-+        () => { s.misses = 0; },
++      s.gw.ping({ signal: AbortSignal.timeout(pingTimeoutMs) }).then(
 +        () => {
++          s.misses = 0;
++          busy = false;
++        },
++        () => {
++          busy = false;
 +          s.misses += 1;
-+          if (s.misses < heartbeatMisses) return;
++          if (s.misses < pingMisses) return check(); // again at once, not a tick later
 +          this.#unwatch(s);
 +          this.#onFailure(s);
 +          s.gw.reset();
 +        },
-+      ).finally(() => { busy = false; });
-+    }, heartbeatMs);
++      );
++    };
++    s.watch = setInterval(check, livenessCheckMs);
 +    // Node: never hold the process open just for the check.
-+    (s.heartbeat as { unref?: () => void }).unref?.();
++    (s.watch as { unref?: () => void }).unref?.();
 +  }
 +
 +  #unwatch(s: GatewayState): void {
-+    clearInterval(s.heartbeat);
-+    s.heartbeat = undefined;
++    clearInterval(s.watch);
++    s.watch = undefined;
 +    s.misses = 0;
    }
  
    // -- Direct TCP strategy (Node.js / Deno) ---------------------------------
-@@ -383,6 +441,7 @@ export class ArtiSocketProvider {
+@@ -383,6 +453,7 @@ export class ArtiSocketProvider {
          // a gateway carrying many live tunnels reads as busy.
          const release = () => { s.inFlight -= 1; };
          sock.closed.then(release, release);
@@ -168,10 +278,39 @@ index 1fa92a9..c9f5810 100644
        } catch (e: any) {
          s.inFlight -= 1;
 diff --git a/test/unit/socketProvider.test.mjs b/test/unit/socketProvider.test.mjs
-index bae1d02..5d4427f 100644
+index bae1d02..ca1c652 100644
 --- a/test/unit/socketProvider.test.mjs
 +++ b/test/unit/socketProvider.test.mjs
-@@ -75,6 +75,7 @@ function makeDial(behaviours) {
+@@ -38,19 +38,25 @@ before(async () => {
+ const enc = new TextEncoder()
+ const OK_HEAD = 'HTTP/1.1 200 OK\r\n\r\n'
+ 
+-/** A fake KPS stream that replays `head` (+ optional body) to the reader. */
+-function makeStream({ head = OK_HEAD, body = null, endAfterHead = false } = {}) {
++/**
++ * A fake KPS stream that replays `head` (+ optional body) to the reader. With
++ * `echo`, tunnel bytes written after the request line come back.
++ */
++function makeStream({ head = OK_HEAD, body = null, endAfterHead = false, echo = false } = {}) {
+   let settle
++  let ctl
++  let writes = 0
+   const closed = new Promise((r) => { settle = r })
+   return {
+     readable: new ReadableStream({
+       start(c) {
++        ctl = c
+         c.enqueue(enc.encode(head))
+         if (body) c.enqueue(body)
+         if (endAfterHead) c.close()
+       },
+     }),
+-    writable: new WritableStream({ write() {} }),
++    writable: new WritableStream({ write(chunk) { if (echo && writes++ > 0) ctl.enqueue(chunk) } }),
+     closed,
+     closeWrite: async () => {},
+     close: async () => settle({ ok: true }),
+@@ -75,6 +81,7 @@ function makeDial(behaviours) {
        openStream: async () => {
          b.opens = (b.opens ?? 0) + 1
          if (b.openMode === 'reject') throw new Error('openStream refused')
@@ -179,13 +318,19 @@ index bae1d02..5d4427f 100644
          return makeStream(b.stream)
        },
        closed,
-@@ -311,3 +312,55 @@ describe('gatewayFetch (fast bootstrap)', () => {
+@@ -311,3 +318,83 @@ describe('gatewayFetch (fast bootstrap)', () => {
      await assert.rejects(() => provider.gatewayFetch('/bootstrap.zip.zst'), /no gateway configured/)
    })
  })
 +
 +describe('liveness check', () => {
-+  const quick = { heartbeatMs: 20, heartbeatTimeoutMs: 40, heartbeatMisses: 2, attemptTimeoutMs: 200 }
++  const quick = { livenessCheckMs: 10, suspectAfterMs: 30, pingTimeoutMs: 40, pingMisses: 2, attemptTimeoutMs: 200 }
++  const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
++  const send = async (sock) => {
++    const w = sock.writable.getWriter()
++    await w.write(enc.encode('cell'))
++    w.releaseLock()
++  }
 +
 +  test('tunnels through a gateway that stops answering are closed, and new ones go elsewhere', async () => {
 +    const { provider, behaviours } = setup([ADDRS[0], ADDRS[1]], { timing: quick })
@@ -195,6 +340,7 @@ index bae1d02..5d4427f 100644
 +      const sock = await provider.connect('198.51.100.1:9001')
 +      behaviours[dead].openMode = 'hang' // the gateway vanished: nothing answers, nothing closes
 +      const started = Date.now()
++      await send(sock) // owed an answer that never comes
 +      await sock.closed
 +      const elapsed = Date.now() - started
 +      assert.ok(elapsed < 1_000, `tunnel stayed open ${elapsed}ms after the gateway died`)
@@ -206,16 +352,37 @@ index bae1d02..5d4427f 100644
 +    }
 +  })
 +
-+  test('a gateway that keeps answering keeps its tunnels', async () => {
++  test('a gateway whose tunnels carry traffic both ways is never pinged', async () => {
++    const { provider, behaviours } = setup([ADDRS[0]], { timing: quick })
++    behaviours[ADDRS[0]].stream = { echo: true }
++    try {
++      const sock = await provider.connect('198.51.100.1:9001')
++      const reader = sock.readable.getReader()
++      for (let i = 0; i < 15; i++) {
++        await send(sock)
++        await reader.read()
++        await sleep(20)
++      }
++      assert.equal(behaviours[ADDRS[0]].opens, 1, 'only the tunnel itself')
++    } finally {
++      provider.close()
++    }
++  })
++
++  test('a quiet gateway that answers its ping keeps its tunnels', async () => {
 +    const { provider, behaviours } = setup([ADDRS[0]], { timing: quick })
 +    const keepAlive = setTimeout(() => {}, 30_000)
 +    try {
 +      const sock = await provider.connect('198.51.100.1:9001')
 +      let closed = false
 +      sock.closed.then(() => { closed = true })
-+      await new Promise((r) => setTimeout(r, 300))
++      for (let i = 0; i < 3; i++) {
++        await send(sock) // the target is slow: nothing comes back
++        await sleep(100)
++      }
 +      assert.equal(closed, false)
-+      assert.ok(behaviours[ADDRS[0]].opens > 3, 'liveness checks ran')
++      assert.ok(behaviours[ADDRS[0]].opens > 1, 'pinged once it went quiet')
++      assert.ok(behaviours[ADDRS[0]].opens <= 4, 'one ping per silence, not one per tick')
 +      assert.equal(behaviours[ADDRS[0]].dials, 1, 'no redial')
 +    } finally {
 +      clearTimeout(keepAlive)
@@ -223,15 +390,18 @@ index bae1d02..5d4427f 100644
 +    }
 +  })
 +
-+  test('no checks once a gateway carries no tunnels', async () => {
++  test('an idle gateway, or one without tunnels, is not pinged', async () => {
 +    const { provider, behaviours } = setup([ADDRS[0]], { timing: quick })
 +    const sock = await provider.connect('198.51.100.1:9001')
++    await sleep(150)
++    assert.equal(behaviours[ADDRS[0]].opens, 1, 'tunnel open but nothing owed')
++    await send(sock)
 +    sock.close()
-+    await new Promise((r) => setTimeout(r, 100))
-+    const opens = behaviours[ADDRS[0]].opens
-+    await new Promise((r) => setTimeout(r, 150))
-+    assert.equal(behaviours[ADDRS[0]].opens, opens)
++    await sleep(150)
++    assert.equal(behaviours[ADDRS[0]].opens, 1, 'no tunnels left')
 +    provider.close()
 +  })
 +})
-+
+-- 
+2.54.0 (Apple Git-157)
+

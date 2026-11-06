@@ -1,38 +1,38 @@
 {
  "stock": [
   {
-   "victim": "canary-gateway",
+   "victim": "canary-gateway-12300",
    "failed": 2,
    "slowOver2s": 0,
-   "recoveredAfterMs": 17386,
-   "gapMs": 17859,
-   "reads": "✗10012 ✗4418 1211 1284 1602 1206 1292 1212 1526 1503 1381 1324 1567 1202"
+   "recoveredAfterMs": 18260,
+   "gapMs": 19654,
+   "reads": "✗10019 ✗5723 727 773 795 719 690 974 680 904 714 814 670 733"
   },
   {
    "victim": "canary-gateway-12299",
    "failed": 2,
-   "slowOver2s": 0,
-   "recoveredAfterMs": 18191,
-   "gapMs": 19868,
-   "reads": "✗10008 ✗6411 560 512 496 517 518 524 532 641 500 489 484 512"
+   "slowOver2s": 1,
+   "recoveredAfterMs": 24975,
+   "gapMs": 25927,
+   "reads": "✗10013 ✗3949 7653 1040 1060 1053 1082 1045 1182 1196 1263 1188 1126"
   }
  ],
  "patched": [
   {
    "victim": "canary-gateway-12300",
-   "failed": 0,
-   "slowOver2s": 1,
-   "recoveredAfterMs": 12538,
-   "gapMs": 13646,
-   "reads": "11568 249 243 238 244 246 339 261 256 260 241 242 243 244"
+   "failed": 1,
+   "slowOver2s": 2,
+   "recoveredAfterMs": 14030,
+   "gapMs": 15131,
+   "reads": "✗8221 4292 236 221 229 568 249 3001 236 264 223 233 235 299"
   },
   {
    "victim": "canary-gateway",
-   "failed": 0,
+   "failed": 1,
    "slowOver2s": 1,
-   "recoveredAfterMs": 9982,
-   "gapMs": 11015,
-   "reads": "8512 245 286 285 245 240 254 336 553 327 229 305 254 265"
+   "recoveredAfterMs": 31518,
+   "gapMs": 33488,
+   "reads": "✗7880 22124 228 259 209 217 227 531 208 212 197 193 212 245"
   }
  ]
 }
