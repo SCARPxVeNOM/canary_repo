@@ -1,0 +1,64 @@
+{
+  "chainId": 11155111,
+  "contracts": {
+    "ethRegistrar": "0xf633e7fc17e2bbe0d0965d18ec1821dcb754a3d3",
+    "ethRegistry": "0xd4ebcbbdf463c9c45784603db0ddd499bc44a8b4",
+    "factory": "0xda70306c98e97ece36f997a21368e53298572991",
+    "resolverImpl": "0x115eb53f0c60696633855f90b138178fb40b2b2c",
+    "userRegistryImpl": "0x9bd8a88719068d09ecee662f36c0e3856708366a",
+    "usdc": "0x240b0316df57887dbbe58b586508b19e633a14aa",
+    "universalResolver": "0xeeeeeeee14d718c2b47d9923deab1335e144eeee"
+  },
+  "owner": "0x7fCD34282e0d69A6E5c2c0D66d27C333bFC36256",
+  "verifier": "0x0f17A972C98f06BB128d8d8B971c33E631b351De",
+  "names": {
+    "leakydash.eth": {
+      "resolver": "0xD9aBe143093250df4BaaFb624D096eC10B8599ba"
+    },
+    "canary.eth": {
+      "resolver": "0x43971D30D3BdE33bBE8E39FDCD60Fc13fAB8620c",
+      "subregistry": "0x3E2cea6Be8D3fAb76ea8DA0767d92c26988BE28c"
+    },
+    "verifier.canary.eth": {
+      "owner": "0x0f17A972C98f06BB128d8d8B971c33E631b351De",
+      "resolver": "0x43971D30D3BdE33bBE8E39FDCD60Fc13fAB8620c",
+      "addr": "0x0f17A972C98f06BB128d8d8B971c33E631b351De",
+      "labelhash": "0xd8d69c1da829f8277e4e80945a974b3ca009835eb268c14bf9321952f1cf169e"
+    }
+  },
+  "txs": {
+    "fund verifier": "0x30fb515153d39afb6c7badb265462bdbdc254d3f3358af44b396d5c0fa089716",
+    "deploy PermissionedResolver for leakydash.eth": "0x929571d66dfab89251dd688beaa8c126d3858f7532c0922eff556061e37e138b",
+    "deploy PermissionedResolver for canary.eth": "0x1afc84da67e1f87222ffc76856e96f37e2743f99f6f9355cef40e3da6956e3f7",
+    "deploy UserRegistry for canary.eth": "0xf28debaad6dc3f34f10f3f7abc0ec4e8476d74e31d8e51b9da54f72041861bb4",
+    "commit leakydash.eth": "0xcbbc36b773931ab3cca6be18d510db4ba6df69354065fec135492b8cbbc9a40b",
+    "commit canary.eth": "0xea6ac6b901d58858a92567bccd2bdb71fd2506e6a32794612c12a0f964f45790",
+    "mint MockUSDC": "0x9c5a6fb3ed08e4350ce677754007a72bf4bd5e2262a5129d1eaaa3b0cfe32d9b",
+    "approve MockUSDC": "0x5185e54da9e8b8771fca3b50574af166931d8345c71002369e8438d5089ada0f",
+    "register leakydash.eth": "0xd843e633a99aa78a755044c18e9c50a2032562905e3da3810702e7668702905d",
+    "register canary.eth": "0x940924408b57125e9e2c342b4d604c4e1bbbd87f3105bd09ba79696250f76768",
+    "setParent canary registry": "0x7ca14f0b2d4b7d96bfdde8db023ef18d63c52fd27025027049d9688380afc2f9",
+    "register verifier.canary.eth": "0xc5791e0f1eb50b9affc00a4c70d5def787363caab3383546e934e461a0ee41a2",
+    "addr verifier.canary.eth": "0x4e27fe3123d4b3591b4c5f3f4edebf2616314e413917ec85e848533f8d7b891f",
+    "text canary.eth url": "0xdc0b664f482dbd4a4475c187ac331c5b3576a889be1d1b26e767e8c7cd0f8809",
+    "text canary.eth description": "0x1aa62db8973dcf86d142753baac7c3957fafbac675c3d567d8da8b90a62e6f03"
+  },
+  "records": {
+    "leakydash.eth": {
+      "set-dapp (url, privacy.manifest)": [
+        "0xa3f383f80edb5adbf557e76606666c06f4bbb43d6ce9791950ab018193015107",
+        "0x47230559ab9d1d865c7d08153ead17436f275ea9f12df2df840b4579d1ab0c16"
+      ],
+      "grant-verifier privacy.verdict.canary → verifier.canary.eth": "0xa30bcc8cfe743f2a5d2f9f36bd35b98fc30131770fb627b73c8e50290453a71a",
+      "publish-verdict (signed by verifier.canary.eth, sent by its key)": "0x0fe1f2839cd75551ad6959d5676a6968afa0600613b4ec21e74c14527fe719e7",
+      "revoke-verifier (readers see delegated: false)": [
+        "0xcf2a0ce1c9fc1ca410e6bf3e255c762f9633400991f7829f1601a6f4098bd4d2",
+        "0x0beb89c88f52f1d2d11d40cd172c900e219c49b4950c4323c9f582c4363c4926"
+      ],
+      "grant-verifier again": [
+        "0x520287baa1d882c03ed7271823b4fc8d372fb167bde89ff053889acf1038b112",
+        "0x9e0761080a9349c6fca1e518edd9e8cfb2ff5e51ed64d135f9f54c9e6b9db348"
+      ]
+    }
+  }
+}

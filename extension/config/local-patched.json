@@ -1,0 +1,35 @@
+{
+  "network": {
+    "id": "tor-js",
+    "label": "tor-js patched (own gateways, dev worker)",
+    "specifier": "0x000000000000000000000000000000000000c0de",
+    "bootstrapRpc": "https://ethereum-rpc.publicnode.com",
+    "workerConfig": {
+      "gateways": [
+        "127.0.0.1:12298:uEiA7-gErW8ncO5ilJnuAcDIYIn-eaeWW46qB8FvCrfqeyA",
+        "127.0.0.1:12299:uEiBqhyrM1xJQYDQbjN4te03xCNEfsFknwcPtgjNtQgXKVA",
+        "127.0.0.1:12300:uEiDoBVlkflIij7JzMopAcK1czhz_m85dpqaNESJFz4nKEw"
+      ]
+    },
+    "devWorker": {
+      "bundle": "../tor-js-patches/dist/anon-rpc-worker.js",
+      "url": "http://127.0.0.1:8547/anon-rpc-worker.js"
+    }
+  },
+  "readEndpoints": {
+    "1": "https://ethereum-rpc.publicnode.com",
+    "10": "https://optimism-rpc.publicnode.com",
+    "8453": "https://base-rpc.publicnode.com",
+    "42161": "https://arbitrum-one-rpc.publicnode.com",
+    "11155111": "https://ethereum-sepolia-rpc.publicnode.com"
+  },
+  "timeoutMs": 30000,
+  "matches": [
+    "<all_urls>"
+  ],
+  "hostPermissions": [
+    "https://*/*",
+    "http://*/*"
+  ],
+  "torBootstrap": true
+}

@@ -35,3 +35,6 @@ button { background: #1f2937; color: var(--text); border: 1px solid var(--line);
 footer { padding: 10px 14px 12px; }
 footer p { margin: 0 0 6px; }
 .empty { color: var(--muted); font-style: italic; }
+.st-undeclared { color: var(--red); }
+.st-declared { color: var(--green); }
+.st-notSeen { color: var(--muted); }

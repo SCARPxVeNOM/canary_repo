@@ -11,6 +11,7 @@
 // read chains other than the one your wallet is on.
 
 import { AnonRpcWorker, type PlainValue } from "@anon-rpc/browser-extension-harness";
+import { readDeclared, UNIVERSAL_RESOLVER, type Declared } from "./ens.js";
 import { RpcPipeline } from "./rpc-pipeline.js";
 import {
   chainHintFromUrl, findAddress, isLocalHost, isThirdParty, knownChain, needlesFor, parseJsonRpc, SUBSTITUTABLE,
@@ -20,8 +21,18 @@ import {
 declare const chrome: any;
 
 type Config = {
-  network: { id: string; label: string; specifier: string; bootstrapRpc: string; workerConfig?: PlainValue };
+  network: {
+    id: string;
+    label: string;
+    specifier: string;
+    bootstrapRpc: string;
+    workerConfig?: PlainValue;
+    /** Dev only, set by build.mjs: a worker build pinned here instead of on chain. */
+    devWorker?: { hash: string; url: string };
+  };
   readEndpoints: Record<string, string>;
+  /** Where dapps' ENS names live (default: Sepolia, Universal Resolver at its usual address), and whose verdict record to read (privacy.verdict.<verifier>, default "canary"). */
+  ens?: { chainId: number; universalResolver?: string; verifier?: string };
   timeoutMs: number;
   /** A tor-js fast-bootstrap snapshot packaged at build time (build.mjs --tor-bootstrap). */
   torBootstrap?: { file: string; fetchedAt: number; maxAgeHours: number };
@@ -125,6 +136,8 @@ export type TabState = {
   notes: string[];
   /** calls answered without a request of their own: from cache, or by joining an identical one in flight */
   noRequest: number;
+  /** the site's declared recipients (ENS privacy.manifest), for declared vs observed */
+  declared?: Declared;
 };
 
 const emptyCounts = (): Record<Category, number> => ({
@@ -193,7 +206,30 @@ const setStatus = (s: Partial<WorkerStatus>) => {
   void chrome.storage.session.set({ worker: status });
 };
 
+/** ABI encoding of a string[] return value. */
+function abiStrings(xs: string[]): string {
+  const word = (n: number) => n.toString(16).padStart(64, "0");
+  const hex = (b: Uint8Array) => Array.from(b, (x) => x.toString(16).padStart(2, "0")).join("");
+  let head = "", tail = "", off = xs.length * 32;
+  for (const x of xs) {
+    const b = new TextEncoder().encode(x);
+    const padded = hex(b).padEnd(Math.ceil(b.length / 32) * 64, "0");
+    head += word(off);
+    tail += word(b.length) + padded;
+    off += 32 + padded.length / 2;
+  }
+  return "0x" + word(32) + word(xs.length) + head + tail;
+}
+
 async function bootstrapCall(method: string, params: unknown[]) {
+  // A dev worker: answer the specifier's workerHash()/workerResolvers() with
+  // the hash pinned at build time. The harness verifies the bytes against it.
+  const dev = CFG.network.devWorker;
+  const to = (params[0] as { to?: string; data?: string } | undefined);
+  if (dev && method === "eth_call" && to?.to?.toLowerCase() === CFG.network.specifier.toLowerCase()) {
+    if (to.data === "0x3898587d") return dev.hash; // workerHash()
+    if (to.data === "0x1c67ff29") return abiStrings([dev.url]); // workerResolvers()
+  }
   const r = await fetch(CFG.network.bootstrapRpc, {
     method: "POST",
     headers: { "content-type": "application/json" },
@@ -504,6 +540,39 @@ async function handleRpc(tabId: number, origin: string, url: string, body: strin
   }
 }
 
+/* --- declared recipients (ENS) ------------------------------------------- */
+
+const ENS = { chainId: CFG.ens?.chainId ?? 11155111, universalResolver: CFG.ens?.universalResolver ?? UNIVERSAL_RESOLVER, verifier: CFG.ens?.verifier ?? "canary" };
+const DECLARED_TTL_MS = 10 * 60_000;
+const DECLARED_RETRY_MS = 30_000;
+const declaredCache = new Map<string, { at: number; ttl: number; value: Promise<Declared> }>();
+
+/** The site's manifest, read once per origin every 10 min (30 s after a failure). */
+function declaredFor(origin: string): Promise<Declared> {
+  const hit = declaredCache.get(origin);
+  if (hit && Date.now() - hit.at < hit.ttl) return hit.value;
+  const read = CFG.readEndpoints[String(ENS.chainId)];
+  const entry = { at: Date.now(), ttl: DECLARED_TTL_MS, value: Promise.resolve<Declared>({ state: "error", error: `no read endpoint for chain ${ENS.chainId}` }) };
+  if (read) {
+    // Its own circuit: ENS lookups never share one with reads about your addresses.
+    const call = (to: string, data: string, from?: string) =>
+      pipeline.call(read, { jsonrpc: "2.0", id: 1, method: "eth_call", params: [{ ...(from ? { from } : {}), to, data }, "latest"] }, "canary:ens").then((o) => o.answer as { result?: string; error?: { message: string } });
+    entry.value = readDeclared(origin, call, ENS).catch((e) => ({ state: "error", error: String(e?.message ?? e) }) as Declared);
+  }
+  void entry.value.then((d) => { if (d.state === "error") entry.ttl = DECLARED_RETRY_MS; });
+  declaredCache.set(origin, entry);
+  return entry.value;
+}
+
+async function lookUpDeclared(tabId: number, origin: string) {
+  if (!/^https?:/.test(origin)) return;
+  const s = await tabState(tabId);
+  if (s) (s.declared = { state: "pending" }), persist(tabId);
+  const d = await declaredFor(origin);
+  const now = await tabState(tabId);
+  if (now && now.origin === origin) (now.declared = d), persist(tabId);
+}
+
 /* --- messages ------------------------------------------------------------ */
 
 chrome.runtime.onMessage.addListener((msg: any, sender: any, respond: (r: unknown) => void) => {
@@ -515,6 +584,7 @@ chrome.runtime.onMessage.addListener((msg: any, sender: any, respond: (r: unknow
         if (tabId !== undefined && sender.frameId === 0) {
           tabs.set(tabId, freshTab(msg.origin));
           persist(tabId);
+          void lookUpDeclared(tabId, msg.origin);
           // Rebuilds any circuit that has aged out (no-op when ready() hasn't happened yet).
           void getWorker().then(() => prewarmKnown(), () => {});
         }

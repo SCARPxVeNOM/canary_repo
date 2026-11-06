@@ -1,6 +1,6 @@
 # @canary/ens
 
-The ENSv2 side of Canary for agents (agent-sdk.md §4): an agent's name holds its policy and its signed egress reports, with a one-key role so the gateway can write reports and nothing else.
+The ENSv2 side of Canary. For agents (agent-sdk.md §4): an agent's name holds its policy and its signed egress reports, with a one-key role so the gateway can write reports and nothing else. For dapps (idea.md §3.3): a dapp's name holds its declared recipients and an independent verifier's signed verdict, again with a one-key role (below).
 
 | Record on the agent's name | Written by | Content |
 |---|---|---|
@@ -49,7 +49,9 @@ As of Nov 2026 the ENS docs describe two ways to delegate one text key:
 - `authorizeTextRoles(bytes name, string key, address account, bool grant)` (Permissioned Resolver guide);
 - `grantSetterRoles(bytes setterCalldata, address account)` / `revokeRoles(resource, roleBitmap, account)`, where a text key's resource is `keccak256(bytes(key))` (contracts reference).
 
-`grantTextKey`/`revokeTextKey` try both and use the one the resolver accepts. Reads go through viem's `getEnsText`, which uses the Universal Resolver address viem ships for the chain (pass `universalResolverAddress` / `--universal-resolver` if ENS gives you a different one); writes use `setText(bytes dnsEncodedName, key, value)`; revocation detection simulates `setText`, so it doesn't depend on either API. The tests run against mock contracts written from the docs (`test/contracts/Mocks.sol`), one per API. **Not yet run against the live Sepolia deployment:** confirm with the ENS mentors which API is deployed.
+`grantTextKey`/`revokeTextKey` try both and use the one the resolver accepts. Reads go through viem's `getEnsText`, which uses the Universal Resolver address viem ships for the chain (pass `universalResolverAddress` / `--universal-resolver` if ENS gives you a different one); writes use `setText(bytes dnsEncodedName, key, value)`; revocation detection simulates `setText`, so it doesn't depend on either API. The tests run against mock contracts written from the docs (`test/contracts/Mocks.sol`), one per API.
+
+**On Sepolia** (checked against the Sourcify-verified `PermissionedResolver` source, and live, below): the deployed resolver has `grantSetterRoles` / `revokeRoles` and no `authorizeTextRoles`; `setText` needs `ROLE_SET_TEXT` (`1 << 4`) on `keccak256(bytes(key))` or on the root resource, so the one-key grant works as designed. `revokeTextKey` confirms the revoke from the receipt's `EACRolesChanged` (a load-balanced RPC's `latest` can be a block behind the receipt).
 
 ## CLI
 
@@ -62,6 +64,48 @@ CANARY_OWNER_KEY=0x… canary-ens revoke-reporter <name> <reportKeyAddress>
 
 `--chain <id>` (default 11155111). `--rpc <url>` defaults to the local gateway (`http://127.0.0.1:18545/<chain>`), so these lookups and transactions also go over anon-rpc. `--universal-resolver <address>` for chains viem doesn't know.
 
+## A dapp's name: manifest and a verifier's verdict (idea.md §3.3)
+
+| Record on the dapp's name | Written by | Content |
+|---|---|---|
+| `url` | dapp (owner key) | its origin; the site serves `/.well-known/canary.json` → `{"ens": "<name>"}`, so the binding holds both ways |
+| `privacy.manifest` | dapp | who receives the connected address: `{name, origin, recipients: [{host, kind, purpose}], rpc}` (`parseDappManifest` in `@canary/core`) |
+| `privacy.verdict.canary` | the verifier only, delegated for this one key | a scanner baseline turned into a signed verdict (below) |
+
+The dapp grants the verifier exactly one key (`grantTextKey`, as for the agent's reporter), so the verifier can publish bad news without the dapp's help and can't touch anything else. The owner keeps admin roles and could re-grant itself the key, so the verdict is also signed by the key in the verifier name's `addr` record. The only way to silence the verifier is to revoke the role, which readers see: `canWriteText` turns false, and `EACRolesChanged` is on chain. Per the ENS docs, a text-key grant covers that key on every name the same Permissioned Resolver instance serves; give the dapp's name its own resolver if that matters.
+
+The verdict (`verdict.ts`): `{name, origin, verifier, buildHash, scannerHash, flows, result: matches | undeclared | incomplete, undeclaredHosts, notInspected, issuedAt, expiresAt, evidenceURI?, signer, signature}`. EIP-712 over `Verdict{name, origin, verifier, result, issuedAt, expiresAt, verdictHash}` (domain `Canary Verdict` v1), where `verdictHash = keccak256(canonicalJson(verdict))` commits to the rest. `verdictFromScan` makes it from a `scanner/scan.mjs` baseline report (never a with-Canary run: the verdict is about what the dapp itself sends); `incomplete` when there was no manifest to check against.
+
+```sh
+CANARY_OWNER_KEY=0x…    canary-ens set-dapp leakydash.eth manifest.json        # url + privacy.manifest
+CANARY_OWNER_KEY=0x…    canary-ens grant-verifier leakydash.eth <verifierAddress>
+CANARY_VERIFIER_KEY=0x… canary-ens sign-verdict leakydash.eth scans/leakydash.baseline.json --verifier-name verifier.canary.eth > verdict.json
+CANARY_VERIFIER_KEY=0x… canary-ens publish-verdict leakydash.eth verdict.json  # refuses a record that doesn't verify
+canary-ens read-dapp leakydash.eth                                             # anyone: records, signer, role still held, expiry
+CANARY_OWNER_KEY=0x…    canary-ens revoke-verifier leakydash.eth <verifierAddress>
+```
+
+The browser extension reads these records over anon-rpc and shows the verdict next to declared vs observed (`extension/README.md`).
+
+## Live on Sepolia
+
+Every record above is on ENSv2 Sepolia, written by these commands. Addresses and every transaction: [`sepolia.json`](sepolia.json).
+
+| Name | What it is | ENSv2 parts used |
+|---|---|---|
+| `leakydash.eth` | the demo dapp (`leakydash/`): `url`, `privacy.manifest`, and `privacy.verdict.canary` | ETHRegistrar (commit/register, paid in MockUSDC); its own Permissioned Resolver from the Verifiable Factory; a one-key EAC grant (`grantSetterRoles`) to the verifier |
+| `canary.eth` | Canary's namespace: `url`, `description` | a UserRegistry as its subregistry (`setParent` → the .eth registry) |
+| `verifier.canary.eth` | the verifier: a subname owned by the verifier key, `addr` = that key | a subname in that registry, resolved through the Universal Resolver |
+
+```sh
+# names, resolvers and the subregistry (rerunnable: it skips what's on chain)
+node scripts/sepolia-setup.mjs --owner-key-file ../../keys.txt --verifier-key-file ../../verifier.key
+# the records, as above, with --rpc https://ethereum-sepolia-rpc.publicnode.com
+canary-ens read-dapp leakydash.eth --rpc https://ethereum-sepolia-rpc.publicnode.com
+```
+
+The verdict was made from a real baseline scan of LeakyDash ([`test-artifacts/sepolia/`](../../test-artifacts/sepolia/): the report, and the signed verdict as published). It says `undeclared`: `tracker.localhost` received the address in three encodings and isn't in the manifest. Checked live: the signer is `verifier.canary.eth`'s `addr`; the verifier holds `ROLE_SET_TEXT` on that key only; after `revoke-verifier`, both `read-dapp` and the extension's reader (`extension/test/ens-live.mjs`) show the verifier can no longer write, and after `grant-verifier` again, that it can. The verdict's origin is the local LeakyDash (`http://leakydash.localhost:3000`); a deployed LeakyDash needs `set-dapp` with its origin and a new scan.
+
 ## Test
 
-`npm test`: ganache (in-process, chain id 11155111) plus the mock contracts, compiled with solc at test time. Covers both delegation APIs, tampering, a forged reporter, policy drift, and a manifest published on the wrong name.
+`npm test`: ganache (in-process, chain id 11155111) plus the mock contracts, compiled with solc at test time. Covers both delegation APIs, tampering, a forged reporter, policy drift, and a manifest published on the wrong name; and for dapps (`test/verdict.test.mjs`): a verdict from a scan, signature tampering, and the verifier's one-key grant, publish and revoke.

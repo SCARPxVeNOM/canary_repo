@@ -17,7 +17,10 @@ import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import { WebSocketServer } from "ws";
 import { keccak_256 } from "@noble/hashes/sha3";
+import { decodeFunctionData, encodeAbiParameters, namehash } from "viem";
+import { privateKeyToAccount } from "viem/accounts";
 import { buildExtension } from "../build.mjs";
+import { compareDeclared, signVerdict } from "./shared-src.mjs";
 
 const HERE = import.meta.dirname;
 const CHROME = process.env.CHROME_BIN;
@@ -49,10 +52,55 @@ const ANSWERS = {
   provider: { eth_chainId: "0xaa36a7", eth_blockNumber: "0x111", eth_getBalance: "0x1", eth_call: "0x" + word(1), alchemy_getTokenBalances: { from: "provider" } },
   read: { eth_chainId: "0xaa36a7", eth_blockNumber: "0x222", eth_getBalance: "0x2", eth_call: "0x" + word(2) },
 };
+
+// LeakyDash's ENS name, answered by the read endpoint's Universal Resolver:
+// it declares its RPC provider and indexer, not its tracker (idea.md §3.4),
+// and carries a verdict from a verifier it delegated privacy.verdict.canary to.
+const UR = "0xeeeeeeee14d718c2b47d9923deab1335e144eeee";
+const RESOLVER = "0x" + "22".repeat(20);
+const VERIFIER_KEY = "0x6cbed15c793ce57650b9877cf6fa156fbef513c4e6134f022a85b1ffdd59b2a1";
+const VERIFIER = privateKeyToAccount(VERIFIER_KEY).address;
+let verdictRecord = "";
+const ensRecords = () => ({
+  "leakydash.eth": {
+    url: `http://leakydash.test:${P}`,
+    "privacy.manifest": JSON.stringify({ name: "leakydash.eth", recipients: [{ host: "rpc.provider.test", kind: "rpc", purpose: "reads balances" }, { host: "indexer.test", kind: "backend" }, { host: "cdn.leakydash-assets.test", kind: "backend" }] }),
+    "privacy.verdict.canary": verdictRecord,
+  },
+  "verifier.canary.eth": { addr: VERIFIER },
+});
+const ensAbi = [
+  { type: "function", name: "resolve", inputs: [{ type: "bytes" }, { type: "bytes" }], outputs: [{ type: "bytes" }, { type: "address" }] },
+  { type: "function", name: "findResolver", inputs: [{ type: "bytes" }], outputs: [{ type: "address" }, { type: "bytes32" }, { type: "uint256" }] },
+  { type: "function", name: "text", inputs: [{ type: "bytes32" }, { type: "string" }], outputs: [{ type: "string" }] },
+  { type: "function", name: "addr", inputs: [{ type: "bytes32" }], outputs: [{ type: "address" }] },
+  { type: "function", name: "setText", inputs: [{ type: "bytes" }, { type: "string" }, { type: "string" }], outputs: [] },
+  { type: "function", name: "roles", inputs: [{ type: "uint256" }, { type: "address" }], outputs: [{ type: "uint256" }] },
+];
+function ensAnswer(m) {
+  const call = m.params?.[0];
+  const to = call?.to?.toLowerCase();
+  if (m.method !== "eth_call" || (to !== UR && to !== RESOLVER)) return undefined;
+  const ok = (types, values) => ({ jsonrpc: "2.0", id: m.id, result: encodeAbiParameters(types, values) });
+  const revert = { jsonrpc: "2.0", id: m.id, error: { code: 3, message: "execution reverted" } };
+  const d = decodeFunctionData({ abi: ensAbi, data: call.data });
+  if (d.functionName === "findResolver") return ok([{ type: "address" }, { type: "bytes32" }, { type: "uint256" }], [RESOLVER, "0x" + "00".repeat(32), 0n]);
+  if (d.functionName === "roles") return ok([{ type: "uint256" }], [0n]);
+  // the verifier holds the one-key role; nobody else can write
+  if (d.functionName === "setText") return d.args[1] === "privacy.verdict.canary" && call.from?.toLowerCase() === VERIFIER.toLowerCase() ? { jsonrpc: "2.0", id: m.id, result: "0x" } : revert;
+  const inner = decodeFunctionData({ abi: ensAbi, data: d.args[1] });
+  const recs = Object.entries(ensRecords()).find(([n]) => namehash(n) === inner.args[0])?.[1] ?? {};
+  const v = inner.functionName === "addr" ? recs.addr : recs[inner.args[1]];
+  if (!v) return revert;
+  const enc = inner.functionName === "addr" ? encodeAbiParameters([{ type: "address" }], [v]) : encodeAbiParameters([{ type: "string" }], [v]);
+  return ok([{ type: "bytes" }, { type: "address" }], [enc, RESOLVER]);
+}
+
 const rpcAnswer = (answers, m) =>
-  answers[m.method] === undefined
+  (answers === ANSWERS.read && ensAnswer(m)) ||
+  (answers[m.method] === undefined
     ? { jsonrpc: "2.0", id: m.id, error: { code: -32601, message: `no ${m.method}` } }
-    : { jsonrpc: "2.0", id: m.id, result: answers[m.method] };
+    : { jsonrpc: "2.0", id: m.id, result: answers[m.method] });
 
 let dappJs = "";
 let P;
@@ -74,6 +122,7 @@ const server = createServer((req, res) => {
         if (req.url === "/") return res.writeHead(200, { "content-type": "text/html" }).end(`<!doctype html><title>LeakyDash (fixture)</title><h1>LeakyDash</h1><script src="/app.js"></script>`);
         if (req.url === "/app.js") return res.writeHead(200, { "content-type": "text/javascript" }).end(dappJs);
         if (req.url.startsWith("/api/points")) return logs.points.push({ url: req.url }), json(200, { points: 42 });
+        if (req.url === "/.well-known/canary.json") return json(200, { ens: "leakydash.eth" });
         return res.writeHead(404).end();
       case "rpc.provider.test":
         return rpc(ANSWERS.provider, logs.provider);
@@ -118,6 +167,11 @@ await new Promise((r) => server.listen(0, "127.0.0.1", r));
 P = server.address().port;
 dappJs = (await build({ entryPoints: [resolve(HERE, "fixtures/dapp.ts")], bundle: true, write: false, format: "iife", platform: "browser", target: "es2022", define: { __P__: JSON.stringify(String(P)) }, logLevel: "warning" })).outputFiles[0].text;
 const DAPP = `http://leakydash.test:${P}/`;
+verdictRecord = JSON.stringify(await signVerdict({
+  name: "leakydash.eth", origin: new URL(DAPP).origin, verifier: "verifier.canary.eth", buildHash: "e36522b683b8", scannerHash: "296015c80bdd",
+  flows: ["load", "connect: clicked", "scroll"], result: "undeclared", undeclaredHosts: ["tracker.test"], notInspected: ["WebRTC"],
+  issuedAt: Math.floor(Date.now() / 1000) - 3600, expiresAt: Math.floor(Date.now() / 1000) + 30 * 86400,
+}, VERIFIER_KEY));
 
 /* --- extension ------------------------------------------------------------ */
 
@@ -214,12 +268,24 @@ let tab;
   const st = await ext(c, { type: "state", tabId: tab.tabId });
   check("pipeline sent fewer anon-rpc requests than it answered calls", st.pipeline.requests < st.pipeline.calls, st.pipeline);
 
+  // Declared vs observed: the site names leakydash.eth, whose manifest leaves the tracker out.
+  for (let i = 0; i < 50 && (!tab?.declared || tab.declared.state === "pending"); i++) tab = await tabStateOf(c.sw);
+  check("manifest read from ENS (site ↔ name bound both ways)", tab?.declared?.state === "ok" && tab.declared.ens === "leakydash.eth", tab?.declared);
+  check("ENS lookups went over the anon path to the read endpoint", logs.read.some((l) => l.method === "eth_call" && l.origin === "null" && l.body.toLowerCase().includes(UR.slice(2))));
+  const cmp = tab?.declared?.manifest ? compareDeclared(tab.declared.manifest, Object.values(tab.recipients)) : { rows: [] };
+  const status = Object.fromEntries(cmp.rows.map((r) => [r.host, r.status]));
+  const vc = tab?.declared?.verdict;
+  check("verifier's verdict: signed by the verifier name's addr, role still delegated", vc?.signed && vc.signerIsVerifier && vc.delegated === true && vc.matchesSite && !vc.expired && vc.verdict.result === "undeclared", vc);
+  check("tracker is an undeclared recipient; provider and indexer are declared", status["tracker.test"] === "undeclared" && status["rpc.provider.test"] === "declared" && status["cdn.leakydash-assets.test"] === "notSeen" && !("leakydash.test" in status), status);
+
   // popup screenshot
   const id = await c.sw.evaluate(() => chrome.runtime.id);
   const pop = await c.ctx.newPage();
   await pop.setViewportSize({ width: 400, height: 900 });
   await pop.goto(`chrome-extension://${id}/popup.html?tabId=${tab.tabId}`);
   await pop.waitForTimeout(800);
+  check("popup shows the verdict", (await pop.locator("#declared").innerText()).includes("Verdict by verifier.canary.eth (signed): undeclared recipients: tracker.test"), await pop.locator("#declared").innerText());
+  check("popup lists the undeclared tracker", (await pop.locator("#declaredRows").innerText()).includes("tracker.test\nnot declared"), await pop.locator("#declaredRows").innerText());
   await mkdir(resolve(HERE, "out"), { recursive: true });
   await pop.screenshot({ path: resolve(HERE, "out/popup.png"), fullPage: true });
   await pop.close();

@@ -9,7 +9,8 @@
     "build": "node build.mjs",
     "build:live": "node build.mjs --config config/live.json",
     "test": "npm run test:unit && node test/e2e.mjs",
-    "test:unit": "node --test test/pipeline.test.mjs",
+    "test:unit": "node --test test/pipeline.test.mjs test/ens.test.mjs",
+    "test:ens-live": "node test/ens-live.mjs",
     "snapshot": "node scripts/fetch-tor-bootstrap.mjs"
   },
   "dependencies": {

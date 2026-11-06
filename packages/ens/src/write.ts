@@ -6,7 +6,7 @@
    - roleHistory: EACRolesChanged events for an account (revocation is
      visible on chain: "the only way to silence the reporter is to revoke"). */
 
-import { encodeFunctionData, keccak256, toBytes, toHex, type Account, type Address, type Hash, type Hex, type PublicClient, type WalletClient } from "viem";
+import { encodeFunctionData, keccak256, parseEventLogs, toBytes, toHex, type Account, type Address, type Hash, type Hex, type PublicClient, type WalletClient } from "viem";
 import { packetToBytes } from "viem/ens";
 import { normalize } from "viem/ens";
 import { permissionedResolverAbi, ROLE_SET_TEXT } from "./abi.js";
@@ -18,9 +18,9 @@ const short = (e: unknown) => {
   return String(err?.shortMessage ?? err?.message ?? e).split("\n")[0]!;
 };
 
-export async function canWriteText(client: PublicClient, resolver: Address, name: string, key: string, account: Address): Promise<{ ok: boolean; reason?: string }> {
+export async function canWriteText(client: PublicClient, resolver: Address, name: string, key: string, account: Address, blockNumber?: bigint): Promise<{ ok: boolean; reason?: string }> {
   try {
-    await client.simulateContract({ address: resolver, abi: permissionedResolverAbi, functionName: "setText", args: [dnsEncode(name), key, ""], account });
+    await client.simulateContract({ address: resolver, abi: permissionedResolverAbi, functionName: "setText", args: [dnsEncode(name), key, ""], account, ...(blockNumber === undefined ? {} : { blockNumber }) });
     return { ok: true };
   } catch (e) {
     return { ok: false, reason: short(e) };
@@ -85,8 +85,13 @@ export async function revokeTextKey({ wallet, client }: Writer, resolver: Addres
       const hash = await wallet.writeContract(request as any);
       const receipt = await client.waitForTransactionReceipt({ hash });
       if (receipt.status !== "success") throw new Error(`reverted in ${hash}`);
-      // A no-op revoke (wrong resource formula) succeeds without changing anything: confirm it took.
-      if ((await canWriteText(client, resolver, name, key, grantee)).ok) throw new Error("transaction succeeded but the account can still write");
+      // A no-op revoke (wrong resource formula) succeeds without changing anything: confirm it took,
+      // from the receipt's EACRolesChanged, else by reading at its block (a load-balanced RPC's
+      // "latest" can be a block behind the receipt).
+      const took = parseEventLogs({ abi: permissionedResolverAbi, eventName: "EACRolesChanged", logs: receipt.logs }).some(
+        (l) => l.address.toLowerCase() === resolver.toLowerCase() && l.args.account.toLowerCase() === grantee.toLowerCase() && (l.args.oldRoleBitmap & ROLE_SET_TEXT) !== 0n && (l.args.newRoleBitmap & ROLE_SET_TEXT) === 0n,
+      );
+      if (!took && (await canWriteText(client, resolver, name, key, grantee, receipt.blockNumber)).ok) throw new Error("transaction succeeded but the account can still write");
       return { hash, api: a.api };
     } catch (e) {
       errors.push(`${a.api}: ${short(e)}`);

@@ -11,3 +11,8 @@ scanner/canary-offline-dist/
 __pycache__/
 .tor-bootstrap/
 test-artifacts/latency/out/
+
+# local secrets
+keys.txt
+*.key
+.env

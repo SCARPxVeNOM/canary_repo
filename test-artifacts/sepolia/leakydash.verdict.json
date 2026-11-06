@@ -1,0 +1,27 @@
+{
+  "name": "leakydash.eth",
+  "origin": "http://leakydash.localhost:3000",
+  "verifier": "verifier.canary.eth",
+  "buildHash": "e36522b683b8",
+  "scannerHash": "296015c80bdd",
+  "flows": [
+    "load http://leakydash.localhost:3000/",
+    "connect: clicked",
+    "scroll"
+  ],
+  "result": "undeclared",
+  "undeclaredHosts": [
+    "tracker.localhost"
+  ],
+  "notInspected": [
+    "service workers' own traffic",
+    "WebRTC",
+    "encrypted or arbitrarily obfuscated payloads",
+    "flows beyond load → connect → scroll"
+  ],
+  "issuedAt": 1793930333,
+  "expiresAt": 1796522333,
+  "evidenceURI": "https://github.com/SCARPxVeNOM/canary_repo/blob/main/test-artifacts/sepolia/leakydash.localhost_3000.baseline.md",
+  "signer": "0x0f17A972C98f06BB128d8d8B971c33E631b351De",
+  "signature": "0xef2bf464bc4e7ca527163dff267359fc1c8f6328cc26cc200da6a9ec65bab2fa0aec902fd44f25ead0a0c3968ad345851dabc6158d6539b56656bb0a3d50430f1c"
+}

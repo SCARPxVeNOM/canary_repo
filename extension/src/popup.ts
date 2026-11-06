@@ -1,7 +1,7 @@
 // Canary popup: renders the service worker's per-tab coverage. Wording follows
 // idea.md §4: never "private", "safe" or "leak-free".
 
-import { CATEGORY_LABEL, type Category } from "./shared.js";
+import { CATEGORY_LABEL, compareDeclared, type Category } from "./shared.js";
 
 declare const chrome: any;
 
@@ -86,6 +86,8 @@ async function render() {
         .join("")
     : `<tr><td class="empty">Nothing observed yet.</td></tr>`;
 
+  renderDeclared(tab);
+
   $("notesSec").hidden = !tab.notes.length;
   $("notes").innerHTML = tab.notes.map((n: string) => `<li>${esc(n)}</li>`).join("");
 
@@ -93,6 +95,76 @@ async function render() {
   $("addresses").innerHTML = a.all.length
     ? a.all.map((x: string) => `<li>${x.slice(0, 8)}…${x.slice(-6)} <span class="muted">${a.wallet.includes(x) ? "from wallet" : "added"}</span></li>`).join("")
     : `<li class="empty">None yet. Connect a wallet, or add one below.</li>`;
+}
+
+const CHAIN_NAME: Record<number, string> = { 1: "mainnet", 11155111: "Sepolia" };
+const STATUS_LABEL = { declared: "declared", undeclared: "not declared", notSeen: "declared, not seen on this page" };
+
+/** The site's ENS manifest against what this page was seen sending (idea.md §2). */
+function renderDeclared(tab: any) {
+  const d = tab.declared ?? { state: "pending" };
+  const rows = $("declaredRows");
+  rows.innerHTML = "";
+  const line = (html: string) => ($("declared").innerHTML = html);
+  switch (d.state) {
+    case "pending":
+      return line("Looking for the site's manifest…");
+    case "none":
+      return line("This site doesn't name an ENS manifest (no /.well-known/canary.json), so there is nothing declared to compare with.");
+    case "notFound":
+      return line(`<b>${esc(d.ens)}</b> has no <span class="mono">privacy.manifest</span> record.` + verdictLine(d.verdict));
+    case "unbound":
+      return line(`<b>${esc(d.ens)}</b> points at ${d.url ? esc(d.url) : "no site"}, not this one, so its manifest isn't used here.`);
+    case "invalid":
+      return line(`<b>${esc(d.ens)}</b> has a malformed manifest: ${esc(d.error)}` + verdictLine(d.verdict));
+    case "error":
+      return line(`Couldn't read the manifest${d.ens ? ` of <b>${esc(d.ens)}</b>` : ""}: ${esc(d.error)}`);
+  }
+  const { rows: rs, undeclared } = compareDeclared(d.manifest, Object.values(tab.recipients));
+  const seen = rs.filter((r) => r.status !== "notSeen").length;
+  line(
+    `Manifest of <b>${esc(d.ens)}</b> (ENS, ${CHAIN_NAME[d.chainId] ?? `chain ${d.chainId}`}, read via anon-rpc). ` +
+      (undeclared
+        ? `<span class="st-undeclared">${undeclared} recipient${undeclared > 1 ? "s" : ""} not declared.</span>`
+        : seen
+          ? "No undeclared recipients observed on this page so far."
+          : "No recipients observed on this page yet.") +
+      ` <span class="muted">What wasn't observed may still be sent.</span>` +
+      verdictLine(d.verdict),
+  );
+  rows.innerHTML = rs
+    .map((r) => {
+      const meta = [r.kind, r.purpose].filter(Boolean).join(" · ");
+      return `<tr><td><div class="host">${esc(r.host)}</div><span class="tag st-${r.status}">${STATUS_LABEL[r.status]}</span>${meta ? `<span class="meta"> ${esc(meta)}</span>` : ""}</td></tr>`;
+    })
+    .join("");
+}
+
+const day = (t: number) => new Date(t * 1000).toISOString().slice(0, 10);
+
+/** A verifier's signed verdict (privacy.verdict.canary), with what Canary could check about it. */
+function verdictLine(v: any): string {
+  const br = "<br><br>";
+  if (!v) return `${br}<span class="muted">No verifier's verdict on this name.</span>`;
+  if (v.state === "invalid") return `${br}<span class="st-undeclared">The verdict record is malformed (${esc(v.error)}); ignored.</span>`;
+  const r = v.verdict;
+  if (!v.signed) return `${br}<span class="st-undeclared">The verdict record's signature doesn't verify; ignored.</span>`;
+  if (!v.signerIsVerifier) return `${br}<span class="st-undeclared">The verdict claims to be from ${esc(r.verifier)} but isn't signed by its address; ignored.</span>`;
+  if (!v.matchesSite) return `${br}<span class="st-undeclared">The verdict is about ${esc(r.name)} at ${esc(r.origin)}, not this site; ignored.</span>`;
+  const what =
+    r.result === "matches" ? "no undeclared recipients observed"
+    : r.result === "undeclared" ? `<span class="st-undeclared">undeclared recipients: ${r.undeclaredHosts.map(esc).join(", ")}</span>`
+    : "incomplete (nothing declared to check against)";
+  const role =
+    v.delegated === false ? ` <span class="st-undeclared">Independent verification revoked: ${esc(r.verifier)} can no longer write this record.</span>`
+    : v.delegated === null ? ` <span class="muted">Whether ${esc(r.verifier)} still holds its role can't be checked on this resolver.</span>`
+    : "";
+  return (
+    `${br}Verdict by <b>${esc(r.verifier)}</b> (signed): ${what}, in ${r.flows.length} flow steps on build <span class="mono">${esc(r.buildHash)}</span>, ${day(r.issuedAt)}.` +
+    (v.expired ? ` <span class="st-undeclared">Expired ${day(r.expiresAt)}.</span>` : "") +
+    role +
+    ` <span class="muted">Build not compared with this page.</span>`
+  );
 }
 
 function total(r: any) {

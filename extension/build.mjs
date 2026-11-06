@@ -39,7 +39,19 @@ export async function buildExtension(cfg, out) {
       console.warn(`warning: no tor-js snapshot packaged (${e.message}); the worker will fetch it from a gateway on first boot`);
     }
   }
-  const common = { bundle: true, platform: "browser", target: "es2022", logLevel: "warning", sourcemap: "linked" };
+  // Dev only (config "network.devWorker": { "bundle": path, "url": served-at }):
+  // run a worker build that isn't pinned on chain, e.g. tor-js with the patches
+  // in ../tor-js-patches/. Its keccak256 is pinned here at build time and the
+  // harness still verifies the bytes it loads against it, but the pin is ours,
+  // not the specifier owner's. Never set in config/live.json.
+  if (cfg.network.devWorker) {
+    const { keccak_256 } = await import("@noble/hashes/sha3");
+    const bytes = await readFile(resolve(HERE, cfg.network.devWorker.bundle));
+    const hash = "0x" + Buffer.from(keccak_256(bytes)).toString("hex");
+    runtime.network = { ...cfg.network, devWorker: { hash, url: cfg.network.devWorker.url } };
+    console.warn(`warning: dev worker ${hash.slice(0, 12)}… from ${cfg.network.devWorker.url}, not the on-chain pin`);
+  }
+  const common = { bundle: true, platform: "browser", target: "es2022", logLevel: "warning", sourcemap: "linked", plugins: [sharedPackages] };
   await build({ ...common, format: "esm", entryPoints: [resolve(HERE, "src/background.ts")], outfile: resolve(out, "background.js"), define: { __CANARY_CONFIG__: JSON.stringify(runtime) } });
   for (const name of ["shim", "bridge", "popup"]) {
     await build({ ...common, format: "iife", entryPoints: [resolve(HERE, `src/${name}.ts`)], outfile: resolve(out, `${name}.js`) });
@@ -69,6 +81,21 @@ export async function buildExtension(cfg, out) {
   await writeFile(resolve(out, "manifest.json"), JSON.stringify(manifest, null, 2) + "\n");
   return out;
 }
+
+/**
+ * Code shared with ../packages (the verdict format in packages/ens) imports
+ * viem and @canary/core by name. Resolve both from here: one viem in the
+ * bundle, the core source, and nothing needed outside extension/.
+ */
+export const sharedPackages = {
+  name: "shared-packages",
+  setup(b) {
+    b.onResolve({ filter: /^@canary\/core$/ }, () => ({ path: resolve(HERE, "../packages/core/src/index.ts") }));
+    b.onResolve({ filter: /^viem(\/.*)?$/ }, (a) =>
+      a.pluginData === "shared" || a.resolveDir.startsWith(HERE) ? undefined : b.resolve(a.path, { resolveDir: HERE, kind: a.kind, pluginData: "shared" }),
+    );
+  },
+};
 
 if (process.argv[1] === import.meta.filename) {
   const { values } = parseArgs({ options: { config: { type: "string", default: "config/live.json" }, out: { type: "string", default: "dist" } } });
