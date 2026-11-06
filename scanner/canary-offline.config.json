@@ -1,0 +1,8 @@
+{
+  "network": { "id": "passthrough", "label": "passthrough (offline test)", "specifier": "0x4fd77be300f31c5fe6ab266d35d27750a3478d27", "bootstrapRpc": "http://127.0.0.1:8546/" },
+  "//": "Offline test config: passthrough worker and a local stub chain (see scanner/README.md). Not anonymous.",
+  "readEndpoints": { "11155111": "http://127.0.0.1:8546/" },
+  "timeoutMs": 8000,
+  "matches": ["<all_urls>"],
+  "hostPermissions": ["http://*/*", "https://*/*"]
+}

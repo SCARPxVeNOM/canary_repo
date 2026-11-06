@@ -1,0 +1,14 @@
+{
+  "name": "canary-scanner",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "license": "MIT",
+  "description": "Canary scanner: Playwright + mitmproxy + a fake wallet with a synthetic canary address. Reports who received it.",
+  "bin": { "canary-scan": "scan.mjs" },
+  "scripts": { "scan": "node scan.mjs" },
+  "dependencies": {
+    "@noble/hashes": "^1.8.0",
+    "playwright": "^1.56.0"
+  }
+}
