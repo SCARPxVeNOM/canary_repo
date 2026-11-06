@@ -10,3 +10,4 @@ scanner/canary-offline-dist/
 .env
 __pycache__/
 .tor-bootstrap/
+test-artifacts/latency/out/

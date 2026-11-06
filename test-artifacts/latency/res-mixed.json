@@ -1,0 +1,267 @@
+{
+ "out": {
+  "startup: browser launch → Tor ready (no tab opened)": {
+   "ms": 4038,
+   "worker": {
+    "bootMs": 3037,
+    "cold": true,
+    "network": "tor-js (EF + own gateways)",
+    "state": "ready"
+   }
+  },
+  "first dapp read after startup": {
+   "ms": 2147,
+   "ok": true
+  },
+  "single read, warm (30 samples)": {
+   "n": 30,
+   "p50": 1642,
+   "p90": 1915,
+   "mean": 1569,
+   "failed": 0,
+   "errors": []
+  },
+  "eth_chainId (answered by Canary)": {
+   "n": 10,
+   "p50": 2,
+   "p90": 2,
+   "mean": 2
+  },
+  "20 parallel reads (5 runs)": {
+   "n": 5,
+   "p50": 1596,
+   "p90": 2176,
+   "mean": 1676,
+   "ok": [
+    20,
+    20,
+    20,
+    20,
+    20
+   ]
+  },
+  "app.uniswap.org": {
+   "counts": {
+    "backend": 48,
+    "blocked": 0,
+    "detected": 0,
+    "direct": 0,
+    "failedClosed": 0,
+    "localNode": 0,
+    "notInspected": 0,
+    "protected": 13,
+    "protectedIpOnly": 0
+   },
+   "notes": [],
+   "rpcCalls": 13
+  },
+  "app.ens.domains": {
+   "counts": {
+    "backend": 7,
+    "blocked": 0,
+    "detected": 0,
+    "direct": 0,
+    "failedClosed": 0,
+    "localNode": 0,
+    "notInspected": 0,
+    "protected": 8,
+    "protectedIpOnly": 0
+   },
+   "notes": [],
+   "rpcCalls": 8,
+   "errs": []
+  },
+  "traffic per gateway (8 s, round 0)": {
+   "canary-gateway": "1 kB",
+   "canary-gateway-12299": "40 kB",
+   "canary-gateway-12300": "3 kB"
+  },
+  "failover round 0 (killed canary-gateway-12299)": {
+   "failedReads": 0,
+   "gapMs": 5368,
+   "readsAfter": "3651 4386 3707 22913 1643",
+   "errors": []
+  },
+  "traffic per gateway (8 s, round 1)": {
+   "canary-gateway": "1 kB",
+   "canary-gateway-12299": "0 kB",
+   "canary-gateway-12300": "43 kB"
+  },
+  "failover round 1 (killed canary-gateway-12300)": {
+   "failedReads": 1,
+   "gapMs": 36474,
+   "readsAfter": "✗33032 1473 874 767 840",
+   "errors": [
+    "Canary: anon path unavailable (signal is aborted without reason). Not sent directly."
+   ]
+  },
+  "traffic per gateway (8 s, round 2)": {
+   "canary-gateway": "52 kB",
+   "canary-gateway-12299": "0 kB",
+   "canary-gateway-12300": "0 kB"
+  },
+  "failover round 2 (killed canary-gateway)": {
+   "failedReads": 1,
+   "gapMs": null,
+   "readsAfter": "✗33034",
+   "errors": [
+    "Canary: anon path unavailable (signal is aborted without reason). Not sent directly."
+   ]
+  }
+ },
+ "log": [
+  {
+   "at": 0,
+   "ms": 1441,
+   "ok": true
+  },
+  {
+   "at": 4015,
+   "ms": 1311,
+   "ok": true
+  },
+  {
+   "at": 5829,
+   "ms": 1280,
+   "ok": true
+  },
+  {
+   "at": 7614,
+   "ms": 1654,
+   "ok": true
+  },
+  {
+   "at": 9771,
+   "ms": 1402,
+   "ok": true
+  },
+  {
+   "at": 12890,
+   "ms": 3651,
+   "ok": true
+  },
+  {
+   "at": 17044,
+   "ms": 4386,
+   "ok": true
+  },
+  {
+   "at": 21934,
+   "ms": 3707,
+   "ok": true
+  },
+  {
+   "at": 26144,
+   "ms": 22913,
+   "ok": true
+  },
+  {
+   "at": 49560,
+   "ms": 1643,
+   "ok": true
+  },
+  {
+   "at": 51707,
+   "ms": 1015,
+   "ok": true
+  },
+  {
+   "at": 54963,
+   "ms": 1005,
+   "ok": true
+  },
+  {
+   "at": 56471,
+   "ms": 959,
+   "ok": true
+  },
+  {
+   "at": 57935,
+   "ms": 989,
+   "ok": true
+  },
+  {
+   "at": 59427,
+   "ms": 1863,
+   "ok": true
+  },
+  {
+   "at": 61793,
+   "ms": 960,
+   "ok": true
+  },
+  {
+   "at": 64218,
+   "ms": 33032,
+   "ok": false,
+   "err": "Canary: anon path unavailable (signal is aborted without reason). Not sent directly."
+  },
+  {
+   "at": 97754,
+   "ms": 1473,
+   "ok": true
+  },
+  {
+   "at": 99730,
+   "ms": 874,
+   "ok": true
+  },
+  {
+   "at": 101108,
+   "ms": 767,
+   "ok": true
+  },
+  {
+   "at": 102378,
+   "ms": 840,
+   "ok": true
+  },
+  {
+   "at": 104782,
+   "ms": 726,
+   "ok": true
+  },
+  {
+   "at": 106012,
+   "ms": 774,
+   "ok": true
+  },
+  {
+   "at": 107291,
+   "ms": 739,
+   "ok": true
+  },
+  {
+   "at": 108534,
+   "ms": 869,
+   "ok": true
+  },
+  {
+   "at": 109908,
+   "ms": 683,
+   "ok": true
+  },
+  {
+   "at": 111094,
+   "ms": 739,
+   "ok": true
+  },
+  {
+   "at": 112337,
+   "ms": 971,
+   "ok": true
+  },
+  {
+   "at": 114539,
+   "ms": 33034,
+   "ok": false,
+   "err": "Canary: anon path unavailable (signal is aborted without reason). Not sent directly."
+  },
+  {
+   "at": 148079,
+   "ms": 33032,
+   "ok": false,
+   "err": "Canary: anon path unavailable (signal is aborted without reason). Not sent directly."
+  }
+ ]
+}

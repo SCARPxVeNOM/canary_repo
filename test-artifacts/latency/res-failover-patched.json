@@ -1,0 +1,38 @@
+{
+ "stock": [
+  {
+   "victim": "canary-gateway",
+   "failed": 2,
+   "slowOver2s": 0,
+   "recoveredAfterMs": 17386,
+   "gapMs": 17859,
+   "reads": "✗10012 ✗4418 1211 1284 1602 1206 1292 1212 1526 1503 1381 1324 1567 1202"
+  },
+  {
+   "victim": "canary-gateway-12299",
+   "failed": 2,
+   "slowOver2s": 0,
+   "recoveredAfterMs": 18191,
+   "gapMs": 19868,
+   "reads": "✗10008 ✗6411 560 512 496 517 518 524 532 641 500 489 484 512"
+  }
+ ],
+ "patched": [
+  {
+   "victim": "canary-gateway-12300",
+   "failed": 0,
+   "slowOver2s": 1,
+   "recoveredAfterMs": 12538,
+   "gapMs": 13646,
+   "reads": "11568 249 243 238 244 246 339 261 256 260 241 242 243 244"
+  },
+  {
+   "victim": "canary-gateway",
+   "failed": 0,
+   "slowOver2s": 1,
+   "recoveredAfterMs": 9982,
+   "gapMs": 11015,
+   "reads": "8512 245 286 285 245 240 254 336 553 327 229 305 254 265"
+  }
+ ]
+}

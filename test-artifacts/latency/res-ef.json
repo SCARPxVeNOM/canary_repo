@@ -1,0 +1,81 @@
+{
+ "out": {
+  "startup: browser launch → Tor ready (no tab opened)": {
+   "ms": 180071,
+   "worker": {
+    "network": "tor-js",
+    "state": "warming"
+   }
+  },
+  "first dapp read after startup": {
+   "ms": 42781,
+   "ok": true
+  },
+  "single read, warm (30 samples)": {
+   "n": 30,
+   "p50": 1516,
+   "p90": 1907,
+   "mean": 1650,
+   "failed": 0,
+   "errors": []
+  },
+  "eth_chainId (answered by Canary)": {
+   "n": 10,
+   "p50": 1,
+   "p90": 2,
+   "mean": 2
+  },
+  "20 parallel reads (5 runs)": {
+   "n": 5,
+   "p50": 1845,
+   "p90": 3203,
+   "mean": 2115,
+   "ok": [
+    20,
+    20,
+    20,
+    20,
+    20
+   ]
+  },
+  "app.uniswap.org": {
+   "counts": {
+    "backend": 46,
+    "blocked": 0,
+    "detected": 0,
+    "direct": 0,
+    "failedClosed": 0,
+    "localNode": 0,
+    "notInspected": 0,
+    "protected": 9,
+    "protectedIpOnly": 0
+   },
+   "notes": [],
+   "rpcCalls": 9
+  },
+  "app.ens.domains": {
+   "counts": {
+    "backend": 7,
+    "blocked": 0,
+    "detected": 0,
+    "direct": 0,
+    "failedClosed": 0,
+    "localNode": 0,
+    "notInspected": 0,
+    "protected": 8,
+    "protectedIpOnly": 0
+   },
+   "notes": [],
+   "rpcCalls": 8,
+   "errs": []
+  },
+  "20 more reads": "1034 1113 1175 1071 1202 1064 1034 1265 1048 1033 1156 1466 1122 1057 1034 1075 1106 1043 1123 1073"
+ },
+ "log": [
+  {
+   "at": 0,
+   "ms": 1332,
+   "ok": true
+  }
+ ]
+}

@@ -280,7 +280,7 @@ function getWorker(): Promise<AnonRpcWorker> {
 
 async function anonFetch(w: AnonRpcWorker, url: string, body: string, isolationKey?: string): Promise<{ status: number; text: string }> {
   const ac = new AbortController();
-  const t = setTimeout(() => ac.abort(), CFG.timeoutMs);
+  const t = setTimeout(() => ac.abort(new Error(`no answer within ${Math.round(CFG.timeoutMs / 1000)} s`)), CFG.timeoutMs);
   try {
     const r = await w.fetch(url, {
       method: "POST",
@@ -302,16 +302,26 @@ async function anonFetch(w: AnonRpcWorker, url: string, body: string, isolationK
  * HEDGE_MS (warm reads are ~0.9 s p50, 1.3 s p90), the same read goes out
  * again under a new isolation key, which makes tor-js build a new circuit,
  * and the first answer wins. A circuit whose gateway died otherwise stalls
- * until its 15 s timeout (measured: 15–35 s gaps when a gateway was killed).
+ * until the request timeout (measured: 15–35 s gaps when a gateway was killed).
+ * When the hedge wins, its circuit becomes the one used for that key: tor-js
+ * keeps handing out a key's circuit after its gateway died, so without this
+ * every later read paid HEDGE_MS first (measured: ~4.2 s per read through
+ * the surviving gateway instead of ~1.2 s).
  * The hedge key is derived from the original, so a hedge for one address
  * still never shares a circuit with another address. Reads only: background
  * never sends a write through the pipeline.
  */
 const HEDGE_MS = 3000;
 let retrySeq = 0;
+/** isolation key (or "shared") → the key of the circuit currently used for it */
+const circuitFor = new Map<string, string>();
 const pipeline = new RpcPipeline(async (target, body, key) => {
   const w = await getWorker();
-  const first = anonFetch(w, target, body, key);
+  const base = key ?? "shared";
+  const current = circuitFor.get(base) ?? key;
+  const first = anonFetch(w, target, body, current);
+  let firstWon = false;
+  first.then(() => (firstWon = true), () => {});
   let timer: ReturnType<typeof setTimeout> | undefined;
   const second = new Promise<{ status: number; text: string }>((resolve, reject) => {
     let started = false;
@@ -319,7 +329,11 @@ const pipeline = new RpcPipeline(async (target, body, key) => {
       if (started) return;
       started = true;
       clearTimeout(timer);
-      anonFetch(w, target, body, `${key ?? "shared"}#retry${++retrySeq}`).then(resolve, reject);
+      const fresh = `${base}#retry${++retrySeq}`;
+      anonFetch(w, target, body, fresh).then((r) => {
+        if (!firstWon && (circuitFor.get(base) ?? key) === current) circuitFor.set(base, fresh);
+        resolve(r);
+      }, reject);
     };
     timer = setTimeout(go, HEDGE_MS);
     first.catch(go);
@@ -353,7 +367,7 @@ async function prewarm(key: string | undefined, chainId?: number) {
   if (!target || isLocalHost(new URL(target).hostname)) return;
   warmedAt.set(k, Date.now());
   try {
-    await anonFetch(await getWorker(), target, JSON.stringify({ jsonrpc: "2.0", id: 1, method: "eth_blockNumber", params: [] }), key);
+    await anonFetch(await getWorker(), target, JSON.stringify({ jsonrpc: "2.0", id: 1, method: "eth_blockNumber", params: [] }), circuitFor.get(key ?? "shared") ?? key);
   } catch {
     warmedAt.delete(k); // try again next time
   }

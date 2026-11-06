@@ -1,0 +1,513 @@
+diff --git a/crates/tor-js-wasm/src/fetch.rs b/crates/tor-js-wasm/src/fetch.rs
+index 17c060c..f463ebc 100644
+--- a/crates/tor-js-wasm/src/fetch.rs
++++ b/crates/tor-js-wasm/src/fetch.rs
+@@ -128,6 +128,12 @@ impl BodyReader {
+         }
+     }
+ 
++    /// Whether the body's end is known from its framing, so the connection
++    /// can carry another request once the body has been read to the end.
++    pub fn reusable(&self) -> bool {
++        !matches!(self.framing, BodyFraming::UntilEof)
++    }
++
+     /// Read the entire remaining body by calling `read_chunk()` in a loop.
+     #[allow(dead_code)]
+     pub async fn read_all(&mut self) -> Result<Vec<u8>, JsTorError> {
+@@ -344,11 +350,24 @@ impl BodyReader {
+ }
+ 
+ /// Build an HTTP/1.1 request as raw bytes
++#[cfg_attr(not(test), allow(dead_code))]
+ pub fn build_request_head(
+     url: &Url,
+     method: &Method,
+     headers: &HashMap<String, String>,
+     body: &RequestBody,
++) -> Result<Vec<u8>, JsTorError> {
++    build_request_head_with(url, method, headers, body, false)
++}
++
++/// As [`build_request_head`], asking the server to keep the connection open
++/// when `keep_alive` is set (see [`exchange`]).
++pub fn build_request_head_with(
++    url: &Url,
++    method: &Method,
++    headers: &HashMap<String, String>,
++    body: &RequestBody,
++    keep_alive: bool,
+ ) -> Result<Vec<u8>, JsTorError> {
+     let host = url.host_str().unwrap_or("localhost");
+     let path = if url.path().is_empty() {
+@@ -379,7 +398,7 @@ pub fn build_request_head(
+         request.push_str("Accept: */*\r\n");
+     }
+     if !has_header(headers, "Connection") {
+-        request.push_str("Connection: close\r\n");
++        request.push_str(if keep_alive { "Connection: keep-alive\r\n" } else { "Connection: close\r\n" });
+     }
+ 
+     // Add custom headers (reject any with CR/LF to prevent header injection).
+@@ -617,6 +636,7 @@ where
+ /// The returned `FetchHeadersResult` contains parsed headers and a `BodyReader`
+ /// that can be used to read the body asynchronously.
+ #[expect(clippy::too_many_arguments, reason = "HTTP fetch requires many parameters")]
++#[allow(dead_code, reason = "fetch_impl now uses establish + exchange")]
+ pub async fn fetch_headers<S>(
+     stream: S,
+     url: &Url,
+@@ -680,6 +700,114 @@ where
+     }
+ }
+ 
++// ----------------------------------------------------------------------------
++// Connection reuse (HTTP/1.1 keep-alive)
++//
++// A request used to cost a new Tor stream, TCP from the exit and a TLS
++// handshake: about three circuit round trips before the request is sent.
++// `establish` does that once; `exchange` sends one request on an established
++// connection, so a caller can keep the connection and send the next request
++// on it. Callers key reuse by isolation key, so a connection never carries
++// requests for two keys.
++// ----------------------------------------------------------------------------
++
++/// A bidirectional byte stream: a Tor stream, or TLS over one.
++pub trait Conn: futures::io::AsyncRead + futures::io::AsyncWrite + Unpin {}
++impl<T: futures::io::AsyncRead + futures::io::AsyncWrite + Unpin + ?Sized> Conn for T {}
++pub type BoxedConn = Box<dyn Conn>;
++
++/// Wrap a fresh Tor stream in TLS (for https) and return the connection.
++pub async fn establish<S>(
++    stream: S,
++    is_https: bool,
++    host: &str,
++    tls_config: Option<std::sync::Arc<futures_rustls::rustls::ClientConfig>>,
++) -> Result<BoxedConn, JsTorError>
++where
++    S: futures::io::AsyncRead + futures::io::AsyncWrite + Unpin + 'static,
++{
++    if !is_https {
++        return Ok(Box::new(stream));
++    }
++    let tls_config = tls_config.ok_or_else(|| JsTorError::tls("HTTPS requested but no TLS config provided"))?;
++    let connector = futures_rustls::TlsConnector::from(tls_config);
++    let server_name = rustls_pki_types::ServerName::try_from(host.to_string())
++        .map_err(|e| JsTorError::tls(format!("Invalid server name '{}': {}", host, e)))?;
++    let tls_stream = connector
++        .connect(server_name, stream)
++        .await
++        .map_err(|e| JsTorError::tls(format!("TLS handshake failed with {}: {}", host, e)))?;
++    info!("TLS connection established with {}", host);
++    Ok(Box::new(tls_stream))
++}
++
++/// A connection shared between the response being read and the pool that
++/// takes it back afterwards. Counts bytes read, so a caller can tell whether a
++/// failed request got any answer (only an unanswered one is safe to resend).
++#[derive(Clone)]
++pub struct SharedConn {
++    pub conn: std::rc::Rc<std::cell::RefCell<BoxedConn>>,
++    pub bytes_read: std::rc::Rc<std::cell::Cell<usize>>,
++}
++
++impl SharedConn {
++    pub fn new(conn: std::rc::Rc<std::cell::RefCell<BoxedConn>>) -> Self {
++        Self { conn, bytes_read: std::rc::Rc::new(std::cell::Cell::new(0)) }
++    }
++}
++
++impl futures::io::AsyncRead for SharedConn {
++    fn poll_read(
++        self: Pin<&mut Self>,
++        cx: &mut std::task::Context<'_>,
++        buf: &mut [u8],
++    ) -> std::task::Poll<std::io::Result<usize>> {
++        let this = self.get_mut();
++        let r = Pin::new(&mut **this.conn.borrow_mut()).poll_read(cx, buf);
++        if let std::task::Poll::Ready(Ok(n)) = &r {
++            this.bytes_read.set(this.bytes_read.get() + n);
++        }
++        r
++    }
++}
++
++impl futures::io::AsyncWrite for SharedConn {
++    fn poll_write(
++        self: Pin<&mut Self>,
++        cx: &mut std::task::Context<'_>,
++        buf: &[u8],
++    ) -> std::task::Poll<std::io::Result<usize>> {
++        Pin::new(&mut **self.conn.borrow_mut()).poll_write(cx, buf)
++    }
++    fn poll_flush(self: Pin<&mut Self>, cx: &mut std::task::Context<'_>) -> std::task::Poll<std::io::Result<()>> {
++        Pin::new(&mut **self.conn.borrow_mut()).poll_flush(cx)
++    }
++    fn poll_close(self: Pin<&mut Self>, cx: &mut std::task::Context<'_>) -> std::task::Poll<std::io::Result<()>> {
++        Pin::new(&mut **self.conn.borrow_mut()).poll_close(cx)
++    }
++}
++
++/// Send one keep-alive request on an established connection and read the
++/// response headers. The body reader reads from the same connection.
++pub async fn exchange(
++    conn: SharedConn,
++    url: &Url,
++    method: Method,
++    headers: HashMap<String, String>,
++    body: RequestBody,
++) -> Result<FetchHeadersResult, JsTorError> {
++    let head = build_request_head_with(url, &method, &headers, &body, true)?;
++    let mut c = conn.clone();
++    write_request(&mut c, &head, body).await?;
++    let (status, resp_headers, framing, overflow) = read_response_headers(&mut c, &method).await?;
++    info!("Received response headers: status={}", status);
++    Ok(FetchHeadersResult {
++        status,
++        headers: resp_headers,
++        body_reader: BodyReader::new(Box::new(conn), framing, overflow),
++    })
++}
++
+ /// Find the position of a subsequence in a byte slice
+ fn find_subsequence(haystack: &[u8], needle: &[u8]) -> Option<usize> {
+     haystack
+@@ -1119,6 +1247,25 @@ mod tests {
+         head.split("\r\n").map(|s| s.to_string()).collect()
+     }
+ 
++    #[test]
++    fn a_keep_alive_head_asks_for_keep_alive_unless_the_caller_set_connection() {
++        let u = url("https://rpc.example/");
++        let h = String::from_utf8(build_request_head_with(&u, &Method::POST, &HashMap::new(), &RequestBody::None, true).unwrap()).unwrap();
++        assert!(h.contains("Connection: keep-alive\r\n"));
++        assert!(!h.contains("Connection: close"));
++        let mut mine = HashMap::new();
++        mine.insert("Connection".to_string(), "close".to_string());
++        let h = String::from_utf8(build_request_head_with(&u, &Method::POST, &mine, &RequestBody::None, true).unwrap()).unwrap();
++        assert!(!h.contains("keep-alive"));
++    }
++
++    #[test]
++    fn only_framed_bodies_are_reusable() {
++        assert!(BodyReader::new(reader(Vec::<Vec<u8>>::new()), BodyFraming::ContentLength(0), vec![]).reusable());
++        assert!(BodyReader::new(reader(Vec::<Vec<u8>>::new()), BodyFraming::Chunked, vec![]).reusable());
++        assert!(!BodyReader::new(reader(Vec::<Vec<u8>>::new()), BodyFraming::UntilEof, vec![]).reusable());
++    }
++
+     #[test]
+     fn a_minimal_get_has_a_request_line_host_and_defaults() {
+         let h = head("https://example.com/", Method::GET, &[], RequestBody::None);
+diff --git a/crates/tor-js-wasm/src/lib.rs b/crates/tor-js-wasm/src/lib.rs
+index 2bac0b4..71ebbf8 100644
+--- a/crates/tor-js-wasm/src/lib.rs
++++ b/crates/tor-js-wasm/src/lib.rs
+@@ -46,6 +46,7 @@ use error::JsTorError;
+ 
+ use std::cell::RefCell;
+ use std::collections::HashMap;
++use std::rc::Rc;
+ use std::sync::Arc;
+ 
+ use arti_client::config::CfgPath;
+@@ -296,6 +297,58 @@ pub struct TorClient {
+     /// `anonOptions.isolationKey` → Arti isolation group, with the key's own TLS
+     /// session cache (see isolation.rs, tls.rs).
+     isolation: RefCell<IsolationGroups<Arc<futures_rustls::rustls::ClientConfig>>>,
++    /// Idle keep-alive connections (see `ConnPool`).
++    pool: Rc<RefCell<ConnPool>>,
++}
++
++/// Where a connection may be reused: same isolation key (None = unkeyed),
++/// scheme, host and port. Never across keys: that would put two keys'
++/// requests on one circuit and one TLS session.
++type PoolKey = (Option<String>, String, String, u16);
++type PooledConn = Rc<RefCell<fetch::BoxedConn>>;
++
++/// A connection idle longer than this may have been closed by the server.
++const POOL_IDLE_MS: f64 = 30_000.0;
++/// Arti stops putting new streams on a circuit after ~10 min; a pooled
++/// connection would keep an old circuit in use, so it is retired as well.
++const POOL_MAX_AGE_MS: f64 = 600_000.0;
++const POOL_PER_KEY: usize = 4;
++
++/// HTTP/1.1 keep-alive connections, kept per `PoolKey` after their response
++/// body has been read to the end.
++#[derive(Default)]
++struct ConnPool {
++    idle: HashMap<PoolKey, Vec<(PooledConn, f64, f64)>>, // (conn, created, idle since)
++}
++
++impl ConnPool {
++    fn take(&mut self, key: &PoolKey, now: f64) -> Option<(PooledConn, f64)> {
++        let list = self.idle.get_mut(key)?;
++        while let Some((conn, created, idle_since)) = list.pop() {
++            if now - idle_since < POOL_IDLE_MS && now - created < POOL_MAX_AGE_MS {
++                return Some((conn, created));
++            }
++        }
++        None
++    }
++
++    fn put(&mut self, key: PoolKey, conn: PooledConn, created: f64, now: f64) {
++        if now - created >= POOL_MAX_AGE_MS {
++            return;
++        }
++        let list = self.idle.entry(key).or_default();
++        if list.len() < POOL_PER_KEY {
++            list.push((conn, created, now));
++        }
++    }
++}
++
++/// Handed to a response body: puts the connection back once the body ends.
++struct Release {
++    pool: Rc<RefCell<ConnPool>>,
++    key: PoolKey,
++    conn: PooledConn,
++    created: f64,
+ }
+ 
+ #[wasm_bindgen]
+@@ -331,8 +384,12 @@ impl TorClient {
+ 
+         // Resolve the isolation group now: the map lives on this client, and the
+         // future below must not borrow `self`.
+-        let (isolation, tls_config) = match isolation_key_from_init(&init) {
+-            Ok(Some(key)) => match self.isolation.borrow_mut().group_for(&key, || self.tls.for_new_key()) {
++        let iso_key = match isolation_key_from_init(&init) {
++            Ok(k) => k,
++            Err(e) => return wasm_bindgen_futures::future_to_promise(async move { Err(e) }),
++        };
++        let (isolation, tls_config) = match &iso_key {
++            Some(key) => match self.isolation.borrow_mut().group_for(key, || self.tls.for_new_key()) {
+                 Ok(group) => (Some(group.token), group.state),
+                 Err(e) => {
+                     let message = match e {
+@@ -344,12 +401,12 @@ impl TorClient {
+                     });
+                 }
+             },
+-            Ok(None) => (None, self.tls.unkeyed()),
+-            Err(e) => return wasm_bindgen_futures::future_to_promise(async move { Err(e) }),
++            None => (None, self.tls.unkeyed()),
+         };
++        let pool = Rc::clone(&self.pool);
+ 
+         wasm_bindgen_futures::future_to_promise(async move {
+-            fetch_impl(&client, &url, init, tls_config, isolation).await
++            fetch_impl(&client, &url, init, tls_config, isolation, pool, iso_key).await
+         })
+     }
+ 
+@@ -464,6 +521,7 @@ async fn create_client(options: TorClientOptions) -> Result<TorClient, JsValue>
+         inner: Some(tor_client),
+         tls: tls::TlsConfigs::new(make_tls_config()),
+         isolation: RefCell::new(IsolationGroups::default()),
++        pool: Rc::new(RefCell::new(ConnPool::default())),
+     })
+ }
+ 
+@@ -510,6 +568,8 @@ async fn fetch_impl(
+     init: JsValue,
+     tls_config: Arc<futures_rustls::rustls::ClientConfig>,
+     isolation: Option<IsolationToken>,
++    pool: Rc<RefCell<ConnPool>>,
++    iso_key: Option<String>,
+ ) -> Result<JsValue, JsValue> {
+     // Parse URL
+     let url = url::Url::parse(url_str)
+@@ -566,30 +626,63 @@ async fn fetch_impl(
+     // Log only the origin: the full URL can carry credentials or API keys.
+     info!("Fetching {}://{}:{} via Tor", url.scheme(), host, port);
+ 
+-    // Connect through Tor (circuit building can take several seconds)
+-    debug!("Connecting to {}:{}...", host, port);
+-    let stream = abortable(signal.as_ref(), async {
+-        match isolation {
+-            Some(token) => {
+-                let mut prefs = StreamPrefs::new();
+-                prefs.set_isolation(token);
+-                client.connect_with_prefs((host, port), &prefs).await
+-            }
+-            None => client.connect((host, port)).await,
++    // A body we can send again (none, or bytes) may go on a pooled keep-alive
++    // connection: if the server closed it while idle, the request is resent
++    // once on a new one. A streamed body always gets a new connection.
++    let replay: Option<Option<Vec<u8>>> = match &request_body {
++        fetch::RequestBody::None => Some(None),
++        fetch::RequestBody::Bytes(b) => Some(Some(b.clone())),
++        fetch::RequestBody::Stream(_) => None,
++    };
++    let pool_key: PoolKey = (iso_key, url.scheme().to_string(), host.to_string(), port);
++    let pooled = if replay.is_some() { pool.borrow_mut().take(&pool_key, js_sys::Date::now()) } else { None };
++    let reused = pooled.is_some();
++
++    let (mut conn, mut created) = match pooled {
++        Some(p) => {
++            debug!("Reusing a keep-alive connection to {}:{}", host, port);
++            p
+         }
+-        .map_err(|e| JsTorError::connect_failed(&e).into_js_value())
+-    })
+-    .await?;
+-
+-    debug!("Connected, making HTTP request...");
++        None => (
++            open_conn(client, host, port, isolation, is_https, Arc::clone(&tls_config), signal.as_ref()).await?,
++            js_sys::Date::now(),
++        ),
++    };
+ 
+     // Perform the HTTP request — resolves as soon as headers arrive
+-    let result = abortable(signal.as_ref(), async {
+-        fetch::fetch_headers(stream, &url, method, headers, request_body, is_https, host, Some(tls_config))
++    let shared = fetch::SharedConn::new(Rc::clone(&conn));
++    let first = abortable(signal.as_ref(), async {
++        fetch::exchange(shared.clone(), &url, method.clone(), headers.clone(), request_body)
+             .await
+             .map_err(|e| e.into_js_value())
+     })
+-    .await?;
++    .await;
++    let aborted = signal.as_ref().is_some_and(|s| s.aborted());
++    let result = match first {
++        Ok(r) => r,
++        // Only a request that got no answer at all is sent again.
++        Err(_) if reused && shared.bytes_read.get() == 0 && !aborted => {
++            debug!("Keep-alive connection to {}:{} was closed; sending on a new one", host, port);
++            conn = open_conn(client, host, port, isolation, is_https, Arc::clone(&tls_config), signal.as_ref()).await?;
++            created = js_sys::Date::now();
++            let body = match replay.clone().flatten() {
++                Some(b) => fetch::RequestBody::Bytes(b),
++                None => fetch::RequestBody::None,
++            };
++            let again = fetch::SharedConn::new(Rc::clone(&conn));
++            abortable(signal.as_ref(), async {
++                fetch::exchange(again, &url, method.clone(), headers.clone(), body)
++                    .await
++                    .map_err(|e| e.into_js_value())
++            })
++            .await?
++        }
++        Err(e) => return Err(e),
++    };
++
++    let keep = result.body_reader.reusable()
++        && !result.headers.iter().any(|(k, v)| k == "connection" && v.to_ascii_lowercase().contains("close"));
++    let release = keep.then(|| Release { pool, key: pool_key, conn, created });
+ 
+     // Build web_sys::Headers from the parsed headers
+     let js_headers = web_sys::Headers::new()
+@@ -601,15 +694,21 @@ async fn fetch_impl(
+ 
+     // Convert BodyReader → futures::Stream → JS ReadableStream
+     // The signal is threaded through the unfold state so abort interrupts each chunk read.
+-    let body_stream = futures::stream::unfold((result.body_reader, signal), |(mut reader, sig)| async move {
++    // At the clean end of the body the connection goes back to the pool.
++    let body_stream = futures::stream::unfold((result.body_reader, signal, release), |(mut reader, sig, release)| async move {
+         let chunk = abortable(sig.as_ref(), async { reader.read_chunk().await.map_err(|e| e.into_js_value()) }).await;
+         match chunk {
+             Ok(Some(chunk)) => {
+                 let arr = js_sys::Uint8Array::from(&chunk[..]);
+-                Some((Ok(arr.into()), (reader, sig)))
++                Some((Ok(arr.into()), (reader, sig, release)))
++            }
++            Ok(None) => {
++                if let Some(r) = release {
++                    r.pool.borrow_mut().put(r.key, r.conn, r.created, js_sys::Date::now());
++                }
++                None
+             }
+-            Ok(None) => None,
+-            Err(e) => Some((Err(e), (reader, sig))),
++            Err(e) => Some((Err(e), (reader, sig, None))),
+         }
+     });
+     let readable = wasm_streams::ReadableStream::from_stream(body_stream);
+@@ -630,6 +729,38 @@ async fn fetch_impl(
+     Ok(response.into())
+ }
+ 
++/// A new Tor stream to `host:port` (on the key's circuit), with TLS for https.
++async fn open_conn(
++    client: &ArtiTorClient<WasmRuntime>,
++    host: &str,
++    port: u16,
++    isolation: Option<IsolationToken>,
++    is_https: bool,
++    tls_config: Arc<futures_rustls::rustls::ClientConfig>,
++    signal: Option<&web_sys::AbortSignal>,
++) -> Result<PooledConn, JsValue> {
++    // Connect through Tor (circuit building can take several seconds)
++    debug!("Connecting to {}:{}...", host, port);
++    let stream = abortable(signal, async {
++        match isolation {
++            Some(token) => {
++                let mut prefs = StreamPrefs::new();
++                prefs.set_isolation(token);
++                client.connect_with_prefs((host, port), &prefs).await
++            }
++            None => client.connect((host, port)).await,
++        }
++        .map_err(|e| JsTorError::connect_failed(&e).into_js_value())
++    })
++    .await?;
++    debug!("Connected, making HTTP request...");
++    let conn = abortable(signal, async {
++        fetch::establish(stream, is_https, host, Some(tls_config)).await.map_err(|e| e.into_js_value())
++    })
++    .await?;
++    Ok(Rc::new(RefCell::new(conn)))
++}
++
+ /// Extract body from JavaScript FetchInit object
+ fn extract_body_from_js(init: &JsValue) -> Result<fetch::RequestBody, JsValue> {
+     let body = js_sys::Reflect::get(init, &JsValue::from_str("body"))
+@@ -961,3 +1092,46 @@ mod tests {
+         assert_eq!(block_on(unless_aborted(ready(()), ready(7))), None);
+     }
+ }
++
++#[cfg(test)]
++mod pool_tests {
++    use super::*;
++
++    fn conn() -> PooledConn {
++        Rc::new(RefCell::new(Box::new(futures::io::Cursor::new(Vec::<u8>::new())) as fetch::BoxedConn))
++    }
++    fn key(k: Option<&str>) -> PoolKey {
++        (k.map(String::from), "https".into(), "rpc.example".into(), 443)
++    }
++
++    #[test]
++    fn a_connection_is_reused_only_under_its_own_key() {
++        let mut p = ConnPool::default();
++        p.put(key(Some("addr:a")), conn(), 0.0, 0.0);
++        assert!(p.take(&key(Some("addr:b")), 1.0).is_none());
++        assert!(p.take(&key(None), 1.0).is_none());
++        assert!(p.take(&key(Some("addr:a")), 1.0).is_some());
++        assert!(p.take(&key(Some("addr:a")), 1.0).is_none(), "taken once");
++    }
++
++    #[test]
++    fn idle_and_old_connections_are_dropped() {
++        let mut p = ConnPool::default();
++        p.put(key(None), conn(), 0.0, 0.0);
++        assert!(p.take(&key(None), POOL_IDLE_MS).is_none(), "idle too long");
++        p.put(key(None), conn(), 0.0, POOL_MAX_AGE_MS - 1.0);
++        assert!(p.take(&key(None), POOL_MAX_AGE_MS + 1.0).is_none(), "too old");
++        p.put(key(None), conn(), 0.0, POOL_MAX_AGE_MS);
++        assert!(p.take(&key(None), POOL_MAX_AGE_MS).is_none(), "not pooled past max age");
++    }
++
++    #[test]
++    fn at_most_a_few_idle_connections_per_key() {
++        let mut p = ConnPool::default();
++        for _ in 0..10 {
++            p.put(key(None), conn(), 0.0, 0.0);
++        }
++        assert_eq!(p.idle[&key(None)].len(), POOL_PER_KEY);
++    }
++}
++

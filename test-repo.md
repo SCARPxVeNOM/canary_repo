@@ -429,6 +429,64 @@ Reading it:
 
 The hedge shortens the stall but can't remove it: for a few seconds after a gateway dies, tor-js still builds the new circuit through it, because it only marks a gateway cooling after a failure. Getting this to zero needs a change in tor-js's gateway health checks, not in Canary.
 
+### EF's gateway vs ours (`gw-matrix.mjs`, `boot-log.mjs`, 6 Nov, ~04:00 IST)
+
+Builds: `dist/` (EF's demo gateway only), `dist-mixed/` (`config/mixed-gateway.json`: EF + our 3).
+
+| | EF only | EF + our 3 |
+|---|---|---|
+| Browser launch → Tor ready | **>180 s** (still booting) | 4.0–5.2 s |
+| First dapp read | 43 s (waited for boot) | 2.1–4.9 s |
+| Single read, warm (30) | p50 1.52 s, p90 1.91 s, 0 failed | p50 0.84–1.64 s, p90 1.55–1.92 s, 0 failed |
+| 20 parallel reads | p50 1.85 s, 100/100 | p50 1.37–1.60 s, 100/100 |
+| app.uniswap.org / app.ens.domains | 9/9 and 8/8 protected | 9–13/9–13 and 8/8 protected |
+
+Failover in the mixed pool:
+- Kill ours one by one: 0, 1 and 1 failed reads; recovery gaps 5 s and 36 s.
+- Kill all three of ours at once, so only EF is left: every read failed for over 150 s, then reads recovered through EF.
+  - Before the fix below, recovered reads took 3.1–5.8 s each.
+  - After the fix: one 4.6 s read, then 0.6–1.1 s.
+
+Found and fixed:
+- **Recovered reads stayed slow (fixed):** tor-js keeps giving a key the circuit through the dead gateway, so every later read waited the 3 s hedge and was answered by it. Now, when the hedge wins, its circuit becomes that key's circuit (`circuitFor` in background.ts). Recovered reads went from ~4.2 s to ~0.8 s.
+- **Unclear error (fixed):** a timed-out read said "signal is aborted without reason"; it now says "no answer within 30 s".
+
+Not fixable in Canary:
+- **EF's gateway can't reach Tor guards reliably.** `ef-boot.log`: "Could not connect to guard … Retrying in 2m 30s" from 13 s on, then "Unable to select a guard relay" and "Unable to download a usable directory" at 177 s. The same guards work through our gateway at the same time, and the packaged consensus was valid (valid until 23:00 UTC; the run was at 22:50). The problem is in EF's gateway (load, limits or network); only its operator can fix it. This is why falling back to EF alone takes minutes.
+- **A pool with EF in it is a little slower:** some circuits go via Frankfurt (125 ms RTT, several round trips per read).
+- **The first failed read after a gateway dies:** tor-js only marks a gateway cooling after a failure through it (see above).
+
+### HTTP keep-alive in tor-js (`ka-bench.mjs`, 6 Nov)
+
+tor-js patched to reuse HTTP/1.1 connections per isolation key ([tor-js-patches/](tor-js-patches/)). Built in Docker with the pinned toolchain; the unpatched build came out hash-identical to the on-chain worker (`0x5b62f358…818b`), so the baseline is exactly what Canary runs. Both loaded through the real harness with hash verification (a stand-in specifier pointing at the local bundle), our 3 gateways, 3 interleaved rounds, fresh profile each.
+
+| | stock 0.4.4 | keep-alive |
+|---|---|---|
+| warm read, no key (75) | p50 775 ms, p90 1,000, mean 794 | **p50 252 ms, p90 326, mean 259** |
+| warm read, isolation key (45) | p50 921 ms, p90 1,934, mean 1,090 | **p50 262 ms, p90 322, mean 291** |
+| first read after 40 s idle (new connection) | p50 832 ms | p50 985 ms |
+| 20 separate parallel reads | p50 1,250 ms | p50 1,478 ms |
+| boot | 2.46 s | 2.49 s |
+| failed | 0 | 0 |
+
+- A warm read now costs about one circuit round trip instead of three: about 3× faster.
+- After 30 s idle the pool drops the connection, so the next read pays full price again.
+- 20 separate parallel requests don't benefit (the pool keeps 4 per key). Canary sends those as one batch anyway.
+- It can't ship from Canary alone: the worker is pinned on chain by hash. It has to land upstream in tor-js, or run under a specifier we publish.
+
+### Gateway liveness check in tor-js (`fo-bench.mjs`, 6 Nov)
+
+The patched worker (keep-alive + liveness check, [tor-js-patches/](tor-js-patches/)) vs stock 0.4.4. 3 own gateways, a read every 500 ms, the busiest gateway killed twice per build.
+
+| | stock | patched |
+|---|---|---|
+| failed reads per kill | 2, 2 | **0, 0** |
+| until reads were normal again | 17.4 s, 18.2 s | **12.5 s, 10.0 s** |
+| read in flight at the kill | failed (10 s), the next failed too | answered after 11.6 s / 8.5 s |
+| reads afterwards | 0.5–1.6 s | 0.23–0.55 s |
+
+What's left: the one read in flight still waits about 5–9 s for detection plus a new circuit. A shorter check would cut that, but it would also drop slow gateways that are still working.
+
 ### Found along the way
 
 - **Shim race (fixed):** if the wallet handed out an address before the extension's config reply arrived, `applyConfig` replaced the address list and dropped it, so every leak check failed (e2e 20/24 on Chrome for Testing 156, also on the old code). Now merged. e2e 26/26, twice.
