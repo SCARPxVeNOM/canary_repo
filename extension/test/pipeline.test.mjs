@@ -8,7 +8,7 @@ const A = "https://read.example/";
 const B = "https://other.example/";
 
 /** A fake anon path: records each request and answers like a node would. */
-function fakeSend({ batch = true, status = 200, drop = [] } = {}) {
+function fakeSend({ batch = true, status = 200, drop = [], maxBatch = Infinity } = {}) {
   const sent = [];
   let block = 100;
   const answer = (m) => {
@@ -22,6 +22,7 @@ function fakeSend({ batch = true, status = 200, drop = [] } = {}) {
     sent.push({ target, key, size: Array.isArray(v) ? v.length : 1, methods: (Array.isArray(v) ? v : [v]).map((m) => m.method) });
     await new Promise((r) => setTimeout(r, 5));
     if (status !== 200) return { status, text: "{}" };
+    if (Array.isArray(v) && v.length > maxBatch) return { status: 400, text: JSON.stringify(v.map((m) => ({ jsonrpc: "2.0", id: m.id, error: { code: -32000, message: `Batch of more than ${maxBatch} requests are not allowed` } }))) };
     if (Array.isArray(v) && !batch) return { status: 200, text: JSON.stringify({ jsonrpc: "2.0", id: null, error: { code: -32600, message: "batch not supported" } }) };
     if (Array.isArray(v)) return { status: 200, text: JSON.stringify(v.filter((m) => !drop.includes(m.method)).map(answer).reverse()) };
     return { status: 200, text: JSON.stringify(answer(v)) };
@@ -117,6 +118,21 @@ test("an endpoint that rejects batches gets the calls one by one", async () => {
   const outs = await Promise.all([p.call(A, bal("0x1")), p.call(A, bal("0x2")), p.call(A, bal("0x3"))]);
   assert.deepEqual(f.sent.map((s) => s.size), [3, 1, 1, 1]);
   assert.ok(outs.every((o) => o.answer.result?.startsWith("eth_getBalance")));
+});
+
+test("an endpoint that refuses a large batch (HTTP 400) gets halves, and later bursts that size", async () => {
+  const f = fakeSend({ maxBatch: 3 });
+  const p = new RpcPipeline(f.send);
+  const outs = await Promise.all(Array.from({ length: 10 }, (_, i) => p.call(A, bal("0x" + i))));
+  assert.ok(outs.every((o) => o.answer.result?.startsWith("eth_getBalance")));
+  assert.deepEqual(f.sent.map((s) => s.size), [10, 5, 5, 3, 2, 3, 2]);
+  f.sent.length = 0;
+  await Promise.all(Array.from({ length: 7 }, (_, i) => p.call(A, bal("0x1" + i))));
+  assert.deepEqual(f.sent.map((s) => s.size), [3, 3, 1]);
+  // another endpoint keeps its own size
+  f.sent.length = 0;
+  await Promise.all([p.call(B, bal("0x1")), p.call(B, bal("0x2"))]);
+  assert.deepEqual(f.sent.map((s) => s.size), [2]);
 });
 
 test("a call missing from a batch answer is retried alone", async () => {

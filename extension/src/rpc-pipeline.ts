@@ -12,6 +12,8 @@
 //   batch     calls for the same endpoint AND isolation key that arrive within
 //             `windowMs` leave as one JSON-RPC batch. Never across keys: that
 //             would put two addresses' reads on one circuit.
+//   split     an endpoint that refuses a batch for its size (HTTP 400/413) gets
+//             it again in halves, and batches no larger from then on.
 //
 // Read methods only: background.ts forwards everything else untouched, so a
 // write is never batched, shared, cached or retried.
@@ -49,6 +51,8 @@ export class RpcPipeline {
   private readonly cache = new Map<string, { answer: Answer; until: number }>();
   private readonly inflight = new Map<string, Promise<Answer>>();
   private readonly queues = new Map<string, Queue>();
+  // Endpoints that refused a larger batch: the size they get from then on.
+  private readonly caps = new Map<string, number>();
   private readonly send: Send;
 
   constructor(send: Send, opts: Partial<PipelineOptions> = {}) {
@@ -100,7 +104,7 @@ export class RpcPipeline {
     if (!q) this.queues.set(qk, (q = { target, key, items: [] }));
     return new Promise<Answer>((resolve, reject) => {
       q!.items.push({ call, resolve, reject });
-      if (q!.items.length >= this.opts.maxBatch) this.flush(qk);
+      if (q!.items.length >= Math.min(this.opts.maxBatch, this.caps.get(target) ?? Infinity)) this.flush(qk);
       else q!.timer ??= setTimeout(() => this.flush(qk), this.opts.windowMs);
     });
   }
@@ -121,6 +125,14 @@ export class RpcPipeline {
     let parsed: unknown;
     try {
       const r = await this.send(target, JSON.stringify(one ? wire[0] : wire), key);
+      // Some endpoints refuse a batch past a size outright (dRPC's free plan: HTTP 400 past 3 calls). Reads are
+      // safe to resend: halve the batch, and keep later ones to this endpoint that small.
+      if (!one && (r.status === 400 || r.status === 413)) {
+        const size = Math.ceil(items.length / 2);
+        this.caps.set(target, Math.min(this.caps.get(target) ?? Infinity, size));
+        for (let i = 0; i < items.length; i += size) void this.dispatch(target, key, items.slice(i, i + size));
+        return;
+      }
       if (r.status >= 400) throw new TransportError(`HTTP ${r.status} from ${hostOf(target)}`);
       parsed = JSON.parse(r.text);
     } catch (e) {
