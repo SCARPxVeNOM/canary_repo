@@ -31,6 +31,8 @@ export type Verdict = {
   /** matches: no undeclared recipients observed · undeclared: some · incomplete: no manifest to check against */
   result: "matches" | "undeclared" | "incomplete";
   undeclaredHosts: string[];
+  /** third parties the scan saw receive your address, and what each is (all a label can say about a site with no manifest) */
+  addressRecipients?: { host: string; kind: string }[];
   notInspected: string[];
   /** unix seconds */
   issuedAt: number;
@@ -75,6 +77,10 @@ export function verdictFromScan(
   if (!report?.build?.fingerprint || !Array.isArray(report.recipients)) throw new TypeError("not a scanner report");
   const unchecked = report.recipients.some((r: any) => r.party === "third" && r.carriedAddress && r.declared === null);
   const undeclaredHosts: string[] = [...(report.undeclared ?? [])].sort();
+  const addressRecipients = report.recipients
+    .filter((r: any) => r.party === "third" && r.carriedAddress)
+    .map((r: any) => ({ host: String(r.host), kind: String(r.kind ?? "unknown") }))
+    .sort((a: { host: string }, b: { host: string }) => (a.host < b.host ? -1 : a.host > b.host ? 1 : 0));
   const scannedAt = Date.parse(report.scannedAt);
   const issuedAt = Math.floor((o.now ?? (Number.isFinite(scannedAt) ? scannedAt : Date.now())) / 1000);
   return {
@@ -86,6 +92,7 @@ export function verdictFromScan(
     flows: report.flows ?? [],
     result: unchecked ? "incomplete" : undeclaredHosts.length ? "undeclared" : "matches",
     undeclaredHosts,
+    addressRecipients,
     notInspected: report.notInspected ?? [],
     issuedAt,
     expiresAt: issuedAt + Math.round((o.ttlDays ?? 30) * 86400),
@@ -113,5 +120,7 @@ export function parseVerdictRecord(text: string): VerdictRecord {
   if (!RESULTS.has(r.result)) throw new TypeError("verdict.result: expected matches | undeclared | incomplete");
   for (const k of ["issuedAt", "expiresAt"]) if (!Number.isSafeInteger(r[k])) throw new TypeError(`verdict.${k}: expected unix seconds`);
   for (const k of ["flows", "undeclaredHosts", "notInspected"]) if (!Array.isArray(r[k])) throw new TypeError(`verdict.${k}: expected an array`);
+  if (r.addressRecipients !== undefined && !(Array.isArray(r.addressRecipients) && r.addressRecipients.every((x: any) => typeof x?.host === "string" && typeof x?.kind === "string")))
+    throw new TypeError("verdict.addressRecipients: expected [{host, kind}]");
   return r as VerdictRecord;
 }

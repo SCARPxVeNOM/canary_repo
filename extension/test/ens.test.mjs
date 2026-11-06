@@ -156,3 +156,41 @@ test("a revoked verifier, an ENSv1 name, a forged or stale verdict", async () =>
   assert.equal((await verdictSite(async () => ({ hello: 1 }))).state, "invalid");
   assert.equal(await verdictSite(async () => null), undefined, "no verdict record");
 });
+
+/* --- Canary's labels: a verdict for a site that names no ENS name ------------ */
+
+const LABEL = "app-dapp-example.labels.canary.eth";
+/** readDeclared for https://app.dapp.example, whose well-known file answers `status`. */
+async function labelled(status, labelRecords, chainOpts = {}) {
+  const origin = "https://app.dapp.example";
+  const real = globalThis.fetch;
+  globalThis.fetch = async () => new Response("", { status });
+  try {
+    const records = { "verifier.canary.eth": { addr: VERIFIER }, ...(labelRecords ? { [LABEL]: await labelRecords(origin) } : {}) };
+    return await readDeclared(origin, chainCall({ records, ...chainOpts }), ENS, Date.UTC(2026, 10, 6));
+  } finally {
+    globalThis.fetch = real;
+  }
+}
+const labelVerdict = (o = {}) => async (origin) => ({
+  url: origin,
+  "privacy.verdict.canary": JSON.stringify(await signVerdict(verdict(origin, { name: LABEL, result: "incomplete", undeclaredHosts: [], addressRecipients: [{ host: "tracker.test", kind: "analytics" }], ...o }), VERIFIER_KEY)),
+});
+
+test("no well-known file: Canary's label for the site, checked like any verdict", async () => {
+  const d = await labelled(404, labelVerdict());
+  assert.equal(d.state, "none");
+  assert.equal(d.label.ens, LABEL);
+  const v = d.label.verdict;
+  assert.deepEqual([v.signed, v.signerIsVerifier, v.delegated, v.matchesSite, v.expired], [true, true, true, true, false]);
+  assert.deepEqual(v.verdict.addressRecipients, [{ host: "tracker.test", kind: "analytics" }]);
+  assert.equal((await labelled(503, labelVerdict())).label?.ens, LABEL, "a well-known file that errors still gets the label");
+});
+
+test("a label is used only when it points back at the site", async () => {
+  assert.equal((await labelled(404, undefined)).label, undefined, "no label");
+  assert.equal((await labelled(404, async (o) => ({ ...(await labelVerdict()(o)), url: "https://app.dapp-example.org" }))).label, undefined, "a label whose url names another site (a-b.com and a.b-com share one)");
+  assert.equal((await labelled(404, async (o) => ({ url: o }))).label, undefined, "a label with no verdict yet");
+  assert.equal((await labelled(404, labelVerdict({ origin: "https://elsewhere.example" }))).label.verdict.matchesSite, false, "a verdict about another site");
+  assert.equal((await labelled(404, labelVerdict(), { writers: [] })).label.verdict.delegated, false, "the verifier's role revoked");
+});

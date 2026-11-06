@@ -12,12 +12,6 @@
   font-display: block;
 }
 @font-face {
-  font-family: "Syne";
-  src: url("fonts/syne.woff2") format("woff2-variations");
-  font-weight: 400 800;
-  font-display: block;
-}
-@font-face {
   font-family: "JetBrains Mono";
   src: url("fonts/jetbrains-mono.woff2") format("woff2-variations");
   font-weight: 100 800;
@@ -26,7 +20,7 @@
 
 @theme {
   --font-sans: "Instrument Sans", ui-sans-serif, system-ui, sans-serif;
-  --font-display: "Syne", "Instrument Sans", ui-sans-serif, sans-serif;
+  --font-display: "Instrument Sans", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
 
   /* the four outcomes */
@@ -142,7 +136,6 @@ body {
   color: var(--foreground);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
-  font-feature-settings: "ss01";
 }
 
 /* a few HeroUI defaults, tuned to the design */

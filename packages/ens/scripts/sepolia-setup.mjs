@@ -13,13 +13,21 @@
      trader-01.agents.canary.eth
                             the example agent, with its own Permissioned Resolver
                             (so its report key's grant covers this agent only)
+     labels.canary.eth      Canary's privacy labels (src/label.ts): its own
+                            UserRegistry, and one Permissioned Resolver for every
+                            label, on which the verifier holds the verdict key only
+     <host>.labels.canary.eth
+                            a label per --label scan: url = the site, and the
+                            verifier's signed verdict from that baseline scan
 
    The records themselves are written with canary-ens afterwards (set-dapp,
    grant-verifier, sign-verdict, publish-verdict for the dapp; set-manifest,
    grant-reporter for the agent; see packages/ens/README.md).
 
    usage: node scripts/sepolia-setup.mjs --owner-key-file <file> --verifier-key-file <file>
-            --report-key-file <file> [--rpc <url>] [--out sepolia.json]
+            --report-key-file <file> [--label <baseline scan.json>]... [--rpc <url>] [--out sepolia.json]
+
+   Run `npm run build` first: labels are made with this package's verdict code.
 
    A key file holds a hex key, alone or as `name=key` (first line used). Keys
    are never printed. A missing verifier or report key file is created (mode
@@ -38,6 +46,8 @@ import {
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
 import { packetToBytes } from "viem/ens";
 import { sepolia } from "viem/chains";
+import { basename } from "node:path";
+import { canWriteText, grantTextKey, labelName, parseVerdictRecord, signVerdict, verdictFromScan, verdictKey } from "../dist/index.js";
 
 const A = {
   ethRegistrar: "0xf633e7fc17e2bbe0d0965d18ec1821dcb754a3d3",
@@ -54,6 +64,8 @@ const NAMESPACE = "canary";
 const VERIFIER = "verifier";
 const AGENTS = "agents";
 const AGENT = "trader-01";
+const LABELS = "labels";
+const REPO = "https://github.com/SCARPxVeNOM/canary_repo";
 const DURATION = 365n * 86400n;
 // every role, admin roles included, for the owner of a resolver or registry it deploys
 const ALL_ROLES = ((1n << 256n) - 1n) / 15n; // 0x1111…1
@@ -104,6 +116,7 @@ const { values: opt } = parseArgs({
   options: {
     "owner-key-file": { type: "string" }, "verifier-key-file": { type: "string" }, "report-key-file": { type: "string" },
     rpc: { type: "string", default: "https://ethereum-sepolia-rpc.publicnode.com" }, out: { type: "string", default: "sepolia.json" },
+    label: { type: "string", multiple: true, default: [] },
   },
 });
 if (!opt["owner-key-file"] || !opt["verifier-key-file"] || !opt["report-key-file"]) {
@@ -177,6 +190,9 @@ const agentsName = `${AGENTS}.${NAMESPACE}.eth`;
 const agentName = `${AGENT}.${agentsName}`;
 const agentsRegistry = await deployProxy(agentsName, A.userRegistryImpl, "UserRegistry", registryInit);
 const agentResolver = await deployProxy(agentName, A.resolverImpl, "PermissionedResolver", resolverInit);
+const labelsName = `${LABELS}.${NAMESPACE}.eth`;
+const labelsRegistry = await deployProxy(labelsName, A.userRegistryImpl, "UserRegistry", registryInit);
+const labelsResolver = await deployProxy(labelsName, A.resolverImpl, "PermissionedResolver", resolverInit);
 out.names[`${DAPP}.eth`] = { resolver: dappResolver };
 out.names[`${NAMESPACE}.eth`] = { resolver: canaryResolver, subregistry: canaryRegistry };
 save();
@@ -238,6 +254,22 @@ if (!same(await client.readContract({ address: agentsRegistry, abi: registry, fu
   await send(`register ${agentName}`, agentsRegistry, registry, "register", [AGENT, owner.address, zeroAddress, agentResolver, NAME_OWNER_ROLES, expiry]);
 }
 
+// 3c. labels.canary.eth: like agents.canary.eth, a subname with its own subregistry
+if (!same(await client.readContract({ address: canaryRegistry, abi: registry, functionName: "findOwner", args: [LABELS] }), owner.address)) {
+  const expiry = await client.readContract({ address: A.ethRegistry, abi: registry, functionName: "findExpiry", args: [NAMESPACE] });
+  await send(`register ${labelsName}`, canaryRegistry, registry, "register", [LABELS, owner.address, labelsRegistry, canaryResolver, NAME_OWNER_ROLES, expiry]);
+}
+const [labelsParent, labelsLabel] = await client.readContract({ address: labelsRegistry, abi: registry, functionName: "getParent" });
+if (!same(labelsParent, canaryRegistry) || labelsLabel !== LABELS) await send("setParent labels registry", labelsRegistry, registry, "setParent", [canaryRegistry, LABELS]);
+// One grant for every label: a text-key role covers that key on each name the resolver serves.
+const vKey = verdictKey("canary");
+if (!(await canWriteText(client, labelsResolver, labelsName, vKey, verifier.address)).ok) {
+  const { hash } = await grantTextKey({ wallet, client }, labelsResolver, labelsName, vKey, verifier.address);
+  out.txs[`grant ${vKey} on the labels resolver`] = hash;
+  save();
+  console.log(`  grant ${vKey} on the labels resolver: ${hash}`);
+}
+
 // 4. records the setup owns: the verifier's addr; canary.eth points at the code
 const verifierName = `${VERIFIER}.${NAMESPACE}.eth`;
 /** A record through the Universal Resolver, decoded; null if the name doesn't resolve yet. */
@@ -257,5 +289,32 @@ for (const [key, value] of [["url", "https://github.com/SCARPxVeNOM/canary_repo"
 out.names[verifierName] = { owner: verifier.address, resolver: canaryResolver, addr: verifier.address, labelhash: labelhash(VERIFIER) };
 out.names[agentsName] = { owner: owner.address, resolver: canaryResolver, subregistry: agentsRegistry };
 out.names[agentName] = { owner: owner.address, resolver: agentResolver, reporter: reporter.address };
+out.names[labelsName] = { owner: owner.address, resolver: canaryResolver, subregistry: labelsRegistry, labelsResolver };
 save();
+
+// 5. a label per baseline scan: Canary binds it to the site (url), the verifier signs and writes the verdict
+const verifierWallet = createWalletClient({ chain: sepolia, transport, account: verifier });
+for (const file of opt.label) {
+  const report = JSON.parse(readFileSync(file, "utf8"));
+  const origin = new URL(report.url).origin;
+  const name = labelName(origin, labelsName);
+  if (!name) throw new Error(`${origin} can't have a label (see src/label.ts)`);
+  const label = name.slice(0, name.indexOf("."));
+  if (!same(await client.readContract({ address: labelsRegistry, abi: registry, functionName: "findOwner", args: [label] }), owner.address)) {
+    const expiry = await client.readContract({ address: A.ethRegistry, abi: registry, functionName: "findExpiry", args: [NAMESPACE] });
+    await send(`register ${name}`, labelsRegistry, registry, "register", [label, owner.address, zeroAddress, labelsResolver, NAME_OWNER_ROLES, expiry]);
+  }
+  if ((await record(name, "text", ["url"])) !== origin) await send(`text ${name} url`, labelsResolver, resolver, "setText", [dns(name), "url", origin]);
+  const v = verdictFromScan(report, { name, verifier: verifierName, evidenceURI: `${REPO}/blob/main/test-artifacts/scans/${basename(file).replace(/\.json$/, ".md")}` });
+  let cur = null;
+  try {
+    cur = parseVerdictRecord((await record(name, "text", [vKey])) ?? "");
+  } catch {
+    /* none yet, or unreadable: write it */
+  }
+  if (!(cur && cur.verifier === v.verifier && cur.buildHash === v.buildHash && cur.issuedAt === v.issuedAt && cur.evidenceURI === v.evidenceURI))
+    await send(`verdict ${name}`, labelsResolver, resolver, "setText", [dns(name), vKey, JSON.stringify(await signVerdict(v, readKey(opt["verifier-key-file"])))], verifierWallet);
+  out.names[name] = { owner: owner.address, resolver: labelsResolver, url: origin, verdict: { result: v.result, addressRecipients: v.addressRecipients, buildHash: v.buildHash, issuedAt: v.issuedAt, expiresAt: v.expiresAt } };
+  save();
+}
 console.log(JSON.stringify(out.names, null, 2));

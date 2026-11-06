@@ -12,9 +12,10 @@
 
 import { AnonRpcWorker, type PlainValue } from "@anon-rpc/browser-extension-harness";
 import { readDeclared, UNIVERSAL_RESOLVER, type Declared } from "./ens.js";
+import { privacyLabel } from "./privacy-label.js";
 import { RpcPipeline } from "./rpc-pipeline.js";
 import {
-  chainHintFromUrl, findAddress, isLocalHost, isThirdParty, knownChain, needlesFor, parseJsonRpc, SUBSTITUTABLE,
+  chainHintFromUrl, findAddress, isLocalHost, isThirdParty, knownChain, needlesFor, parseJsonRpc, sampleCall, SUBSTITUTABLE,
   type Category, type Observation,
 } from "./shared.js";
 
@@ -31,8 +32,8 @@ type Config = {
     devWorker?: { hash: string; url: string };
   };
   readEndpoints: Record<string, string>;
-  /** Where dapps' ENS names live (default: Sepolia, Universal Resolver at its usual address), and whose verdict record to read (privacy.verdict.<verifier>, default "canary"). */
-  ens?: { chainId: number; universalResolver?: string; verifier?: string };
+  /** Where dapps' ENS names live (default: Sepolia, Universal Resolver at its usual address), whose verdict record to read (privacy.verdict.<verifier>, default "canary"), and where Canary's labels are (default labels.canary.eth). */
+  ens?: { chainId: number; universalResolver?: string; verifier?: string; labels?: string };
   timeoutMs: number;
   /** A tor-js fast-bootstrap snapshot packaged at build time (build.mjs --tor-bootstrap). */
   torBootstrap?: { file: string; fetchedAt: number; maxAgeHours: number };
@@ -46,9 +47,9 @@ const CFG = __CANARY_CONFIG__;
 type Site = { enabled: boolean; allowDirect: boolean; blockHosts: string[] };
 const DEFAULT_SITE: Site = { enabled: true, allowDirect: false, blockHosts: [] };
 
-/** Global. Kept on this device only. */
-type Settings = { historyDays: number; theme: "system" | "light" | "dark" };
-const DEFAULT_SETTINGS: Settings = { historyDays: 30, theme: "system" };
+/** Global. Kept on this device only. connectNotice: show the site's privacy label on the page when you connect a wallet. */
+type Settings = { historyDays: number; theme: "system" | "light" | "dark"; connectNotice: boolean };
+const DEFAULT_SETTINGS: Settings = { historyDays: 30, theme: "system", connectNotice: true };
 const getSettings = async (): Promise<Settings> => ({ ...DEFAULT_SETTINGS, ...(await local<Partial<Settings>>("settings", {})) });
 
 async function local<T>(key: string, fallback: T): Promise<T> {
@@ -153,6 +154,8 @@ export type TabState = {
   recipients: Record<string, Recipient>;
   latencies: number[];
   walletChain?: number;
+  /** when the page first learned a wallet address (connect, or eth_accounts on load) */
+  connectedAt?: number;
   notes: string[];
   /** calls answered without a request of their own: from cache, or by joining an identical one in flight */
   noRequest: number;
@@ -221,7 +224,7 @@ async function record(tabId: number, o: Observation, calls = 1) {
 
 chrome.tabs.onRemoved.addListener(async (tabId: number) => {
   const s = await tabState(tabId);
-  if (s) await archive(s);
+  if (s) await archive(s).catch(() => {});
   tabs.delete(tabId);
   void chrome.storage.session.remove(`tab:${tabId}`);
 });
@@ -546,7 +549,7 @@ async function handleRpc(tabId: number, origin: string, url: string, body: strin
   const firstParty = !isThirdParty(new URL(origin).hostname, host);
   const { all } = await getAddresses();
   const taint = findAddress(body, all.map(needlesFor));
-  const base = { channel, host, firstParty, methods, address: taint?.address };
+  const base = { channel, host, firstParty, methods, address: taint?.address, sample: sampleCall(calls[0]) };
   const site = await getSite(origin);
   const tab = await tabState(tabId);
 
@@ -565,12 +568,14 @@ async function handleRpc(tabId: number, origin: string, url: string, body: strin
     let target = url;
     let category: Category = "protectedIpOnly";
     let note: string | undefined;
+    let via: string | undefined;
     if (calls.every((c) => SUBSTITUTABLE.has(c.method))) {
       const chain = await chainOf(w, url, tab?.walletChain);
       const read = chain && CFG.readEndpoints[String(chain.id)];
       if (read) {
         target = read;
         category = "protected";
+        via = new URL(read).hostname;
         if (chain.assumed) note = `chain of ${host} assumed from ${chain.from === "url" ? "its URL" : "the wallet"} (${chain.id})`;
         // The read endpoint's chain is known, so these never need a request.
         pipeline.seed(read, "eth_chainId", [], "0x" + chain.id.toString(16));
@@ -589,7 +594,7 @@ async function handleRpc(tabId: number, origin: string, url: string, body: strin
     if (!calls.every((c) => SUBSTITUTABLE.has(c.method))) {
       const r = await anonFetch(w, target, body, key);
       if (r.status >= 400) throw new Error(`HTTP ${r.status} from ${new URL(target).hostname}`);
-      await record(tabId, { ...base, category, ms: Date.now() - t0, note }, calls.length);
+      await record(tabId, { ...base, category, ms: Date.now() - t0, note, via }, calls.length);
       return { status: r.status, body: r.text };
     }
     const outs = await Promise.all(calls.map((c) => pipeline.call(target, c, key)));
@@ -598,7 +603,7 @@ async function handleRpc(tabId: number, origin: string, url: string, body: strin
     if (noRequest && tab) tab.noRequest = (tab.noRequest ?? 0) + noRequest;
     // A call answered from cache took no anon-rpc round trip: don't let it pull the latency figures down.
     const ms = outs.some((o) => o.source === "network") ? Date.now() - t0 : undefined;
-    await record(tabId, { ...base, category, ms, note }, calls.length);
+    await record(tabId, { ...base, category, ms, note, via }, calls.length);
     return { status: 200, body: JSON.stringify(/^\s*\[/.test(body) ? answers : answers[0]) };
   } catch (e) {
     const why = String((e as Error)?.message ?? e);
@@ -613,7 +618,7 @@ async function handleRpc(tabId: number, origin: string, url: string, body: strin
 
 /* --- declared recipients (ENS) ------------------------------------------- */
 
-const ENS = { chainId: CFG.ens?.chainId ?? 11155111, universalResolver: CFG.ens?.universalResolver ?? UNIVERSAL_RESOLVER, verifier: CFG.ens?.verifier ?? "canary" };
+const ENS = { chainId: CFG.ens?.chainId ?? 11155111, universalResolver: CFG.ens?.universalResolver ?? UNIVERSAL_RESOLVER, verifier: CFG.ens?.verifier ?? "canary", labels: CFG.ens?.labels };
 const DECLARED_TTL_MS = 10 * 60_000;
 const DECLARED_RETRY_MS = 30_000;
 const declaredCache = new Map<string, { at: number; ttl: number; value: Promise<Declared> }>();
@@ -630,9 +635,26 @@ function declaredFor(origin: string): Promise<Declared> {
       pipeline.call(read, { jsonrpc: "2.0", id: 1, method: "eth_call", params: [{ ...(from ? { from } : {}), to, data }, "latest"] }, "canary:ens").then((o) => o.answer as { result?: string; error?: { message: string } });
     entry.value = readDeclared(origin, call, ENS).catch((e) => ({ state: "error", error: String(e?.message ?? e) }) as Declared);
   }
-  void entry.value.then((d) => { if (d.state === "error") entry.ttl = DECLARED_RETRY_MS; });
+  void entry.value.then((d) => { if (d.state === "error" || ("label" in d && d.label && "error" in d.label)) entry.ttl = DECLARED_RETRY_MS; });
   declaredCache.set(origin, entry);
   return entry.value;
+}
+
+/**
+ * The page has your address now: note when, and show the site's privacy label
+ * on the page (bridge.ts), once per site per browser session, with protection on.
+ */
+async function noticeConnect(tabId: number, origin: string) {
+  const s = await tabState(tabId);
+  if (!s || s.origin !== origin || s.connectedAt) return;
+  s.connectedAt = Date.now();
+  persist(tabId);
+  const key = `notice:${origin}`;
+  if (!(await getSettings()).connectNotice || !(await getSite(origin)).enabled || (await chrome.storage.session.get(key))[key]) return;
+  await chrome.storage.session.set({ [key]: true });
+  const label = privacyLabel(await declaredFor(origin));
+  if ((await tabState(tabId))?.origin !== origin) return;
+  chrome.tabs.sendMessage(tabId, { type: "notice", label }, { frameId: 0 }).catch(() => {});
 }
 
 async function lookUpDeclared(tabId: number, origin: string) {
@@ -653,8 +675,9 @@ chrome.runtime.onMessage.addListener((msg: any, sender: any, respond: (r: unknow
       case "config": {
         // A new top-level document: start this tab's coverage over.
         if (tabId !== undefined && sender.frameId === 0) {
+          // Archived in the background: the page waits for this reply, and history must never break it.
           const prev = await tabState(tabId);
-          if (prev) await archive(prev);
+          if (prev) void archive(prev).catch(() => {});
           tabs.set(tabId, freshTab(msg.origin));
           persist(tabId);
           void lookUpDeclared(tabId, msg.origin);
@@ -674,6 +697,7 @@ chrome.runtime.onMessage.addListener((msg: any, sender: any, respond: (r: unknow
         return null;
       case "wallet": {
         if (msg.addresses?.length) await addAddresses("walletAddresses", msg.addresses);
+        if (msg.addresses?.length && tabId !== undefined && sender.frameId === 0) void noticeConnect(tabId, msg.origin);
         if (tabId !== undefined && Number.isFinite(msg.chainId)) {
           const s = await tabState(tabId);
           if (s) (s.walletChain = msg.chainId), persist(tabId);

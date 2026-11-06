@@ -3,3 +3,4 @@ export { policyHashOf, signCoarseReport, verifyReportRecord, parseReportRecord, 
 export { readText, resolverOf, loadManifest, readAgentPrivacy, ManifestNotFound, type AgentPrivacy, type EnsOptions } from "./read.js";
 export { dnsEncode, canWriteText, setTextRecord, grantTextKey, revokeTextKey, roleHistory, type RoleChange, type DelegationApi } from "./write.js";
 export { verdictKey, verdictFromScan, signVerdict, verifyVerdictRecord, parseVerdictRecord, type Verdict, type VerdictRecord } from "./verdict.js";
+export { LABELS_PARENT, labelName } from "./label.js";

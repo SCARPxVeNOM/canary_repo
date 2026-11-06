@@ -16,8 +16,9 @@
       switch (method) {
         case "eth_requestAccounts":
         case "eth_accounts":
+          // "connect" once, as a wallet does: dapps re-read accounts on it, so emitting it per call loops forever (app.uniswap.org froze).
+          if (!provider.accountsGiven) setTimeout(() => emit("connect", { chainId: CHAIN }), 0);
           provider.accountsGiven = true;
-          setTimeout(() => emit("connect", { chainId: CHAIN }), 0);
           return [ADDR];
         case "eth_chainId":
           return CHAIN;

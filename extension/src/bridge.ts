@@ -1,6 +1,9 @@
 // Canary ISOLATED-world bridge. Injected at document_start, before the shim.
 // Accepts the shim's MessagePort, sends it this site's config, and relays
-// requests and observations to the service worker.
+// requests and observations to the service worker. Shows the site's privacy
+// label when you connect a wallet (notice.ts).
+
+import { showNotice } from "./notice.js";
 
 declare const chrome: any;
 
@@ -37,6 +40,11 @@ window.addEventListener("message", (ev) => {
       chrome.runtime.sendMessage({ type: "wallet", addresses: m.addresses, chainId: m.chainId, origin: location.origin }).catch(() => {});
     }
   };
+});
+
+// The background sends this to the top frame only (background.ts noticeConnect).
+chrome.runtime.onMessage.addListener((m: any) => {
+  if (m?.type === "notice" && window === window.top && m.label) showNotice(m.label);
 });
 
 // In case the shim ran first and its hello was missed.

@@ -34,6 +34,124 @@
       "owner": "0x7fCD34282e0d69A6E5c2c0D66d27C333bFC36256",
       "resolver": "0x936557a320aFb6a8dCa1FC9e6fFbad3e3Cdb1Fb0",
       "reporter": "0x19E16ABD42DE0EB8E4a4eE73ed63151a471334b4"
+    },
+    "labels.canary.eth": {
+      "owner": "0x7fCD34282e0d69A6E5c2c0D66d27C333bFC36256",
+      "resolver": "0x43971D30D3BdE33bBE8E39FDCD60Fc13fAB8620c",
+      "subregistry": "0x0C7D0C18D75fe67B66BB6458833C9B2c75d9be28",
+      "labelsResolver": "0x1b46EB3b4Cf84F3f57EF21293eA46496f9593443"
+    },
+    "app-uniswap-org.labels.canary.eth": {
+      "owner": "0x7fCD34282e0d69A6E5c2c0D66d27C333bFC36256",
+      "resolver": "0x1b46EB3b4Cf84F3f57EF21293eA46496f9593443",
+      "url": "https://app.uniswap.org",
+      "verdict": {
+        "result": "matches",
+        "addressRecipients": [],
+        "buildHash": "b008fb242580",
+        "issuedAt": 1793939052,
+        "expiresAt": 1796531052
+      }
+    },
+    "app-aave-com.labels.canary.eth": {
+      "owner": "0x7fCD34282e0d69A6E5c2c0D66d27C333bFC36256",
+      "resolver": "0x1b46EB3b4Cf84F3f57EF21293eA46496f9593443",
+      "url": "https://app.aave.com",
+      "verdict": {
+        "result": "incomplete",
+        "addressRecipients": [
+          {
+            "host": "apps.aavechan.com",
+            "kind": "backend"
+          },
+          {
+            "host": "browser-intake-datadoghq.com",
+            "kind": "analytics"
+          },
+          {
+            "host": "mainnet.gateway.tenderly.co",
+            "kind": "backend+rpc"
+          }
+        ],
+        "buildHash": "f1d35f147d22",
+        "issuedAt": 1793939210,
+        "expiresAt": 1796531210
+      }
+    },
+    "app-ens-domains.labels.canary.eth": {
+      "owner": "0x7fCD34282e0d69A6E5c2c0D66d27C333bFC36256",
+      "resolver": "0x1b46EB3b4Cf84F3f57EF21293eA46496f9593443",
+      "url": "https://app.ens.domains",
+      "verdict": {
+        "result": "incomplete",
+        "addressRecipients": [
+          {
+            "host": "api.bigname.sh",
+            "kind": "backend"
+          },
+          {
+            "host": "lb.drpc.live",
+            "kind": "backend+rpc"
+          }
+        ],
+        "buildHash": "5256f32b3c52",
+        "issuedAt": 1793934327,
+        "expiresAt": 1796526327
+      }
+    },
+    "revoke-cash.labels.canary.eth": {
+      "owner": "0x7fCD34282e0d69A6E5c2c0D66d27C333bFC36256",
+      "resolver": "0x1b46EB3b4Cf84F3f57EF21293eA46496f9593443",
+      "url": "https://revoke.cash",
+      "verdict": {
+        "result": "incomplete",
+        "addressRecipients": [
+          {
+            "host": "api.avax.network",
+            "kind": "backend+rpc"
+          },
+          {
+            "host": "eth-mainnet.g.alchemy.com",
+            "kind": "backend+rpc"
+          },
+          {
+            "host": "polygon-mainnet.g.alchemy.com",
+            "kind": "backend+rpc"
+          }
+        ],
+        "buildHash": "46574feaf526",
+        "issuedAt": 1793939245,
+        "expiresAt": 1796531245
+      }
+    },
+    "snapshot-box.labels.canary.eth": {
+      "owner": "0x7fCD34282e0d69A6E5c2c0D66d27C333bFC36256",
+      "resolver": "0x1b46EB3b4Cf84F3f57EF21293eA46496f9593443",
+      "url": "https://snapshot.box",
+      "verdict": {
+        "result": "incomplete",
+        "addressRecipients": [
+          {
+            "host": "cdn.stamp.fyi",
+            "kind": "backend"
+          },
+          {
+            "host": "hub.snapshot.org",
+            "kind": "backend"
+          },
+          {
+            "host": "rpc.brovider.xyz",
+            "kind": "backend+rpc"
+          },
+          {
+            "host": "stamp.fyi",
+            "kind": "backend"
+          }
+        ],
+        "buildHash": "8d298afa358e",
+        "issuedAt": 1793939542,
+        "expiresAt": 1796531542
+      }
     }
   },
   "txs": {
@@ -57,7 +175,27 @@
     "deploy PermissionedResolver for trader-01.agents.canary.eth": "0xdb44a7d470436c9daa8828ba198a168a2c2e0f02f4578d16d5894951a5c8aa5f",
     "register agents.canary.eth": "0xfab250c9851a4d54db04de62d429deb42992123cadd7c79a6cda42ac0fcba438",
     "setParent agents registry": "0x20658ca83b0cd0ab3878787becaaa4970d7636fa1d28ac3d9942302ab40e8c72",
-    "register trader-01.agents.canary.eth": "0xdd224aca3d8fc0714c5b754bd2af6777c0066baa0a4104aa7db2db960d0b5e7d"
+    "register trader-01.agents.canary.eth": "0xdd224aca3d8fc0714c5b754bd2af6777c0066baa0a4104aa7db2db960d0b5e7d",
+    "deploy UserRegistry for labels.canary.eth": "0x516573cbe8ff545d8b8eaa23d1a408a522ac20952dff9769b3071b6cfcd80f2f",
+    "deploy PermissionedResolver for labels.canary.eth": "0x5dcc075ccaed426c9fabf1ed8b111e6dc4e6086ea53048b6cdad49076034f3d2",
+    "register labels.canary.eth": "0x9ddcfe5291074dc320554306d18eae8e04bde6ccd9e6d99f9442f18c086aec8d",
+    "setParent labels registry": "0x78afb7bef60d80ad8b8f6d3303be2174c9679c883473ea630250040e1d346f48",
+    "grant privacy.verdict.canary on the labels resolver": "0x271ba1bb41277354e0574f0cd43edd9b6700e1670f239920c3f81ab6bc227deb",
+    "register app-uniswap-org.labels.canary.eth": "0x30ee874bd3b4bf5d26373b2b2c1230c24a9e1baf594a62f2245260470c4fb70d",
+    "text app-uniswap-org.labels.canary.eth url": "0x5b8c9c452b579329ea70e573a0f6f9d04270a8eb0fc55ab65eca9b7fe1c7660b",
+    "verdict app-uniswap-org.labels.canary.eth": "0xc660ca0399fd78f9ccde79bd95cb708c1c0bb77ebded70e34a0abc7f0ae86505",
+    "register app-aave-com.labels.canary.eth": "0xf9244b2804ca22f4a1018d97b38b91692a57cf79d475b79e59e472d5ff81b5da",
+    "text app-aave-com.labels.canary.eth url": "0xe5818c4140e058af912988bd2509dccc59e6578e2b246c18046651ebf61de910",
+    "verdict app-aave-com.labels.canary.eth": "0xf701e494cb961061741728d56fd8770be92b60ad18967fc1bb1ec87d8eb6cdc9",
+    "register app-ens-domains.labels.canary.eth": "0x6f0cafd1170180d439990fe4603048d6737d10cb4d7a3a6ec471366ed9d9e077",
+    "text app-ens-domains.labels.canary.eth url": "0x9db9bd82f2f8fa0d7492480666854178e4196007f83c0b3beb6929c147d4d767",
+    "verdict app-ens-domains.labels.canary.eth": "0xa27e83a7cc12b36c859c46382f2cd0bf0ee9277350e7d180610949bf670a8a50",
+    "register revoke-cash.labels.canary.eth": "0xbbe0177bb147000192a77592c4b8b4cc9f7383dde4f70e8406d0e6f23ab4166e",
+    "text revoke-cash.labels.canary.eth url": "0x0847ad88cc21fc6219283082ef57342f07b8bdc97f5ae32077d2f9ed12ea1ec9",
+    "verdict revoke-cash.labels.canary.eth": "0x00338590e3afaa620a1cd45284b0075ca6a9d8813117e64c1aba9fac94d22ed8",
+    "register snapshot-box.labels.canary.eth": "0x3f60632e67ee4081c9a078578ec387d38dd3d816a2be1591f0b0caadfc029e55",
+    "text snapshot-box.labels.canary.eth url": "0x7c75be4d321c34aba66cf08c588b35fcde88dc8bc199f351a597cb1066a1140d",
+    "verdict snapshot-box.labels.canary.eth": "0xae7da93bb5e261e9f7ce0f3fc3c6357fa36ee249b7be9aa1a415d29f4ade9102"
   },
   "records": {
     "leakydash.eth": {
@@ -65,7 +203,7 @@
         "0xa3f383f80edb5adbf557e76606666c06f4bbb43d6ce9791950ab018193015107",
         "0x47230559ab9d1d865c7d08153ead17436f275ea9f12df2df840b4579d1ab0c16"
       ],
-      "grant-verifier privacy.verdict.canary \u2192 verifier.canary.eth": "0xa30bcc8cfe743f2a5d2f9f36bd35b98fc30131770fb627b73c8e50290453a71a",
+      "grant-verifier privacy.verdict.canary → verifier.canary.eth": "0xa30bcc8cfe743f2a5d2f9f36bd35b98fc30131770fb627b73c8e50290453a71a",
       "publish-verdict (signed by verifier.canary.eth, sent by its key)": "0x0fe1f2839cd75551ad6959d5676a6968afa0600613b4ec21e74c14527fe719e7",
       "revoke-verifier (readers see delegated: false)": [
         "0xcf2a0ce1c9fc1ca410e6bf3e255c762f9633400991f7829f1601a6f4098bd4d2",
@@ -83,7 +221,7 @@
     },
     "trader-01.agents.canary.eth": {
       "set-manifest (privacy.manifest: the agent's policy, reporter = the report key)": "0xb383b6eb5da9ac3d717357562b61f5da2a96f0a6189c2f0cc002fc0f41f23fb8",
-      "grant-reporter privacy.report \u2192 the report key": "0xcc53c733fdeb87887348f415720ae190bf4599f942a66a94e6a0cb6b061881a1",
+      "grant-reporter privacy.report → the report key": "0xcc53c733fdeb87887348f415720ae190bf4599f942a66a94e6a0cb6b061881a1",
       "publish privacy.report (gateway, policy read from this name, signed and sent by the report key)": "0xe0beaa42bc8d8584dad5aecac00a2a93f8fcfe68185104864375b5708ee9d309",
       "revoke-reporter (readers see reporterCanWrite: false; the gateway's publish gets 409)": "0x3a538b796440bcf41746f02c653014955f4bb5a1a51994290e9b57e71113f932",
       "grant-reporter again": "0xf7ac82ce7c0efe48ffee8ece5253cb0bf029d3b1db1c07d31528cae100ea497e"

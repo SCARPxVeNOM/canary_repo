@@ -15,7 +15,7 @@
 // you from third parties, not from the page.
 
 import {
-  findAddress, isThirdParty, needlesFor, parseJsonRpc, SUBSTITUTABLE,
+  findAddress, isThirdParty, needlesFor, parseJsonRpc, sampleCall, snippetAround, SUBSTITUTABLE,
   type AddressNeedles, type Observation,
 } from "./shared.js";
 
@@ -157,16 +157,18 @@ import {
       const calls = parseJsonRpc(body);
       if (calls) return { kind: "rpc", url, body, methods: calls.map((c) => c.method) };
     }
-    const taint = findAddress(url + "\n" + (body ?? ""), needles);
+    const sent = url + "\n" + (body ?? "");
+    const taint = findAddress(sent, needles);
+    const snippet = taint ? snippetAround(sent, needles) : undefined;
     // A recipient you chose to block on this site (not in its ENS manifest).
     if (third && config?.blockHosts?.includes(h)) {
-      return { kind: "block", obs: { category: "blocked", channel, host: h, firstParty: false, address: taint?.address, encoding: taint?.encoding, note: "not in the site's manifest; you blocked it on this site" } };
+      return { kind: "block", obs: { category: "blocked", channel, host: h, firstParty: false, address: taint?.address, encoding: taint?.encoding, snippet, note: "not in the site's manifest; you blocked it on this site" } };
     }
     if (taint && third) {
-      return { kind: "block", obs: { category: "blocked", channel, host: h, firstParty: false, address: taint.address, encoding: taint.encoding } };
+      return { kind: "block", obs: { category: "blocked", channel, host: h, firstParty: false, address: taint.address, encoding: taint.encoding, snippet } };
     }
     if (taint) {
-      return { kind: "pass", obs: { category: "detected", channel, host: h, firstParty: true, address: taint.address, encoding: taint.encoding } };
+      return { kind: "pass", obs: { category: "detected", channel, host: h, firstParty: true, address: taint.address, encoding: taint.encoding, snippet } };
     }
     if (body === null) return { kind: "pass", obs: { category: "notInspected", channel, host: h, firstParty: !third, note: "unreadable body" } };
     return { kind: "pass", obs: { category: "backend", channel, host: h, firstParty: !third } };
@@ -295,14 +297,15 @@ import {
     const h = host(ws.url);
     const third = isThirdParty(pageHost, h);
     const taint = findAddress(data, needles);
+    const snippet = taint ? snippetAround(data, needles) : undefined;
     if (taint && third && !calls) {
-      observe({ category: "blocked", channel: "websocket", host: h, firstParty: false, address: taint.address, encoding: taint.encoding });
+      observe({ category: "blocked", channel: "websocket", host: h, firstParty: false, address: taint.address, encoding: taint.encoding, snippet });
       return;
     }
     observe(calls
-      ? { category: "detected", channel: "websocket", host: h, firstParty: !third, address: taint?.address, methods: calls.map((c) => c.method), note: "WebSocket RPC that can't be substituted" }
+      ? { category: "detected", channel: "websocket", host: h, firstParty: !third, address: taint?.address, methods: calls.map((c) => c.method), sample: sampleCall(calls[0]), note: "WebSocket RPC that can't be substituted" }
       : taint
-        ? { category: "detected", channel: "websocket", host: h, firstParty: true, address: taint.address, encoding: taint.encoding }
+        ? { category: "detected", channel: "websocket", host: h, firstParty: true, address: taint.address, encoding: taint.encoding, snippet }
         : { category: "backend", channel: "websocket", host: h, firstParty: !third });
     return origWsSend.call(ws, data);
   };

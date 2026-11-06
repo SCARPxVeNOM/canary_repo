@@ -3,6 +3,7 @@
 // counted. Wording follows idea.md §4: never "private", "safe" or "leak-free".
 
 import { compareDeclared, type Category, type DeclaredRow } from "../shared.js";
+import { privacyLabel, type PrivacyLabel } from "../privacy-label.js";
 
 declare const chrome: any;
 
@@ -18,6 +19,9 @@ export type Ev = {
   methods?: string[];
   ms?: number;
   note?: string;
+  snippet?: string;
+  sample?: string;
+  via?: string;
 };
 export type Recipient = {
   host: string;
@@ -39,9 +43,10 @@ export type TabState = {
   noRequest: number;
   declared?: any;
   events?: Ev[];
+  connectedAt?: number;
 };
 export type Site = { enabled: boolean; allowDirect: boolean; blockHosts: string[] };
-export type Settings = { historyDays: number; theme: "system" | "light" | "dark" };
+export type Settings = { historyDays: number; theme: "system" | "light" | "dark"; connectNotice: boolean };
 export type Worker = { state: "idle" | "warming" | "ready" | "failed"; bootMs?: number; error?: string; network: string };
 export type SessionSummary = { key: string; live: boolean; tabId?: number; origin: string; since: number; until?: number; counts: Record<Category, number>; ens?: string };
 
@@ -170,6 +175,37 @@ export function sentenceOf(e: Ev): string {
   return "";
 }
 
+/** One party in a receipt: what it would have got without Canary, and what it got with it. */
+export type Receipt = { party: string; role: string; without: string; with: string; withTone: "good" | "bad" };
+
+/** What each side saw for one observation. null when there's nothing to compare (no address, no RPC call). */
+export function receiptsOf(e: Ev): Receipt[] | null {
+  const call = e.sample ?? (e.methods?.length ? [...new Set(e.methods)].join(", ") : "the call");
+  const sent = e.snippet ? `“${e.snippet}”` : e.note === "its URL carried your address" ? "your address, in the URL" : e.address ? "your address" : "the request";
+  const ip = "from your IP, with the page's Origin";
+  const provider = e.firstParty ? "the dapp's RPC" : "the dapp's RPC provider";
+  switch (e.category) {
+    case "protected":
+      return [
+        { party: e.host, role: provider, without: `${call}, ${ip}`, with: "Nothing: Canary answered it", withTone: "good" },
+        { party: e.via ?? "Canary's read endpoint", role: "Canary's read endpoint", without: "Nothing", with: `${call}, from a Tor exit, with Origin: null`, withTone: "good" },
+      ];
+    case "protectedIpOnly":
+      return [{ party: e.host, role: provider, without: `${call}, ${ip}`, with: `${call}, from a Tor exit, with Origin: null. The URL is unchanged: an API key in it can still name the dapp.`, withTone: "good" }];
+    case "failedClosed":
+      return [{ party: e.host, role: provider, without: `${call}, ${ip}`, with: "Nothing: held back, and the dapp got an error", withTone: "good" }];
+    case "direct":
+      return [{ party: e.host, role: provider, without: `${call}, ${ip}`, with: "The same: you allowed direct requests on this site", withTone: "bad" }];
+    case "blocked":
+      return [{ party: e.host, role: e.firstParty ? "the dapp" : "a third party", without: `${sent}, from your IP`, with: "Nothing: it never left your browser", withTone: "good" }];
+    case "detected":
+      return e.methods?.length
+        ? [{ party: e.host, role: e.firstParty ? "the dapp's RPC" : "a third party", without: `${call}, ${ip}`, with: "The same: Canary can't reroute this WebSocket", withTone: "bad" }]
+        : [{ party: e.host, role: "the dapp", without: `${sent}, from your IP`, with: "The same: Canary leaves the dapp's own traffic alone", withTone: "bad" }];
+  }
+  return null;
+}
+
 export function ipVisible(e: Ev): string {
   switch (e.category) {
     case "protected":
@@ -214,8 +250,8 @@ export function day(t: number) {
 /* --- the manifest -------------------------------------------------------- */
 
 export type ManifestView =
-  | { kind: "pending" | "none"; ens?: string; text: string }
-  | { kind: "notFound" | "unbound" | "invalid" | "error"; ens?: string; text: string; verdict?: any }
+  | { kind: "pending" | "none"; ens?: string; text: string; label?: PrivacyLabel }
+  | { kind: "notFound" | "unbound" | "invalid" | "error"; ens?: string; text: string; verdict?: any; label?: PrivacyLabel }
   | { kind: "ok"; ens: string; chainId: number; rows: DeclaredRow[]; undeclared: number; seen: number; verdict?: any };
 
 export function manifestOf(tab: TabState | null | undefined): ManifestView {
@@ -224,7 +260,7 @@ export function manifestOf(tab: TabState | null | undefined): ManifestView {
     case "pending":
       return { kind: "pending", text: "Looking for this site's ENS manifest…" };
     case "none":
-      return { kind: "none", text: "This site doesn't name an ENS manifest, so there's no promise to compare with." };
+      return { kind: "none", text: "This site doesn't name an ENS manifest, so there's no promise to compare with.", ...(d.label ? { label: privacyLabel(d) } : {}) };
     case "notFound":
       return { kind: "notFound", ens: d.ens, text: `${d.ens} has no privacy.manifest record.`, verdict: d.verdict };
     case "unbound":
@@ -232,7 +268,7 @@ export function manifestOf(tab: TabState | null | undefined): ManifestView {
     case "invalid":
       return { kind: "invalid", ens: d.ens, text: `${d.ens} has a manifest Canary can't read: ${d.error}`, verdict: d.verdict };
     case "error":
-      return { kind: "error", ens: d.ens, text: `Couldn't read the manifest${d.ens ? ` of ${d.ens}` : ""}: ${d.error}` };
+      return { kind: "error", ens: d.ens, text: `Couldn't read the manifest${d.ens ? ` of ${d.ens}` : ""}: ${d.error}`, ...(d.label ? { label: privacyLabel(d) } : {}) };
   }
   const recipients = Object.values(tab!.recipients) as Recipient[];
   const { rows: compared, undeclared } = compareDeclared(d.manifest, recipients as any);
@@ -246,13 +282,23 @@ export function manifestOf(tab: TabState | null | undefined): ManifestView {
   return { kind: "ok", ens: d.ens, chainId: d.chainId, rows, undeclared, seen: rows.filter((r) => r.status !== "notSeen").length, verdict: d.verdict };
 }
 
+/** "3 recipients": how many the manifest lists. */
+export function declaredCount(m: ManifestView & { kind: "ok" }) {
+  const n = m.rows.filter((r) => r.status !== "undeclared").length;
+  return `${n} ${n === 1 ? "recipient" : "recipients"}`;
+}
+
 /** The badge next to the site's name. */
 export function manifestBadge(m: ManifestView): { label: string; tone: "good" | "bad" | "warn" | "muted" } {
   if (m.kind === "ok") return m.undeclared ? { label: `${m.undeclared} undeclared`, tone: "bad" } : { label: "Matches manifest", tone: "good" };
   if (m.kind === "pending") return { label: "Checking", tone: "muted" };
+  if ((m.kind === "none" || m.kind === "error") && m.label?.source === "canary") return { label: labelBadge(m.label), tone: m.label.tone };
   if (m.kind === "none" || m.kind === "notFound") return { label: "No manifest", tone: "muted" };
   return { label: "Unverified", tone: "warn" };
 }
+
+/** "Label: 3 third parties": the badge for Canary's label on a site with no manifest. */
+export const labelBadge = (l: PrivacyLabel) => (l.rows.length ? `Label: ${l.rows.length} third ${l.rows.length === 1 ? "party" : "parties"}` : "Label: no third parties");
 
 /** What Canary could check about a verifier's signed verdict, in words. null: there is none. */
 export function verdictOf(v: any): { tone: "good" | "bad" | "warn"; title: string; text: string } | null {
@@ -277,7 +323,19 @@ export function verdictOf(v: any): { tone: "good" | "bad" | "warn"; title: strin
   };
 }
 
-export const CHAIN_NAME: Record<number, string> = { 1: "Ethereum mainnet", 10: "OP Mainnet", 8453: "Base", 42161: "Arbitrum One", 11155111: "Sepolia" };
+export const CHAIN_NAME: Record<number, string> = {
+  1: "Ethereum mainnet", 10: "OP Mainnet", 14: "Flare", 25: "Cronos", 56: "BNB Smart Chain", 97: "BNB Testnet", 100: "Gnosis", 122: "Fuse",
+  130: "Unichain", 137: "Polygon", 143: "Monad", 146: "Sonic", 169: "Manta Pacific", 196: "X Layer", 204: "opBNB", 250: "Fantom", 252: "Fraxtal",
+  300: "zkSync Sepolia", 324: "zkSync Era", 360: "Shape", 369: "PulseChain", 480: "World Chain", 919: "Mode Sepolia", 999: "HyperEVM",
+  1088: "Metis", 1101: "Polygon zkEVM", 1116: "Core", 1135: "Lisk", 1301: "Unichain Sepolia", 1329: "Sei", 1868: "Soneium", 1946: "Soneium Minato",
+  2020: "Ronin", 2222: "Kava", 2741: "Abstract", 2818: "Morph", 5000: "Mantle", 5003: "Mantle Sepolia", 8453: "Base", 9745: "Plasma",
+  10143: "Monad Testnet", 10200: "Gnosis Chiado", 33139: "ApeChain", 34443: "Mode", 42161: "Arbitrum One", 42170: "Arbitrum Nova", 42220: "Celo",
+  42793: "Etherlink", 43113: "Avalanche Fuji", 43114: "Avalanche", 57073: "Ink", 59141: "Linea Sepolia", 59144: "Linea", 80002: "Polygon Amoy",
+  80094: "Berachain", 84532: "Base Sepolia", 88888: "Chiliz", 167000: "Taiko", 421614: "Arbitrum Sepolia", 534352: "Scroll", 560048: "Hoodi",
+  747474: "Katana", 763373: "Ink Sepolia", 7777777: "Zora", 11155111: "Sepolia", 11155420: "OP Sepolia", 728126428: "Tron EVM",
+  999999999: "Zora Sepolia", 1313161554: "Aurora",
+};
+export const chainName = (id: number) => CHAIN_NAME[id] ?? `chain ${id}`;
 
 /** The page Canary's numbers are about: the popup's ?tabId= or the active tab. */
 export async function activeTabId(): Promise<number | undefined> {

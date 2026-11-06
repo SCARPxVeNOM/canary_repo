@@ -1,12 +1,12 @@
 
 1. Baseline: no extension
-   dapp: {"chainId":11155111,"blockNumber":"273","balance":"1","call":"0x0000000000000000000000000000000000000000000000000000000000000001","custom":{"from":"provider"},"batch":["273","1"],"xhrBalance":"0x1","wsBlockNumber":"273","hostileBalance":"1","rpcMs":348,"trackerFetch":"sent 204","trackerBase64":"sent 204","trackerBeacon":true,"trackerXhr":204,"trackerPixel":"loaded","trackerClean":"sent 204","points":{"points":42},"indexer":{"name":"vitalik.eth"}}
+   dapp: {"chainId":11155111,"blockNumber":"273","balance":"1","call":"0x0000000000000000000000000000000000000000000000000000000000000001","custom":{"from":"provider"},"batch":["273","1"],"xhrBalance":"0x1","wsBlockNumber":"273","hostileBalance":"1","rpcMs":346,"trackerFetch":"sent 204","trackerBase64":"sent 204","trackerBeacon":true,"trackerXhr":204,"trackerPixel":"loaded","trackerClean":"sent 204","points":{"points":42},"indexer":{"name":"vitalik.eth"}}
   ✓ provider received reads from the page's origin
   ✓ WebSocket provider received reads
   ✓ tracker received the address (fetch, base64, beacon, XHR, pixel)
 
 2. With Canary
-   dapp: {"chainId":11155111,"blockNumber":"546","balance":"2","call":"0x0000000000000000000000000000000000000000000000000000000000000002","custom":{"from":"provider"},"batch":["546","2"],"xhrBalance":"0x2","wsBlockNumber":"546","hostileBalance":"2","rpcMs":478,"trackerFetch":"failed: Failed to fetch","trackerBase64":"failed: Failed to fetch","trackerBeacon":true,"trackerXhr":0,"trackerPixel":"error","trackerClean":"sent 204","points":{"points":42},"indexer":{"name":"vitalik.eth"}}
+   dapp: {"chainId":11155111,"blockNumber":"546","balance":"2","call":"0x0000000000000000000000000000000000000000000000000000000000000002","custom":{"from":"provider"},"batch":["546","2"],"xhrBalance":"0x2","wsBlockNumber":"546","hostileBalance":"2","rpcMs":535,"trackerFetch":"failed: Failed to fetch","trackerBase64":"failed: Failed to fetch","trackerBeacon":true,"trackerXhr":0,"trackerPixel":"error","trackerClean":"sent 204","points":{"points":42},"indexer":{"name":"vitalik.eth"}}
    counts: {"backend":2,"blocked":5,"detected":1,"direct":0,"failedClosed":0,"localNode":0,"notInspected":0,"protected":9,"protectedIpOnly":1} notes: ["chain of torblock.provider.test assumed from the wallet (11155111)","its URL carried your address"]
    provider got: eth_chainId@null, alchemy_getTokenBalances@null, eth_chainId@null
    tracker got: /event
@@ -30,17 +30,23 @@
   ✓ manifest read from ENS (site ↔ name bound both ways)
   ✓ ENS lookups went over the anon path to the read endpoint
   ✓ verifier's verdict: signed by the verifier name's addr, role still delegated
+  ✓ connect notice on the page: the site's label, and what the verifier found beyond it
+  ✓ the page learned the address: connect time recorded
   ✓ tracker is an undeclared recipient; provider and indexer are declared
+  ✓ popup leads with the privacy label
   ✓ popup headline: reads go through anon-rpc
   ✓ events recorded: a blocked request to tracker.test
+  ✓ receipts recorded: the tracker request around your address; reads with the call and where it went
   ✓ popup Activity lists the blocked tracker request
+  ✓ receipt: what the tracker would have seen, and that it got nothing
   ✓ popup shows the verdict
   ✓ popup lists the undeclared tracker
   ✓ dashboard manifest page flags tracker.test as undeclared
   ✓ dashboard overview shows the coverage count
 
 3. Anon path down (read endpoint 503) → fail closed
-   dapp: {"chainId":11155111,"blockNumber":"ERR An internal error was received.","balance":"ERR An internal error was received.","call":"ERR An internal error was received.","custom":{"from":"provider"},"batch":"ERR An internal error was received.","xhrBalance":"{\"jsonrpc\":\"2.0\",\"id\":7,\"error\":{\"code\":-32603,\"message\":\"Canary: anon path unavailable (Failed to fetch). Not sent directly.\"}}","wsBlockNumber":"ERR An internal error was received.","hostileBalance":"ERR An internal error was received.","rpcMs":7353}
+   dapp: {"chainId":11155111,"blockNumber":"ERR An internal error was received.","balance":"ERR An internal error was received.","call":"ERR An internal error was received.","custom":{"from":"provider"},"batch":"ERR An internal error was received.","xhrBalance":"{\"jsonrpc\":\"2.0\",\"id\":7,\"error\":{\"code\":-32603,\"message\":\"Canary: anon path unavailable (Failed to fetch). Not sent directly.\"}}","wsBlockNumber":"ERR An internal error was received.","hostileBalance":"ERR An internal error was received.","rpcMs":7317}
+  ✓ connect notice not repeated for a site this browser session
   ✓ reads failed with an error instead of going direct
   ✓ counted as failed closed
 
@@ -58,4 +64,9 @@
   ✓ blocked as undeclared, and said so
   ✓ earlier page loads kept in history
 
-41/41 checks passed
+7. A site with no manifest of its own: Canary's label on ENS
+  ✓ connect notice shows Canary's label
+  ✓ no well-known file: label read from labelled-test.labels.canary.eth, signed, delegated, bound to the site
+  ✓ popup leads with Canary's label, and badges it
+
+50/50 checks passed

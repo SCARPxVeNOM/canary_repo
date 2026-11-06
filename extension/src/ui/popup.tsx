@@ -5,11 +5,12 @@ import { useEffect, useMemo, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { Globe } from "./icons.js";
 import {
-  activeTabId, applyTheme, coverage, hostOf, manifestOf, send,
+  activeTabId, applyTheme, coverage, declaredCount, hostOf, manifestOf, send,
   type Coverage, type Filter, type ManifestView, type Settings, type Site, type TabState, type Worker,
 } from "./model.js";
-import { CoverageBlock, Empty, EventRow, FILTER_LABEL, FilterChips, headline, Logo, manifestStatusFor, ManifestStatus, ProtectionSwitch, RowStatus, useFiltered, cx } from "./parts.js";
+import { CoverageBlock, Empty, EventRow, FILTER_LABEL, FilterChips, headline, LabelCard, Logo, manifestStatusFor, ManifestStatus, ProtectionSwitch, RowStatus, useFiltered, cx } from "./parts.js";
 import { verdictOf } from "./model.js";
+import { privacyLabel } from "../privacy-label.js";
 
 declare const chrome: any;
 
@@ -127,6 +128,7 @@ function Overview({ tab, site, cov, worker }: { tab: TabState; site: Site; cov: 
   const [title, sub] = headline(tab, site, cov, worker);
   return (
     <div className="space-y-4">
+      <LabelCard l={privacyLabel(tab.declared)} />
       <div>
         <h1 id="headline" className="font-display text-[21px] font-bold leading-[1.2] tracking-[-0.01em] text-ink">{title}</h1>
         <p className="mt-1.5 text-[14px] leading-snug text-ink-2">{sub}</p>
@@ -185,15 +187,18 @@ function Manifest({ tab, m, site, onBlock, openDashboard }: { tab: TabState; m: 
         </p>
       </div>
       {m.kind !== "ok" ? (
-        <div id="declared" className="rounded-xl border border-line bg-surface p-3.5 text-[14px] text-ink">
-          {m.text}
-          {v && <p className="mt-2 text-[13px] text-ink-2"><b className="font-medium text-ink">{v.title}:</b> {v.text}</p>}
-        </div>
+        <>
+          <div id="declared" className="rounded-xl border border-line bg-surface p-3.5 text-[14px] text-ink">
+            {m.text}
+            {v && <p className="mt-2 text-[13px] text-ink-2"><b className="font-medium text-ink">{v.title}:</b> {v.text}</p>}
+          </div>
+          {"label" in m && m.label && <LabelCard l={m.label} />}
+        </>
       ) : (
         <>
           <div id="declared" className="rounded-xl border border-line bg-surface p-3.5 text-[14px] text-ink">
             <p>
-              <b className="font-semibold">{m.ens}</b> declares {m.rows.filter((r) => r.status !== "undeclared").length} recipients.{" "}
+              <b className="font-semibold">{m.ens}</b> declares {declaredCount(m)}.{" "}
               {m.undeclared ? (
                 <span className="text-expose">Canary saw {m.undeclared} more that {m.undeclared === 1 ? "is" : "are"} not declared.</span>
               ) : m.seen ? (

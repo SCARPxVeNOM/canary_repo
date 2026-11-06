@@ -5,7 +5,7 @@ import { test, before, after } from "node:test";
 import assert from "node:assert/strict";
 import {
   readText, canWriteText, setTextRecord, grantTextKey, revokeTextKey,
-  verdictKey, verdictFromScan, signVerdict, verifyVerdictRecord, parseVerdictRecord,
+  verdictKey, verdictFromScan, signVerdict, verifyVerdictRecord, parseVerdictRecord, labelName, LABELS_PARENT,
 } from "../dist/index.js";
 import { startChain, KEYS } from "./chain.mjs";
 
@@ -44,6 +44,31 @@ test("verdictFromScan: result from the scan, baseline only", () => {
   assert.throws(() => verdictFromScan(scan({ withCanary: true }), opts), /baseline/);
 });
 
+test("verdictFromScan: the third parties that received the address, for sites with nothing declared", () => {
+  const r = scan({
+    undeclared: [],
+    recipients: [
+      { host: "stamp.fyi", party: "third", kind: "backend", carriedAddress: 1, declared: null },
+      { host: "analytics.test", party: "third", kind: "analytics", carriedAddress: 3, declared: null },
+      { host: "cdn.test", party: "third", kind: "backend", carriedAddress: 0, declared: null },
+      { host: "leakydash.localhost", party: "first", kind: "backend", carriedAddress: 2, declared: null },
+    ],
+  });
+  const v = verdictFromScan(r, opts);
+  assert.equal(v.result, "incomplete");
+  assert.deepEqual(v.addressRecipients, [{ host: "analytics.test", kind: "analytics" }, { host: "stamp.fyi", kind: "backend" }], "third parties only, the ones that got it, sorted");
+  assert.deepEqual(verdictFromScan(scan({ recipients: [] }), opts).addressRecipients, [], "none observed is said, not left out");
+});
+
+test("labelName: one plain ENS label per host, under labels.canary.eth", () => {
+  assert.equal(LABELS_PARENT, "labels.canary.eth");
+  assert.equal(labelName("https://app.uniswap.org"), "app-uniswap-org.labels.canary.eth");
+  assert.equal(labelName("https://App.Uniswap.org:8443/swap"), "app-uniswap-org.labels.canary.eth", "the url record says which origin");
+  assert.equal(labelName("https://revoke.cash", "labels.example.eth"), "revoke-cash.labels.example.eth");
+  for (const bad of ["https://127.0.0.1", "http://localhost:3000", "https://[::1]", "https://xn--80ak6aa92e.com", "https://under_score.example", "chrome-extension://abc", "not a url", "https://" + "a".repeat(60) + ".com"])
+    assert.equal(labelName(bad), null, bad);
+});
+
 test("signed verdicts verify; any change breaks the signature", async () => {
   const r = await signVerdict(verdictFromScan(scan(), opts), KEYS.reporter);
   assert.equal((await verifyVerdictRecord(r)).toLowerCase(), ch.address(KEYS.reporter).toLowerCase());
@@ -51,6 +76,10 @@ test("signed verdicts verify; any change breaks the signature", async () => {
   await assert.rejects(verifyVerdictRecord({ ...r, undeclaredHosts: [] }), /signed by/, "fields outside the typed struct are covered by verdictHash");
   assert.deepEqual(parseVerdictRecord(JSON.stringify(r)), r);
   assert.throws(() => parseVerdictRecord(JSON.stringify({ ...r, result: "fine" })), /result/);
+  assert.throws(() => parseVerdictRecord(JSON.stringify({ ...r, addressRecipients: ["tracker.localhost"] })), /addressRecipients/);
+  const { addressRecipients: _, ...older } = r;
+  assert.deepEqual(parseVerdictRecord(JSON.stringify(older)), older, "records from before addressRecipients still parse");
+  await assert.rejects(verifyVerdictRecord({ ...r, addressRecipients: [] }), /signed by/, "addressRecipients is covered by verdictHash");
 });
 
 for (const setterApi of [false, true]) {

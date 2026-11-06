@@ -24,7 +24,7 @@ export async function buildExtension(cfg, out) {
   const harness = dirname(require.resolve("@anon-rpc/browser-extension-harness/package.json"));
   await cp(resolve(harness, "dist/static/anon-rpc"), resolve(out, "anon-rpc"), { recursive: true });
 
-  const runtime = { network: cfg.network, readEndpoints: cfg.readEndpoints, timeoutMs: cfg.timeoutMs ?? 30000 };
+  const runtime = { network: cfg.network, readEndpoints: cfg.readEndpoints, ...(cfg.ens ? { ens: cfg.ens } : {}), timeoutMs: cfg.timeoutMs ?? 30000 };
 
   // tor-js fast-bootstrap snapshot (config "torBootstrap": true). Refreshed when
   // the packaged one is over 3 h old; skipped with a warning if no gateway
@@ -92,7 +92,7 @@ export async function buildExtension(cfg, out) {
   return out;
 }
 
-/** Tailwind v4 + HeroUI styles → ui.css, and the three packaged fonts. */
+/** Tailwind v4 + HeroUI styles → ui.css, and the packaged fonts. */
 async function buildCss(out) {
   const entry = resolve(HERE, "src/ui/app.css");
   const base = dirname(entry);
@@ -103,7 +103,6 @@ async function buildCss(out) {
   await mkdir(resolve(out, "fonts"), { recursive: true });
   const fonts = {
     "instrument-sans.woff2": "@fontsource-variable/instrument-sans/files/instrument-sans-latin-standard-normal.woff2",
-    "syne.woff2": "@fontsource-variable/syne/files/syne-latin-wght-normal.woff2",
     "jetbrains-mono.woff2": "@fontsource-variable/jetbrains-mono/files/jetbrains-mono-latin-wght-normal.woff2",
   };
   for (const [name, file] of Object.entries(fonts)) await cp(resolve(HERE, "node_modules", file), resolve(out, "fonts", name));

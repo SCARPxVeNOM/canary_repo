@@ -62,6 +62,7 @@ const RESOLVER = "0x" + "22".repeat(20);
 const VERIFIER_KEY = "0x6cbed15c793ce57650b9877cf6fa156fbef513c4e6134f022a85b1ffdd59b2a1";
 const VERIFIER = privateKeyToAccount(VERIFIER_KEY).address;
 let verdictRecord = "";
+let labelRecord = "";
 const ensRecords = () => ({
   "leakydash.eth": {
     url: `http://leakydash.test:${P}`,
@@ -69,6 +70,8 @@ const ensRecords = () => ({
     "privacy.verdict.canary": verdictRecord,
   },
   "verifier.canary.eth": { addr: VERIFIER },
+  // A site with no manifest of its own: Canary's label for it (packages/ens/src/label.ts).
+  "labelled-test.labels.canary.eth": { url: `http://labelled.test:${P}`, "privacy.verdict.canary": labelRecord },
 });
 const ensAbi = [
   { type: "function", name: "resolve", inputs: [{ type: "bytes" }, { type: "bytes" }], outputs: [{ type: "bytes" }, { type: "address" }] },
@@ -125,6 +128,13 @@ const server = createServer((req, res) => {
         if (req.url.startsWith("/api/points")) return logs.points.push({ url: req.url }), json(200, { points: 42 });
         if (req.url === "/.well-known/canary.json") return json(200, { ens: "leakydash.eth" });
         return res.writeHead(404).end();
+      case "labelled.test":
+        // No /.well-known/canary.json; a wallet that hands the page its address on load.
+        if (req.url === "/") return res.writeHead(200, { "content-type": "text/html" }).end(`<!doctype html><title>Labelled (fixture)</title><h1>A site with no manifest</h1><script>
+          window.ethereum = { request: async ({ method }) => (method === "eth_accounts" || method === "eth_requestAccounts" ? ["${ADDR}"] : method === "eth_chainId" ? "0xaa36a7" : null), on() {} };
+          addEventListener("load", () => ethereum.request({ method: "eth_requestAccounts" }));
+        </script>`);
+        return res.writeHead(404).end();
       case "rpc.provider.test":
         return rpc(ANSWERS.provider, logs.provider);
       case "torblock.provider.test":
@@ -173,6 +183,12 @@ verdictRecord = JSON.stringify(await signVerdict({
   flows: ["load", "connect: clicked", "scroll"], result: "undeclared", undeclaredHosts: ["tracker.test"], notInspected: ["WebRTC"],
   issuedAt: Math.floor(Date.now() / 1000) - 3600, expiresAt: Math.floor(Date.now() / 1000) + 30 * 86400,
 }, VERIFIER_KEY));
+const LABELLED = `http://labelled.test:${P}/`;
+labelRecord = JSON.stringify(await signVerdict({
+  name: "labelled-test.labels.canary.eth", origin: new URL(LABELLED).origin, verifier: "verifier.canary.eth", buildHash: "5256f32b3c52", scannerHash: "296015c80bdd",
+  flows: ["load", "connect: clicked", "scroll"], result: "incomplete", undeclaredHosts: [], addressRecipients: [{ host: "tracker.test", kind: "analytics" }], notInspected: ["WebRTC"],
+  issuedAt: Math.floor(Date.now() / 1000) - 3600, expiresAt: Math.floor(Date.now() / 1000) + 30 * 86400,
+}, VERIFIER_KEY));
 
 /* --- extension ------------------------------------------------------------ */
 
@@ -200,13 +216,14 @@ async function runPage(ctx, opts) {
   const result = await page.evaluate((o) => window.runDapp(o), opts ?? {});
   return { page, result };
 }
-const tabStateOf = (sw) =>
-  sw.evaluate(async () => {
+const tabStateOf = (sw, site = "leakydash") =>
+  sw.evaluate(async (site) => {
     await new Promise((r) => setTimeout(r, 400)); // coverage is persisted with a 150 ms debounce
     const all = await chrome.storage.session.get(null);
-    const [k, v] = Object.entries(all).find(([k, v]) => k.startsWith("tab:") && v.origin.includes("leakydash")) ?? [];
+    const [k, v] = Object.entries(all).find(([k, v]) => k.startsWith("tab:") && v.origin.includes(site)) ?? [];
     return k ? { tabId: Number(k.slice(4)), ...v } : null;
-  });
+  }, site);
+const noticeOf = (page) => page.locator("[data-canary-notice] .box").innerText({ timeout: 15000 }).catch(() => "");
 
 // Send a message to the service worker the way the popup does.
 async function ext(b, msg) {
@@ -243,6 +260,10 @@ let tab;
 {
   reset();
   const { page, result } = await runPage(c.ctx);
+  // The connect moment: the site's privacy label, on the page (it auto-hides after 12 s, so read it first).
+  const notice = await noticeOf(page);
+  await mkdir(resolve(HERE, "out"), { recursive: true });
+  await page.screenshot({ path: resolve(HERE, "out/notice.png") });
   await page.waitForTimeout(500);
   tab = await tabStateOf(c.sw);
   console.log("   dapp:", JSON.stringify(result));
@@ -277,6 +298,8 @@ let tab;
   const status = Object.fromEntries(cmp.rows.map((r) => [r.host, r.status]));
   const vc = tab?.declared?.verdict;
   check("verifier's verdict: signed by the verifier name's addr, role still delegated", vc?.signed && vc.signerIsVerifier && vc.delegated === true && vc.matchesSite && !vc.expired && vc.verdict.result === "undeclared", vc);
+  check("connect notice on the page: the site's label, and what the verifier found beyond it", notice.includes("The site says 3 third parties get your address") && notice.includes("rpc.provider.test") && notice.includes("more: tracker.test") && notice.includes("Protection is on"), notice);
+  check("the page learned the address: connect time recorded", tab?.connectedAt > 0, tab?.connectedAt);
   check("tracker is an undeclared recipient; provider and indexer are declared", status["tracker.test"] === "undeclared" && status["rpc.provider.test"] === "declared" && status["cdn.leakydash-assets.test"] === "notSeen" && !("leakydash.test" in status), status);
 
   // popup screenshot
@@ -285,13 +308,21 @@ let tab;
   await pop.setViewportSize({ width: 400, height: 900 });
   await pop.goto(`chrome-extension://${id}/popup.html?tabId=${tab.tabId}`);
   await pop.waitForTimeout(1200);
-  await mkdir(resolve(HERE, "out"), { recursive: true });
+  check("popup leads with the privacy label", (await pop.locator("#label").innerText()).includes("The site says 3 third parties get your address"), await pop.locator("#label").innerText());
   check("popup headline: reads go through anon-rpc", (await pop.locator("#headline").innerText()).includes("going through anon-rpc"), await pop.locator("#headline").innerText());
   await pop.screenshot({ path: resolve(HERE, "out/popup.png") });
   check("events recorded: a blocked request to tracker.test", tab?.events?.some((e) => e.category === "blocked" && e.host === "tracker.test"), tab?.events?.length);
+  const prot = tab?.events?.find((e) => e.category === "protected" && e.via);
+  check("receipts recorded: the tracker request around your address; reads with the call and where it went", tab?.events?.some((e) => e.category === "blocked" && e.host === "tracker.test" && e.snippet) && prot?.via === "read.canary.test" && /^eth_\w+\(/.test(prot?.sample ?? ""), prot);
   await pop.getByRole("tab", { name: "Activity" }).click();
   await pop.waitForTimeout(300);
   check("popup Activity lists the blocked tracker request", (await pop.locator("body").innerText()).includes("tracker.test"));
+  await pop.getByRole("button", { name: /tracker\.test/ }).filter({ hasText: "Blocked" }).first().click();
+  await pop.waitForTimeout(300);
+  const shown = pop.locator("[data-receipt]:visible").first();
+  const receipt = await shown.innerText().catch(() => "");
+  await shown.screenshot({ path: resolve(HERE, "out/popup-receipt.png") }).catch(() => {});
+  check("receipt: what the tracker would have seen, and that it got nothing", receipt.includes("Without Canary") && receipt.includes("Nothing: it never left your browser") && (receipt.toLowerCase().includes(ADDR_HEX) || receipt.includes(ADDR_B64)), receipt);
   await pop.screenshot({ path: resolve(HERE, "out/popup-activity.png") });
   await pop.getByRole("tab", { name: "Manifest" }).click();
   await pop.waitForTimeout(300);
@@ -321,6 +352,7 @@ console.log("\n3. Anon path down (read endpoint 503) → fail closed");
   const { page, result } = await runPage(c.ctx, { leaks: false });
   const t = await tabStateOf(c.sw);
   console.log("   dapp:", JSON.stringify(result));
+  check("connect notice not repeated for a site this browser session", (await page.locator("[data-canary-notice]").count()) === 0);
   check("reads failed with an error instead of going direct", String(result.balance).startsWith("ERR") && reads(logs.provider).length === 0, { result, provider: logs.provider });
   check("counted as failed closed", t?.counts.failedClosed > 0, t?.counts);
   await page.close();
@@ -366,6 +398,30 @@ console.log("\n6. \"Block undeclared recipients\" on this site");
   const ov = await ext(c, { type: "overview" });
   check("earlier page loads kept in history", ov.history.filter((h) => h.origin.includes("leakydash")).length >= 3, ov.history.length);
   await ext(c, { type: "unblockHost", origin: new URL(DAPP).origin, host: "tracker.test" });
+}
+
+/* --- 7. Canary's label ---------------------------------------------------- */
+console.log("\n7. A site with no manifest of its own: Canary's label on ENS");
+{
+  reset();
+  const page = await c.ctx.newPage();
+  await page.goto(LABELLED);
+  const notice = await noticeOf(page);
+  await page.screenshot({ path: resolve(HERE, "out/notice-label.png") });
+  check("connect notice shows Canary's label", notice.includes("1 third party got your address in Canary's scan") && notice.includes("tracker.test") && notice.includes("signed by verifier.canary.eth"), notice);
+  let t;
+  for (let i = 0; i < 50 && (!t?.declared || t.declared.state === "pending"); i++) t = await tabStateOf(c.sw, "labelled");
+  const lv = t?.declared?.label?.verdict;
+  check("no well-known file: label read from labelled-test.labels.canary.eth, signed, delegated, bound to the site", t?.declared?.state === "none" && t.declared.label?.ens === "labelled-test.labels.canary.eth" && lv?.signed && lv.signerIsVerifier && lv.delegated === true && lv.matchesSite && !lv.expired, t?.declared);
+  const id = await c.sw.evaluate(() => chrome.runtime.id);
+  const pop = await c.ctx.newPage();
+  await pop.setViewportSize({ width: 400, height: 900 });
+  await pop.goto(`chrome-extension://${id}/popup.html?tabId=${t.tabId}`);
+  await pop.waitForTimeout(1200);
+  check("popup leads with Canary's label, and badges it", (await pop.locator("#label").innerText()).includes("1 third party got your address") && (await pop.locator("header").innerText()).includes("Label: 1 third party"), await pop.locator("header").innerText());
+  await pop.screenshot({ path: resolve(HERE, "out/popup-label.png") });
+  await pop.close();
+  await page.close();
 }
 
 await c.close();

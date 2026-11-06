@@ -8,13 +8,14 @@ import { createRoot } from "react-dom/client";
 import { CATEGORY_LABEL } from "../shared.js";
 import { Download, Eye, Info, Route, Shield, Slash, Warn } from "./icons.js";
 import {
-  applyTheme, CHAIN_NAME, coverage, day, hostOf, manifestOf, send, short, verdictOf,
+  applyTheme, chainName, coverage, day, declaredCount, hostOf, manifestOf, send, short, verdictOf,
   type Coverage, type Filter, type ManifestView, type Recipient, type SessionSummary, type Settings, type Site, type TabState, type Worker,
 } from "./model.js";
 import {
-  CopyText, CoverageBar, CoverageBlock, cx, Empty, EventRow, Eyebrow, FILTER_LABEL, FilterChips, Logo, manifestStatusFor, ManifestStatus,
+  CopyText, CoverageBar, CoverageBlock, cx, Empty, EventRow, Eyebrow, FILTER_LABEL, FilterChips, LabelCard, Logo, manifestStatusFor, ManifestStatus,
   Outcome, ProtectionSwitch, RowStatus, Tone, useFiltered,
 } from "./parts.js";
+import { privacyLabel } from "../privacy-label.js";
 
 declare const chrome: any;
 
@@ -304,11 +305,13 @@ function OverviewPage({ ses, tab, cov, m, sessions, pick, go, worker }: { ses: S
             </div>
           </div>
 
+          <LabelCard l={privacyLabel(tab.declared)} className="p-5" />
+
           <Panel eyebrow="ENS privacy manifest" title="Declared vs observed" aside={<ManifestStatus m={m} />}>
             {"ens" in m && m.ens && <div><CopyText text={m.ens} /></div>}
             <p className="mt-3 text-[14px] leading-relaxed text-ink-2">
               {m.kind === "ok"
-                ? `The manifest declares ${m.rows.filter((r) => r.status !== "undeclared").length} recipients. ${m.undeclared ? `Canary saw ${m.undeclared} more that ${m.undeclared === 1 ? "is" : "are"} not declared.` : "Nothing undeclared observed so far."}`
+                ? `The manifest declares ${declaredCount(m)}. ${m.undeclared ? `Canary saw ${m.undeclared} more that ${m.undeclared === 1 ? "is" : "are"} not declared.` : "Nothing undeclared observed so far."}`
                 : m.text}
             </p>
             <button className="mt-3 self-start text-[14px] font-medium text-link underline underline-offset-2" onClick={() => go("manifest")}>Open manifest</button>
@@ -459,7 +462,7 @@ function Evidence({ tab, ov }: { tab: TabState; ov: Overview }) {
             <Row k="Read latency" v={lat.length ? `p50 ${pct(0.5)} ms · p95 ${pct(0.95)} ms (n=${lat.length})` : "no reads yet"} />
             <Row k="From cache" v={`${tab.noRequest ?? 0} calls answered without a request`} />
             {ov.pipeline?.calls ? <Row k="All tabs" v={`${ov.pipeline.calls} calls sent as ${ov.pipeline.requests} anon-rpc requests`} /> : null}
-            <Row k="Read endpoints" v={Object.keys(ov.readEndpoints).map((c) => CHAIN_NAME[Number(c)] ?? `chain ${c}`).join(", ")} />
+            <Row k="Read endpoints" v={<span title={Object.keys(ov.readEndpoints).map((c) => chainName(Number(c))).join(", ")}>{Object.keys(ov.readEndpoints).length} chains</span>} />
           </dl>
         </Panel>
         <Panel eyebrow="Notes" title="What Canary flagged">
@@ -632,6 +635,7 @@ function ManifestPage({ ses, tab, m, go, refresh }: { ses: Session; tab: TabStat
             <Panel title={m.kind === "pending" ? "Checking…" : m.kind === "none" ? "No manifest named" : "No usable manifest"}>
               <p className="text-[15px] text-ink-2">{m.text}</p>
               {v && <p className="mt-3 text-[14px] text-ink-2"><b className="font-medium text-ink">{v.title}:</b> {v.text}</p>}
+              {"label" in m && m.label && <LabelCard l={m.label} className="mt-4" />}
               <p className="mt-3 text-[14px] text-ink-2">
                 A site names its manifest with <code className="font-mono text-[12px]">/.well-known/canary.json</code> pointing at an ENS name with a <code className="font-mono text-[12px]">privacy.manifest</code> text record.
               </p>
@@ -645,7 +649,7 @@ function ManifestPage({ ses, tab, m, go, refresh }: { ses: Session; tab: TabStat
               {[
                 ["ENS name", "ens" in m && m.ens ? <span className="font-mono">{m.ens}</span> : "—"],
                 ["Text record", <span className="font-mono">privacy.manifest</span>],
-                ["Chain", m.kind === "ok" ? CHAIN_NAME[m.chainId] ?? `chain ${m.chainId}` : "—"],
+                ["Chain", m.kind === "ok" ? chainName(m.chainId) : "—"],
                 ["Verdict", v ? v.text : "None on this name"],
                 ["Resolved", m.kind === "pending" ? "Not yet" : `${day(tab.since)}, via anon-rpc`],
               ].map(([k, val], i) => (
@@ -809,6 +813,9 @@ function SettingsPage({ ov, refresh }: { ov: Overview; refresh: () => Promise<vo
             >
               Follows your system by default.
             </SettingRow>
+            <SettingRow title="Show the privacy label when I connect" control={<Toggle label="Show the privacy label when I connect" on={ov.settings.connectNotice ?? true} onChange={(v) => set({ connectNotice: v })} />}>
+              A small notice on the page, once per site each browser session, saying who gets your address there. The page can see the notice.
+            </SettingRow>
             <SettingRow
               title="Clear history"
               control={
@@ -831,7 +838,7 @@ function SettingsPage({ ov, refresh }: { ov: Overview; refresh: () => Promise<vo
           <dl className="space-y-2 text-[14px]">
             <Row k="anon-rpc network" v={ov.network} />
             <Row k="Tor client" v={ov.worker.state === "failed" ? `unreachable${ov.worker.error ? ` (${ov.worker.error})` : ""}` : ov.worker.state} />
-            <Row k="Read endpoints" v={Object.keys(ov.readEndpoints).map((c) => CHAIN_NAME[Number(c)] ?? `chain ${c}`).join(", ")} />
+            <Row k="Read endpoints" v={<span title={Object.keys(ov.readEndpoints).map((c) => chainName(Number(c))).join(", ")}>{Object.keys(ov.readEndpoints).length} chains</span>} />
           </dl>
         </Panel>
 

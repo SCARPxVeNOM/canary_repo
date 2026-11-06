@@ -5,9 +5,10 @@ import { useMemo, type ReactNode } from "react";
 import { CATEGORY_LABEL } from "../shared.js";
 import { Check, Chevron, Copy, Dotted, Eye, Half, Hatch, Shield, Slash, Warn } from "./icons.js";
 import {
-  ago, BUCKET_LABEL, BUCKETS, channelLabel, clock, filterOf, ipVisible, sentenceOf, short, titleOf,
+  ago, BUCKET_LABEL, BUCKETS, channelLabel, clock, filterOf, ipVisible, labelBadge, receiptsOf, sentenceOf, short, titleOf,
   type Bucket, type Coverage, type Ev, type Filter, type ManifestView, type Site, type TabState, type Worker,
 } from "./model.js";
+import type { PrivacyLabel } from "../privacy-label.js";
 
 export const cx = (...xs: (string | number | false | null | undefined)[]) => xs.filter(Boolean).join(" ");
 
@@ -174,6 +175,7 @@ export function evidenceOf(e: Ev, inManifest?: string): [string, ReactNode][] {
     ["IP visible", ipVisible(e)],
   ];
   if (e.methods?.length) rows.push(["RPC calls", <span className="font-mono text-[12px]">{e.n > 1 ? `${e.n} × ` : ""}{[...new Set(e.methods)].join(", ")}</span>]);
+  if (e.via) rows.push(["Answered by", <span className="font-mono text-[12px]">{e.via}</span>]);
   if (e.ms !== undefined) rows.push(["Round trip", `${e.ms} ms`]);
   if (inManifest) rows.push(["In manifest", inManifest]);
   if (e.note) rows.push(["Note", e.note]);
@@ -216,11 +218,40 @@ export function EventRow({ e, inManifest, compact, defaultOpen }: { e: Ev; inMan
       <Disclosure.Content>
         <Disclosure.Body className={cx("space-y-3 pb-4", compact ? "px-3.5" : "px-4 sm:pl-[164px]")}>
           <p className="text-[14px] leading-relaxed text-ink">{sentenceOf(e)}</p>
+          <Receipts e={e} />
           <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-ink-2">Technical evidence</p>
           <EvidenceTable rows={evidenceOf(e, inManifest)} />
         </Disclosure.Body>
       </Disclosure.Content>
     </Disclosure>
+  );
+}
+
+/** "What each side saw": each party's view of this request, without Canary and with it. */
+function Receipts({ e }: { e: Ev }) {
+  const rs = receiptsOf(e);
+  if (!rs) return null;
+  return (
+    <div data-receipt>
+      <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-ink-2">What each side saw</p>
+      <div className="mt-2 overflow-hidden rounded-xl border border-line">
+        <div className="grid grid-cols-2 gap-3 bg-surface-secondary px-3 py-1.5 text-[12px] font-medium text-ink-2">
+          <span>Without Canary</span>
+          <span>With Canary</span>
+        </div>
+        {rs.map((r) => (
+          <div key={r.party + r.role} className="border-t border-line px-3 py-2.5">
+            <p className="truncate text-[12.5px] text-ink-2" title={r.party}>
+              <span className="font-mono text-[12px] text-ink">{r.party}</span> · {r.role}
+            </p>
+            <div className="mt-1 grid grid-cols-2 gap-3 text-[13px] leading-snug">
+              <p className={cx("min-w-0 break-words", r.without === "Nothing" ? "text-ink-2" : "text-expose")}>{r.without}</p>
+              <p className={cx("min-w-0 break-words", r.withTone === "good" ? "text-protect" : "text-expose")}>{r.with}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }
 
@@ -257,6 +288,8 @@ export function CopyText({ text, label }: { text: string; label?: string }) {
 export function ManifestStatus({ m }: { m: ManifestView }) {
   if (m.kind === "ok") return m.undeclared ? <Tone tone="bad" icon={<Warn size={12} />}>{m.undeclared} undeclared</Tone> : <Tone tone="good" icon={<Check size={12} />}>Matches manifest</Tone>;
   if (m.kind === "pending") return <Tone tone="muted" icon={<Dotted size={12} />}>Checking</Tone>;
+  if ((m.kind === "none" || m.kind === "error") && m.label?.source === "canary")
+    return <Tone tone={m.label.tone} icon={m.label.tone === "good" ? <Check size={12} /> : <Warn size={12} />}>{labelBadge(m.label)}</Tone>;
   if (m.kind === "none" || m.kind === "notFound") return <Tone tone="muted" icon={<Dotted size={12} />}>No manifest</Tone>;
   return <Tone tone="warn" icon={<Dotted size={12} />}>Unverified</Tone>;
 }
@@ -269,9 +302,39 @@ export function RowStatus({ s }: { s: "declared" | "undeclared" | "notSeen" }) {
 
 /* --- shared by the popup and the dashboard ------------------------------ */
 
+const LABEL_SOURCE: Record<PrivacyLabel["source"], string> = { site: "From the site's ENS name", canary: "Canary's label on ENS", none: "", pending: "" };
+const LABEL_TONE: Record<PrivacyLabel["tone"], string> = { good: "text-protect", bad: "text-expose", warn: "text-partial", muted: "text-ink" };
+
+/** The site's privacy label (privacy-label.ts): what it says, and where it comes from. */
+export function LabelCard({ l, className }: { l: PrivacyLabel; className?: string }) {
+  return (
+    <section id="label" className={cx("rounded-2xl border border-line bg-surface p-4", className)}>
+      <div className="flex items-baseline justify-between gap-2">
+        <Eyebrow>Privacy label</Eyebrow>
+        {LABEL_SOURCE[l.source] && <span className="text-[12px] text-muted">{LABEL_SOURCE[l.source]}</span>}
+      </div>
+      <h2 className={cx("mt-1.5 font-display text-[16px] font-semibold leading-snug", LABEL_TONE[l.tone])}>{l.title}</h2>
+      {l.rows.length > 0 && (
+        <ul className="mt-2.5 space-y-1">
+          {l.rows.map((r) => (
+            <li key={r.host} className="flex items-baseline justify-between gap-3">
+              <span className="min-w-0 truncate font-mono text-[12.5px] text-ink" title={r.host}>{r.host}</span>
+              <span className="shrink-0 text-[12.5px] text-ink-2">{r.kind}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+      {l.warning && <p className="mt-2 text-[13px] leading-snug text-partial">{l.warning}</p>}
+      {l.by && <p className="mt-2 text-[12px] leading-snug text-muted">{l.by}</p>}
+    </section>
+  );
+}
+
 export function headline(tab: TabState, site: Site, cov: Coverage, worker: Worker): [string, string] {
   const n = (x: number, one: string, many: string) => `${x} ${x === 1 ? one : many}`;
   if (!site.enabled) return ["Protection is off on this site", "Requests go out as the dapp wrote them. Turn it back on, then reload the page."];
+  if (!tab.connectedAt && !cov.total && !cov.notInspected && !cov.other)
+    return ["Before you connect", "Nothing observed yet. Once the page has your address, Canary stops third-party requests that carry it, and answers reads through anon-rpc."];
   if (!cov.total && !cov.notInspected && !cov.other)
     return ["Watching this page", "Nothing observed yet. Canary counts requests as the page makes them; reload the page if it was open before Canary started."];
   const held = tab.counts.failedClosed;

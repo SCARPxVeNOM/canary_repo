@@ -6,6 +6,12 @@
 //   <name> privacy.manifest record          → the declared recipients
 //   <name> privacy.verdict.canary record    → a verifier's signed verdict
 //
+// A site with no well-known file can still have Canary's label (the
+// verifier's verdict under labels.canary.eth, packages/ens/src/label.ts):
+//
+//   <host>.labels.canary.eth url            → must point at <site>
+//   <host>.labels.canary.eth privacy.verdict.canary
+//
 // The ENS reads are eth_calls to the Universal Resolver's resolve(name, data),
 // which follows ENSv2 names to their resolver; a name that needs an offchain
 // (CCIP-read) lookup reverts there and reads as having no records. They go
@@ -14,6 +20,7 @@
 // file comes straight from the site, which already sees your IP.
 
 import { decodeFunctionResult, encodeFunctionData, namehash, toHex, type Hex } from "viem";
+import { LABELS_PARENT, labelName } from "../../packages/ens/src/label.js";
 import { parseVerdictRecord, verdictKey, verifyVerdictRecord, type VerdictRecord } from "../../packages/ens/src/verdict.js";
 import { parseDappManifest, sameOrigin, type DappManifest } from "./shared.js";
 
@@ -56,13 +63,16 @@ export type VerdictCheck =
       expired: boolean;
     };
 
+/** Canary's label for a site that names no ENS name of its own; `error` when it couldn't be read. */
+export type Label = { ens: string; verdict: VerdictCheck } | { ens: string; error: string };
+
 export type Declared =
   | { state: "pending" }
-  | { state: "none" } // the site names no ENS name
+  | { state: "none"; label?: Label } // the site names no ENS name
   | { state: "notFound"; ens: string; verdict?: VerdictCheck } // the name has no manifest
   | { state: "unbound"; ens: string; url: string | null } // the name doesn't point back at the site
   | { state: "invalid"; ens: string; error: string; verdict?: VerdictCheck }
-  | { state: "error"; ens?: string; error: string }
+  | { state: "error"; ens?: string; error: string; label?: Label }
   | { state: "ok"; ens: string; chainId: number; manifest: DappManifest; verdict?: VerdictCheck };
 
 /** Names we can hash without ENSIP-15 normalization: lowercase ASCII labels. Anything else is refused, not guessed at. */
@@ -176,20 +186,36 @@ export async function siteEnsName(origin: string, timeoutMs = 5000): Promise<str
   return j?.ens === undefined ? null : checkName(j.ens);
 }
 
+type EnsConfig = { chainId: number; universalResolver: string; verifier?: string; labels?: string };
+
+/** Canary's label for the site, if it has one that points back at it. */
+async function readLabel(origin: string, call: EthCall, ens: EnsConfig, now: number): Promise<Label | undefined> {
+  const name = labelName(origin, ens.labels ?? LABELS_PARENT);
+  if (!name) return undefined;
+  const ur = ens.universalResolver;
+  const vKey = verdictKey(ens.verifier ?? "canary");
+  try {
+    const [url, raw] = await Promise.all([readText(call, ur, name, "url"), readText(call, ur, name, vKey)]);
+    if (!raw || !(url && sameOrigin(url, origin))) return undefined;
+    return { ens: name, verdict: await checkVerdict(raw, { origin, ens: name }, call, ur, vKey, now) };
+  } catch (e) {
+    return { ens: name, error: String((e as Error).message ?? e) };
+  }
+}
+
 /** Everything the popup needs to show declared vs observed, and the verdict, for one site. */
-export async function readDeclared(
-  origin: string,
-  call: EthCall,
-  ens: { chainId: number; universalResolver: string; verifier?: string },
-  now = Date.now(),
-): Promise<Declared> {
+export async function readDeclared(origin: string, call: EthCall, ens: EnsConfig, now = Date.now()): Promise<Declared> {
   let name: string | null;
   try {
     name = await siteEnsName(origin);
   } catch (e) {
-    return { state: "error", error: String((e as Error).message ?? e) };
+    const label = await readLabel(origin, call, ens, now);
+    return { state: "error", error: String((e as Error).message ?? e), ...(label ? { label } : {}) };
   }
-  if (!name) return { state: "none" };
+  if (!name) {
+    const label = await readLabel(origin, call, ens, now);
+    return { state: "none", ...(label ? { label } : {}) };
+  }
   const ur = ens.universalResolver;
   const vKey = verdictKey(ens.verifier ?? "canary");
   try {

@@ -630,3 +630,23 @@ What the 24 checks cover:
   - `trader-01.agents.canary.eth` → resolver `0x9365…1Fb0`; `reportSigned`, `signerIsReporter`, `policyMatches` and `reporterCanWrite` all **true**.
 
 Raw results: `../live-check/results.json` (outside the repo: it holds this machine's IP via the direct Tor check).
+
+## 20. Privacy labels, the connect notice, receipts, 69 read endpoints (6 Nov)
+
+**Offline suites:** `@canary/core` 13/13 (two new chain-detection tests), `@canary/ens` 10/10 (`addressRecipients`, label names), `@canary/gateway` 41/41, `@canary/agent` 13/13: root suite 77/77. Extension: unit 22/22 (two new: the label fallback), e2e **50/50** (a seventh run: a site with no manifest and Canary's label; the connect notice, shown once per site; receipts). The gateway's "Chromium dies mid-request" test failed once (relaunch not ready within 15 s) while 12 Chrome processes from a live run were open, and passed alone.
+
+**Read endpoints:** 69 chains in every shipped config, each one checked through our gateways over Tor with `eth_chainId` and an `eth_getBalance`. Official RPCs that refused Tor exits with HTTP 403: mainnet.optimism.io, rpc.gnosischain.com, mainnet.unichain.org, both zkSync Era RPCs, zkevm-rpc.com, rpc.api.lisk.com, rpc.soneium.org, both abs.xyz RPCs, Flare's API, Kaia's public node, rpc.taiko.xyz; publicnode or drpc is used for those chains instead. drpc's Kaia and Blast answer `eth_getBalance` with "method does not exist", so those two chains have no read endpoint (their reads are forwarded). Chain detection no longer maps an L2 or testnet provider URL to another chain's id (`linea-mainnet.infura.io` was read as mainnet); unknown provider network names are probed instead of guessed.
+
+**Labels on Sepolia** (`packages/ens/scripts/sepolia-setup.mjs --label …`): `labels.canary.eth` (UserRegistry `0x0C7D…be28`, labels resolver `0x1b46…3443`, one grant to the verifier), and labels for app.uniswap.org (no third party got the address), app.aave.com (3), app.ens.domains (2), revoke.cash (3), snapshot.box (4). 20 transactions, all in `packages/ens/sepolia.json`. Read back with the extension's reader (`extension/test/ens-live.mjs <origin>`): signed, signer = `verifier.canary.eth`'s `addr`, role held, bound, not expired, for all five; the deployed LeakyDash still reads from `leakydash.eth`.
+
+**Live, the extension over our tor-js gateways (`dist-local`):**
+
+| Site | Result |
+|---|---|
+| app.aave.com | worker ready in 4.5 s; label read from `app-aave-com.labels.canary.eth`; the notice appeared 10 s after load: "3 third parties got your address in Canary's scan", apps.aavechan.com, browser-intake-datadoghq.com, mainnet.gateway.tenderly.co, signed by verifier.canary.eth. 9 requests blocked, 2 reads protected |
+| canary-leakydash.vercel.app | its own manifest: "The site says 1 third party gets your address" (its RPC), and "verifier.canary.eth saw it send your address to more: canary-leakydash-tracker.vercel.app" |
+| app.uniswap.org | label read from `app-uniswap-org.labels.canary.eth`; notice 12.5 s after load: "No third party got your address in Canary's scan"; popup "12 of 12 observed requests protected or blocked": 11 reads through anon-rpc (0.9–3.9 s), nothing exposed |
+| app.ens.domains | label read from `app-ens-domains.labels.canary.eth`; notice 10.7 s after load: "2 third parties got your address in Canary's scan" (api.bigname.sh, lb.drpc.live); 3 reads protected, 2 requests carrying the address blocked |
+
+**Fixed: the scanner's fake wallet froze Uniswap.** `scanner/lib/wallet.js` emitted `connect` on every `eth_accounts`; Uniswap re-reads accounts on `connect`, so the two looped and its main thread stalled 10–90 s in Chrome for Testing, with or without Canary (2 ms with no wallet). It now emits `connect` once, as a wallet does: main thread back to 1–2 ms with the wallet. Earlier Uniswap scans finished despite the stall, so their results stand.
+

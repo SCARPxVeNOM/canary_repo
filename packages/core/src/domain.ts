@@ -31,28 +31,76 @@ export function isLocalHost(host: string): boolean {
   );
 }
 
-const KNOWN_PROVIDER = /(alchemy\.com|infura\.io|drpc\.(org|live)|publicnode\.com|ankr\.com|llamarpc\.com|1rpc\.io|blastapi\.io|quiknode\.pro|chainstack\.com|tenderly\.co|cloudflare-eth\.com|merkle\.io|flashbots\.net)/i;
-const CHAIN_PATTERNS: [RegExp, number][] = [
-  [/base[-_]?sepolia/i, 84532],
-  [/arb(itrum)?[-_]?sepolia/i, 421614],
-  [/(op|optimism)[-_]?sepolia/i, 11155420],
-  [/sepolia/i, 11155111],
-  [/holesky/i, 17000],
-  [/hoodi/i, 560048],
-  [/base/i, 8453],
-  [/arb(itrum)?/i, 42161],
-  [/(optimism|opt-mainnet)/i, 10],
-  [/(polygon|matic)/i, 137],
-  [/(eth-mainnet|ethereum|mainnet|\/eth(\/|$)|cloudflare-eth|flashbots|merkle\.io|llamarpc)/i, 1],
-];
+/* Network names well-known providers put in their URLs, exactly as they spell
+   them (underscores read as hyphens). Anything not listed is undefined and gets
+   probed with eth_chainId: a wrong guess would answer a dapp's reads with
+   another chain's data (linea-mainnet is not Ethereum mainnet). */
+const NETWORK: Record<string, number> = {
+  // Ethereum
+  "mainnet": 1, "eth": 1, "ethereum": 1, "eth-mainnet": 1, "ethereum-mainnet": 1,
+  "sepolia": 11155111, "eth-sepolia": 11155111, "ethereum-sepolia": 11155111,
+  "holesky": 17000, "eth-holesky": 17000, "ethereum-holesky": 17000,
+  "hoodi": 560048, "eth-hoodi": 560048, "ethereum-hoodi": 560048,
+  // OP Stack and other L2s
+  "optimism": 10, "op": 10, "opt-mainnet": 10, "optimism-mainnet": 10,
+  "optimism-sepolia": 11155420, "opt-sepolia": 11155420, "op-sepolia": 11155420,
+  "base": 8453, "base-mainnet": 8453, "base-sepolia": 84532,
+  "arbitrum": 42161, "arb": 42161, "arb-mainnet": 42161, "arbitrum-mainnet": 42161, "arbitrum-one": 42161,
+  "arbitrum-sepolia": 421614, "arb-sepolia": 421614,
+  "arbitrum-nova": 42170, "arbnova-mainnet": 42170, "arbitrumnova": 42170,
+  "zksync": 324, "zksync-era": 324, "zksync-mainnet": 324, "zksync2-era": 324, "zksync-sepolia": 300,
+  "linea": 59144, "linea-mainnet": 59144, "linea-sepolia": 59141,
+  "scroll": 534352, "scroll-mainnet": 534352, "scroll-sepolia": 534351,
+  "blast": 81457, "blast-mainnet": 81457,
+  "mantle": 5000, "mantle-mainnet": 5000,
+  "zora": 7777777, "zora-mainnet": 7777777,
+  "unichain": 130, "unichain-mainnet": 130, "unichain-sepolia": 1301,
+  "worldchain": 480, "worldchain-mainnet": 480,
+  "soneium": 1868, "soneium-mainnet": 1868, "ink": 57073, "ink-mainnet": 57073,
+  "polygon-zkevm": 1101, "polygonzkevm-mainnet": 1101, "taiko": 167000,
+  "fraxtal": 252, "frax-mainnet": 252, "mode": 34443, "lisk": 1135, "abstract": 2741, "abstract-mainnet": 2741,
+  // other EVM chains
+  "polygon": 137, "matic": 137, "polygon-mainnet": 137, "polygon-bor": 137,
+  "polygon-amoy": 80002, "amoy": 80002, "polygon-amoy-bor": 80002,
+  "bsc": 56, "bnb": 56, "bsc-mainnet": 56, "bnb-mainnet": 56, "binance": 56,
+  "bsc-testnet": 97, "bnb-testnet": 97, "bsc-testnet-chapel": 97,
+  "opbnb": 204, "opbnb-mainnet": 204,
+  "avalanche": 43114, "avax": 43114, "avalanche-mainnet": 43114, "avax-mainnet": 43114, "avalanche-c-chain": 43114,
+  "avalanche-fuji": 43113, "avax-fuji": 43113, "avalanche-fuji-c-chain": 43113,
+  "gnosis": 100, "gnosis-mainnet": 100, "xdai": 100, "gnosis-chiado": 10200,
+  "celo": 42220, "celo-mainnet": 42220,
+  "fantom": 250, "sonic": 146, "sonic-mainnet": 146,
+  "berachain": 80094, "berachain-mainnet": 80094, "cronos-evm": 25, "sei-evm": 1329, "kava-evm": 2222,
+  "flare": 14, "hyperliquid": 999, "pulsechain": 369, "apechain": 33139, "apechain-mainnet": 33139, "metis-mainnet": 1088,
+};
+const net = (name: string | undefined) => (name ? NETWORK[name.toLowerCase().replace(/_/g, "-")] : undefined);
+
+/** Where each provider spells the network: the first host label, or the first path segment. */
+function providerNetwork(u: URL): number | undefined {
+  const h = u.hostname.toLowerCase();
+  const first = h.split(".")[0];
+  const seg = u.pathname.split("/").filter(Boolean)[0];
+  if (/\.g\.alchemy\.com$|\.alchemyapi\.io$/.test(h)) return net(first);
+  if (/\.infura\.io$/.test(h)) return net(first);
+  if (/\.publicnode\.com$/.test(h)) return net(first.replace(/-rpc$/, ""));
+  if (/^lb\.drpc\.(org|live)$/.test(h)) return net(u.searchParams.get("network") ?? seg);
+  if (/\.drpc\.org$/.test(h)) return net(first);
+  if (h === "rpc.ankr.com" || h === "1rpc.io") return net(seg);
+  if (/\.llamarpc\.com$|\.gateway\.tenderly\.co$/.test(h)) return net(first);
+  if (/\.blastapi\.io$/.test(h)) return net(first);
+  if (/^(cloudflare-eth\.com|rpc\.flashbots\.net|eth\.merkle\.io)$/.test(h)) return 1;
+  return undefined;
+}
 
 /** Chain named by a well-known provider URL; undefined for anything else. */
 export function knownChain(url: string): number | undefined {
   const proxied = proxyChain(url);
   if (proxied !== undefined) return proxied;
-  if (!KNOWN_PROVIDER.test(url)) return undefined;
-  for (const [re, id] of CHAIN_PATTERNS) if (re.test(url)) return id;
-  return undefined;
+  try {
+    return providerNetwork(new URL(url));
+  } catch {
+    return undefined;
+  }
 }
 
 /* Dapps' own RPC proxies whose path names the chain. Curated, because these
