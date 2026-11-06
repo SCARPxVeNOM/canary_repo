@@ -17,7 +17,8 @@
         <option value="11155111">Sepolia · quote and swap</option>
         <option value="1">Ethereum · quote only</option>
       </select>
-      <button id="connect" class="primary">Connect wallet</button>
+      <button id="connect" class="primary" aria-controls="wallets" aria-expanded="false">Connect wallet</button>
+      <div id="wallets" class="menu card" hidden aria-label="Wallets"></div>
     </div>
   </header>
 

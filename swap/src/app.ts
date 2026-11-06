@@ -7,7 +7,7 @@
 // provider doesn't see your IP either. The swap is one Universal Router
 // transaction that your wallet signs and sends (src/v4.js).
 
-import { createPublicClient, createWalletClient, custom, decodeFunctionData, encodeFunctionData, formatUnits, getAddress, http, parseUnits, type Address, type Hex } from "viem";
+import { createPublicClient, createWalletClient, custom, decodeFunctionData, encodeFunctionData, formatUnits, getAddress, http, isAddress, parseUnits, type Address, type Hex } from "viem";
 import { mainnet, sepolia } from "viem/chains";
 import { MARKETS } from "./markets.js";
 import { ABI, approvalCalls, bestQuote, minOut, poolState, swapExactInSingle } from "./v4.js";
@@ -15,7 +15,12 @@ import { ABI, approvalCalls, bestQuote, minOut, poolState, swapExactInSingle } f
 type Token = { symbol: string; address: Address; decimals: number; mintable?: boolean };
 type Key = { currency0: Address; currency1: Address; fee: number; tickSpacing: number; hooks: Address };
 type Quote = { key: Key; amountOut: bigint; gasEstimate: bigint };
-type Provider = { request(a: { method: string; params?: unknown[] }): Promise<any>; on?(e: string, f: (...a: any[]) => void): void };
+type Provider = {
+  request(a: { method: string; params?: unknown[] }): Promise<any>;
+  on?(e: string, f: (...a: any[]) => void): void;
+  removeListener?(e: string, f: (...a: any[]) => void): void;
+};
+type Wallet = { id: string; name: string; icon?: string; provider: Provider };
 
 const SLIPPAGE_BPS = 50;
 const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
@@ -28,6 +33,7 @@ let account: Address | undefined;
 let provider: Provider | undefined;
 let current: { amountIn: bigint; best: Quote | null; impact?: number } | null = null;
 let busy = false;
+let minting = false;
 let seq = 0; // bumped whenever the amount, direction or chain changes: a quote that comes back after is dropped
 let quoting = false;
 let sent: { to: string; body: string }[] = [];
@@ -72,30 +78,181 @@ const status = (text: string, tone: "" | "ok" | "bad" = "", link?: { href: strin
 
 /* --- wallet ---------------------------------------------------------------- */
 
-const announced: { info: { name: string }; provider: Provider }[] = [];
-window.addEventListener("eip6963:announceProvider", (e: any) => announced.push(e.detail));
-window.dispatchEvent(new Event("eip6963:requestProvider"));
+// Every wallet that announces itself (EIP-6963), or the one at window.ethereum if none does.
+// With more than one, the visitor picks; the pick is remembered for the next visit.
+const wallets: Wallet[] = [];
+const WALLET_KEY = "canary-swap.wallet";
+let wallet: Wallet | undefined;
+let connecting: Wallet | undefined;
+let attempt = 0; // bumped on every connect: an answer that comes back after another was started is dropped
 
-async function connect() {
-  provider = announced[0]?.provider ?? W.ethereum;
-  if (!provider) return status("No wallet found. You can still get quotes without one.", "bad");
+window.addEventListener("eip6963:announceProvider", (e: any) => {
+  const d = e?.detail;
+  const p = d?.provider;
+  if (!p || typeof p.request !== "function" || wallets.some((w) => w.provider === p || (d.info?.rdns && w.id === d.info.rdns))) return;
+  wallets.push({ id: d.info?.rdns || d.info?.uuid || `wallet-${wallets.length}`, name: d.info?.name || "Wallet", icon: d.info?.icon, provider: p });
+  if (!$("wallets").hidden) renderWallets();
+});
+window.dispatchEvent(new Event("eip6963:requestProvider"));
+const available = (): Wallet[] =>
+  wallets.length ? wallets : W.ethereum && typeof W.ethereum.request === "function" ? [{ id: "injected", name: "Browser wallet", provider: W.ethereum }] : [];
+
+const remember = (id?: string) => {
   try {
-    const [a] = await provider.request({ method: "eth_requestAccounts" });
-    account = getAddress(a);
-  } catch (e: any) {
-    return status(`Not connected: ${e?.shortMessage ?? e?.message ?? e}`, "bad");
+    if (id) localStorage.setItem(WALLET_KEY, id);
+    else localStorage.removeItem(WALLET_KEY);
+  } catch {
+    /* storage blocked: nothing to remember */
   }
-  provider.on?.("accountsChanged", (accs: string[]) => {
-    account = accs[0] ? getAddress(accs[0]) : undefined;
-    void refreshBalances();
-  });
-  status("");
+};
+
+/** Every EIP-1193 error code in a wallet's or viem's error, and in what it wraps. */
+function codesOf(e: any, seen = new Set<object>()): number[] {
+  if (!e || typeof e !== "object" || seen.has(e)) return [];
+  seen.add(e);
+  return [...(typeof e.code === "number" ? [e.code] : []), ...codesOf(e.cause, seen), ...codesOf(e.data?.originalError, seen), ...codesOf(e.error, seen)];
+}
+/** What went wrong, in words, for the status line. */
+function why(e: any): string {
+  const codes = codesOf(e);
+  if (codes.includes(4001)) return "you cancelled it in your wallet";
+  if (codes.includes(-32002)) return "your wallet already has a request waiting: open it and answer that one";
+  if (codes.includes(4100)) return "this site isn't connected in your wallet: connect again";
+  if (codes.includes(4900) || codes.includes(4901)) return "your wallet is offline or on another network";
+  return String(e?.shortMessage ?? e?.details ?? e?.message ?? e).replace(/\.$/, "");
+}
+const firstAddress = (accs: unknown) => (Array.isArray(accs) ? (accs.find((a) => typeof a === "string" && isAddress(a)) as string | undefined) : undefined);
+
+// Wallet events, on the wallet in use only.
+const onAccounts = (accs: unknown) => {
+  const a = firstAddress(accs);
+  account = a ? getAddress(a) : undefined;
+  if (!account) (wallet = provider = undefined), remember();
+  void refreshBalances();
+};
+function use(w: Wallet | undefined, a: Address | undefined) {
+  if (wallet && wallet !== w) wallet.provider.removeListener?.("accountsChanged", onAccounts);
+  if (w && wallet !== w) w.provider.on?.("accountsChanged", onAccounts);
+  wallet = w;
+  provider = w?.provider;
+  account = a;
+}
+
+async function connect(chosen?: Wallet) {
+  const list = available();
+  if (!list.length) return status("No wallet found. Install one (MetaMask, Rabby, …) to swap; quotes work without it.", "bad");
+  if (!chosen && list.length > 1) return openWallets();
+  const w = chosen ?? list[0];
+  closeWallets();
+  // Asking the waiting wallet again only gets -32002; another wallet can still be picked meanwhile.
+  if (connecting === w) return status(`Approve the connection in ${w.name}.`);
+  const my = ++attempt;
+  connecting = w;
+  renderConnect();
+  status(`Approve the connection in ${w.name}.`);
+  try {
+    const a = firstAddress(await w.provider.request({ method: "eth_requestAccounts" }));
+    if (my !== attempt) return;
+    if (!a) throw new Error(`${w.name} shared no account`);
+    use(w, getAddress(a));
+    remember(w.id);
+    status("");
+  } catch (e) {
+    if (my !== attempt) return;
+    status(`Not connected: ${why(e)}.`, "bad");
+  } finally {
+    if (my === attempt) connecting = undefined;
+  }
   await refreshBalances();
 }
 
+async function disconnect() {
+  const w = wallet;
+  closeWallets();
+  use(undefined, undefined);
+  remember();
+  // Also drop the site's permission where the wallet supports it, so the next connect asks again.
+  w?.provider.request({ method: "wallet_revokePermissions", params: [{ eth_accounts: {} }] }).catch(() => {});
+  status("Disconnected.");
+  await refreshBalances();
+}
+
+/** The wallet picked last time, if it still has this site connected: no prompt (eth_accounts never asks). */
+async function reconnect() {
+  let id: string | null = null;
+  try {
+    id = localStorage.getItem(WALLET_KEY);
+  } catch {
+    return;
+  }
+  if (!id) return;
+  await new Promise((r) => setTimeout(r, 300)); // wallets announce asynchronously
+  const w = available().find((x) => x.id === id);
+  if (!w) return;
+  const a = firstAddress(await w.provider.request({ method: "eth_accounts" }).catch(() => []));
+  if (a && !account && !connecting) {
+    use(w, getAddress(a));
+    await refreshBalances();
+  }
+}
+
+function renderConnect() {
+  const b = $<HTMLButtonElement>("connect");
+  b.textContent = connecting ? "Connecting…" : account ? short(account) : "Connect wallet";
+  b.setAttribute("aria-expanded", String(!$("wallets").hidden));
+}
+
+/* the wallet menu: pick a wallet, or see the one in use and disconnect */
+function renderWallets() {
+  const menu = $("wallets");
+  const items: (HTMLElement | string)[] = [];
+  const p = (text: string) => Object.assign(document.createElement("p"), { textContent: text });
+  const btn = (text: string, onClick: () => void, icon?: string) => {
+    const b = Object.assign(document.createElement("button"), { type: "button" });
+    // EIP-6963 icons are data URIs; anything else isn't loaded.
+    if (icon?.startsWith("data:image/")) b.append(Object.assign(document.createElement("img"), { src: icon, alt: "" }));
+    b.append(text);
+    b.addEventListener("click", onClick);
+    return b;
+  };
+  if (account && wallet) {
+    items.push(p(`Connected with ${wallet.name}: ${short(account)}`), btn("Disconnect", () => void disconnect()));
+  }
+  const others = available().filter((w) => w !== wallet);
+  if (others.length) {
+    items.push(p(account ? "Use another wallet" : "Choose a wallet"));
+    for (const w of others) items.push(btn(connecting === w ? `${w.name} (waiting)` : w.name, () => void connect(w), w.icon));
+  }
+  menu.replaceChildren(...items);
+}
+function openWallets() {
+  renderWallets();
+  $("wallets").hidden = false;
+  renderConnect();
+  ($("wallets").querySelector("button") as HTMLButtonElement | null)?.focus();
+}
+function closeWallets() {
+  $("wallets").hidden = true;
+  renderConnect();
+}
+
+const SEPOLIA = MARKETS[11155111];
 async function onSepolia(p: Provider) {
   const want = `0x${sepolia.id.toString(16)}`;
-  if ((await p.request({ method: "eth_chainId" })) !== want) await p.request({ method: "wallet_switchEthereumChain", params: [{ chainId: want }] });
+  const now = async () => Number(await p.request({ method: "eth_chainId" })); // hex, or a number from some wallets
+  if ((await now()) === sepolia.id) return;
+  status("Switch your wallet to Sepolia…");
+  try {
+    await p.request({ method: "wallet_switchEthereumChain", params: [{ chainId: want }] });
+  } catch (e: any) {
+    if (!codesOf(e).includes(4902) && !/unrecognized chain|not been added|unknown chain/i.test(String(e?.message))) throw e;
+    // The wallet doesn't know Sepolia yet: adding it switches to it too.
+    await p.request({
+      method: "wallet_addEthereumChain",
+      params: [{ chainId: want, chainName: "Sepolia", nativeCurrency: { name: "Sepolia Ether", symbol: "ETH", decimals: 18 }, rpcUrls: [SEPOLIA.rpc], blockExplorerUrls: [SEPOLIA.explorer] }],
+    });
+  }
+  if ((await now()) !== sepolia.id) throw new Error("your wallet is still on another network: switch it to Sepolia");
 }
 
 const walletClient = () => createWalletClient({ account: account!, chain: sepolia, transport: custom(provider!) });
@@ -104,18 +261,25 @@ const walletClient = () => createWalletClient({ account: account!, chain: sepoli
 async function sendTx(what: string, tx: { to: Address; data: Hex; value: bigint }) {
   status(`${what}: confirm in your wallet…`);
   const hash = await walletClient().sendTransaction(tx);
-  const link = { href: `${market().explorer}/tx/${hash}`, text: short(hash) };
+  let link = { href: `${market().explorer}/tx/${hash}`, text: short(hash) };
   status(`${what}: sent, waiting for it to be mined.`, "", link);
-  const r = await client().waitForTransactionReceipt({ hash });
+  // Sped up in the wallet, it's the same transaction; cancelled or replaced, it isn't.
+  let replaced: string | undefined;
+  const r = await client().waitForTransactionReceipt({
+    hash,
+    onReplaced: (x) => ((replaced = x.reason), (link = { href: `${market().explorer}/tx/${x.transaction.hash}`, text: short(x.transaction.hash) })),
+  });
+  if (replaced === "cancelled") throw Object.assign(new Error(`${what} was cancelled in your wallet`), { link });
+  if (replaced === "replaced") throw Object.assign(new Error(`${what} was replaced by another transaction in your wallet`), { link });
   if (r.status !== "success") throw Object.assign(new Error(`${what} reverted`), { link });
-  return { hash, link };
+  return { hash: r.transactionHash, link };
 }
 
 /* --- balances, quote ------------------------------------------------------- */
 
 const balances: Record<string, bigint> = {};
 async function refreshBalances() {
-  $("connect").textContent = account ? short(account) : "Connect wallet";
+  renderConnect();
   for (const k of Object.keys(balances)) delete balances[k];
   if (account) {
     const c = client();
@@ -172,7 +336,8 @@ function render() {
   $("balIn").textContent = bal(tIn);
   $("balOut").textContent = bal(tOut);
   $("mintRow").hidden = !(account && m.swap && m.tokens.some((t: Token) => t.mintable));
-  $("mint").textContent = `Get 1,000 test ${m.tokens.find((t: Token) => t.mintable)?.symbol ?? ""}`;
+  $("mint").textContent = minting ? "Minting…" : `Get 1,000 test ${m.tokens.find((t: Token) => t.mintable)?.symbol ?? ""}`;
+  $<HTMLButtonElement>("mint").disabled = busy || minting;
 
   const q = current?.best;
   $("amountOut").textContent = q ? fmt(q.amountOut, tOut.decimals, 8) : current ? "—" : quoting ? "…" : "0";
@@ -249,7 +414,7 @@ function renderSent() {
 
 async function swap() {
   if (!account) return connect();
-  if (!current?.best || busy) return;
+  if (!current?.best || busy || minting) return;
   busy = true;
   render();
   try {
@@ -267,9 +432,10 @@ async function swap() {
     const [, tOut] = tokens();
     status(`Swapped. At least ${fmt(minOut(fresh.amountOut, SLIPPAGE_BPS), tOut.decimals)} ${tOut.symbol} received.`, "ok", link);
   } catch (e: any) {
-    status(`Not swapped: ${e?.shortMessage ?? e?.message ?? e}`, "bad", e?.link);
+    status(`Not swapped: ${why(e)}.`, "bad", e?.link);
   } finally {
     busy = false;
+    render();
     await refreshBalances();
     void requote();
   }
@@ -277,13 +443,18 @@ async function swap() {
 
 async function mint() {
   const t = market().tokens.find((x: Token) => x.mintable);
-  if (!account || !t) return;
+  if (!account || !t || busy || minting) return;
+  minting = true;
+  render();
   try {
     await onSepolia(provider!);
     const { link } = await sendTx(`Mint 1,000 ${t.symbol}`, { to: t.address, data: encodeFunctionData({ abi: ABI.erc20, functionName: "mint", args: [account, parseUnits("1000", t.decimals)] }), value: 0n });
     status(`1,000 ${t.symbol} minted.`, "ok", link);
   } catch (e: any) {
-    status(`Not minted: ${e?.shortMessage ?? e?.message ?? e}`, "bad", e?.link);
+    status(`Not minted: ${why(e)}.`, "bad", e?.link);
+  } finally {
+    minting = false;
+    render();
   }
   await refreshBalances();
 }
@@ -303,7 +474,14 @@ $("amountIn").addEventListener("input", () => {
   timer = setTimeout(requote, 350);
 });
 $("flip").addEventListener("click", () => (clearTimeout(timer), ++seq, (quoting = false), (zeroForOne = !zeroForOne), ($<HTMLInputElement>("amountIn").value = ""), (current = null), (sent = []), render()));
-$("connect").addEventListener("click", () => void connect());
+// Connect: one wallet connects at once, several open the menu; connected, the menu shows it and Disconnect.
+$("connect").addEventListener("click", () => (!$("wallets").hidden ? closeWallets() : account ? openWallets() : void connect()));
+document.addEventListener("click", (e) => {
+  if (!$("wallets").hidden && !(e.target as Element | null)?.closest?.("#wallets, #connect")) closeWallets();
+});
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && !$("wallets").hidden) closeWallets(), $("connect").focus();
+});
 $("swap").addEventListener("click", () => void swap());
 $("mint").addEventListener("click", () => void mint());
 $<HTMLSelectElement>("chain").value = String(chainId);
@@ -320,3 +498,4 @@ $("chain").addEventListener("change", async (e) => {
   void requote();
 });
 render();
+void reconnect();

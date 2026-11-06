@@ -8,7 +8,12 @@ body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.5 ui-s
 .bar { display: flex; flex-wrap: wrap; gap: 10px; justify-content: space-between; align-items: center; padding: 12px 20px; background: var(--card); border-bottom: 1px solid var(--line); }
 .logo { font-weight: 700; }
 .logo .muted { font-weight: 400; }
-.right { display: flex; gap: 10px; align-items: center; }
+.right { display: flex; gap: 10px; align-items: center; position: relative; }
+.menu { position: absolute; right: 0; top: calc(100% + 8px); z-index: 10; width: min(300px, calc(100vw - 32px)); padding: 8px; display: grid; gap: 6px; box-shadow: 0 14px 36px -14px rgba(0, 0, 0, 0.35); }
+.menu[hidden] { display: none; }
+.menu p { margin: 4px 6px 0; font-size: 13px; color: var(--muted); overflow-wrap: anywhere; }
+.menu button { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; }
+.menu img { width: 22px; height: 22px; border-radius: 6px; flex: none; }
 a { color: var(--accent); }
 main { max-width: 480px; margin: 0 auto; padding: 20px 16px 40px; display: grid; gap: 14px; }
 .card { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 16px; min-width: 0; }
