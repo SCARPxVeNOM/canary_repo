@@ -9,7 +9,7 @@
 <body>
   <header class="bar">
     <div class="logo">💧 LeakyDash · logs</div>
-    <div class="right"><button id="clear">Clear</button> <a href="/">← dapp</a></div>
+    <div class="right"><span class="muted small" id="instances"></span> <button id="clear">Clear</button> <a href="/">← dapp</a></div>
   </header>
   <p class="muted pad">Everything the RPC provider, the tracker and LeakyDash's own backend received, newest first. Addresses are highlighted. Live.</p>
   <main class="panes">
@@ -30,17 +30,34 @@
       const addr = e.addresses.length ? `<div class="addr">your address: ${e.addresses.map((a) => `<mark>${a.slice(0, 10)}…${a.slice(-6)}</mark>`).join(" ")}</div>` : "";
       return `<div class="entry ${e.addresses.length ? "leak" : ""}"><div class="meta">${t} · IP ${esc(e.ip)} · Origin ${esc(e.origin)}</div><div class="what">${hl(what)}</div>${addr}</div>`;
     }
+    // Deployed, each serverless instance holds its own in-memory log and a poll can
+    // land on any of them, so entries are merged across polls by their (instance-
+    // unique) id. A few polls reach every warm instance. "Clear" hides everything
+    // received before it, on every instance.
+    const merged = { provider: new Map(), tracker: new Map(), backend: new Map() };
+    const instances = new Set();
+    const clearKey = `leakydash.clearedAt.${sid}`;
+    let clearedAt = Number(localStorage.getItem(clearKey) || 0);
     async function tick() {
       try {
-        const { logs } = await (await fetch(`/api/logs?sid=${sid}`)).json();
+        const r = await (await fetch(`/api/logs?sid=${sid}`, { cache: "no-store" })).json();
+        if (r.instance) instances.add(r.instance);
         for (const party of ["provider", "tracker", "backend"]) {
-          const list = logs[party].slice().reverse();
+          for (const e of r.logs[party]) merged[party].set(String(e.id), e);
+          const list = [...merged[party].values()].filter((e) => e.at > clearedAt).sort((a, b) => b.at - a.at);
           document.getElementById(party).innerHTML = list.length ? list.map((e) => row(e, party)).join("") : `<div class="muted empty">Nothing received.</div>`;
         }
+        document.getElementById("instances").textContent = instances.size > 1 ? `merged from ${instances.size} server instances` : "";
       } catch {}
     }
-    document.getElementById("clear").onclick = async () => { await fetch(`/api/logs/clear?sid=${sid}`); tick(); };
-    tick(); setInterval(tick, 1000);
+    document.getElementById("clear").onclick = async () => {
+      clearedAt = Date.now();
+      localStorage.setItem(clearKey, String(clearedAt));
+      for (const m of Object.values(merged)) m.clear();
+      await fetch(`/api/logs/clear?sid=${sid}`).catch(() => {});
+      tick();
+    };
+    tick(); setTimeout(tick, 250); setTimeout(tick, 500); setInterval(tick, 1000);
   </script>
 </body>
 </html>

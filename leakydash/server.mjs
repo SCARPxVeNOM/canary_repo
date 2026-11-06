@@ -22,6 +22,7 @@ import { createServer } from "node:http";
 import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { randomUUID } from "node:crypto";
 
 const HERE = import.meta.dirname;
 const PORT = Number(process.env.PORT ?? 3000);
@@ -52,6 +53,10 @@ const page = async (name) =>
 const LOG_MAX = 300;
 const logs = { provider: [], tracker: [], backend: [] };
 let seq = 0;
+// Deployed, each serverless instance keeps its own in-memory log, and a /api/logs
+// read can land on any of them. Ids are unique across instances so the viewer can
+// merge what every instance returns over successive polls (logs.html).
+const INSTANCE = randomUUID().slice(0, 8);
 // Contracts the dapp itself calls; not "your address".
 const KNOWN_CONTRACTS = new Set([
   "0xca11bde05977b3631167028862be2a173976ca11", // Multicall3
@@ -86,7 +91,7 @@ function log(party, req, extra) {
   const text = `${decodeURIComponent(req.url ?? "")} ${extra.body ?? ""}`;
   const addresses = findAddresses(text);
   const entry = {
-    id: ++seq,
+    id: `${INSTANCE}-${++seq}`,
     at: Date.now(),
     sid: sidOf(req, extra.body),
     ip: clientIp(req),
@@ -166,7 +171,7 @@ export const createHandler = (appJs) => (req, res) => {
           }
           case "/api/logs": {
             const shown = Object.fromEntries(Object.entries(logs).map(([k, v]) => [k, v.filter(mine).map(({ sid, ...e }) => e)]));
-            return json(200, { since: Number(url.searchParams.get("since") ?? 0), logs: shown, upstream: UPSTREAM, port: PORT });
+            return json(200, { since: Number(url.searchParams.get("since") ?? 0), logs: shown, instance: INSTANCE, upstream: UPSTREAM, port: PORT }, { "cache-control": "no-store" });
           }
           case "/api/logs/clear":
             for (const k of Object.keys(logs)) logs[k] = logs[k].filter((e) => !mine(e));
