@@ -10,8 +10,12 @@ declare const chrome: any;
 const TAG = "__canary";
 let connected = false;
 
+/** Rejects, never throws: once the extension is reloaded or removed under the page, chrome.runtime is gone, and a
+    throw here would leave the page's request waiting forever. */
+const send = (msg: unknown): Promise<any> => Promise.resolve().then(() => chrome.runtime.sendMessage(msg));
+
 async function siteConfig() {
-  const r = await chrome.runtime.sendMessage({ type: "config", origin: location.origin, top: window === window.top });
+  const r = await send({ type: "config", origin: location.origin, top: window === window.top });
   return r as { enabled: boolean; addresses: string[]; blockHosts: string[] };
 }
 
@@ -27,22 +31,19 @@ window.addEventListener("message", (ev) => {
   port.onmessage = (e) => {
     const m = e.data;
     if (m?.type === "rpc") {
-      chrome.runtime
-        .sendMessage({ type: "rpc", url: m.url, body: m.body, channel: m.channel, canAsk: m.canAsk, pageChain: m.pageChain, origin: location.origin })
+      send({ type: "rpc", url: m.url, body: m.body, channel: m.channel, canAsk: m.canAsk, pageChain: m.pageChain, origin: location.origin })
         .then(
           (r: any) => port.postMessage({ type: "res", id: m.id, ...r }),
           (err: Error) =>
             port.postMessage({ type: "res", id: m.id, status: 200, body: errorBody(m.body, `Canary: extension unavailable (${err?.message ?? err})`) }),
         );
     } else if (m?.type === "obs") {
-      chrome.runtime.sendMessage({ type: "obs", obs: m.obs, origin: location.origin }).catch(() => {});
+      send({ type: "obs", obs: m.obs, origin: location.origin }).catch(() => {});
     } else if (m?.type === "wallet") {
       // Answered once the service worker has the addresses and their block rules: the shim holds the wallet's reply until then.
       const done = () => port.postMessage({ type: "res", id: m.id });
-      // A throw (extension reloaded under the page) answers too.
-      Promise.resolve()
-        .then(() => chrome.runtime.sendMessage({ type: "wallet", addresses: m.addresses, chainId: m.chainId, origin: location.origin }))
-        .then(done, done);
+      // A failure (extension reloaded under the page) answers too.
+      send({ type: "wallet", addresses: m.addresses, chainId: m.chainId, origin: location.origin }).then(done, done);
     }
   };
 });
