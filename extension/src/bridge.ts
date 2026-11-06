@@ -37,7 +37,12 @@ window.addEventListener("message", (ev) => {
     } else if (m?.type === "obs") {
       chrome.runtime.sendMessage({ type: "obs", obs: m.obs, origin: location.origin }).catch(() => {});
     } else if (m?.type === "wallet") {
-      chrome.runtime.sendMessage({ type: "wallet", addresses: m.addresses, chainId: m.chainId, origin: location.origin }).catch(() => {});
+      // Answered once the service worker has the addresses and their block rules: the shim holds the wallet's reply until then.
+      const done = () => port.postMessage({ type: "res", id: m.id });
+      // A throw (extension reloaded under the page) answers too.
+      Promise.resolve()
+        .then(() => chrome.runtime.sendMessage({ type: "wallet", addresses: m.addresses, chainId: m.chainId, origin: location.origin }))
+        .then(done, done);
     }
   };
 });

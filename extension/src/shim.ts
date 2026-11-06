@@ -44,6 +44,9 @@ import {
   const pending = new Map<number, (r: any) => void>();
   let resolveReady!: () => void;
   const ready = new Promise<void>((r) => (resolveReady = r));
+  // Your addresses the service worker has confirmed are blocked in URLs, and confirmations on their way.
+  const ruled = new Set<string>();
+  const ruling = new Map<string, Promise<void>>();
   // If the bridge never answers (extension reloaded, context invalidated) we
   // stop waiting and get out of the page's way, loudly.
   setTimeout(() => {
@@ -60,6 +63,7 @@ import {
     // this reply arrived, and dropping it would let that address leak.
     const known = new Set(needles.map((n) => n.address));
     needles = [...needles, ...c.addresses.map((a) => a.toLowerCase()).filter((a) => !known.has(a)).map(needlesFor)];
+    for (const a of c.addresses) ruled.add(a.toLowerCase()); // the service worker's rules cover these already
     resolveReady();
   }
 
@@ -92,13 +96,22 @@ import {
   function observe(o: Observation) {
     port?.postMessage({ type: "obs", obs: o });
   }
-  function addAddresses(list: unknown, chainId?: unknown) {
+  /** Learns addresses. Returns a promise while the rules that block URLs carrying any of them aren't confirmed yet:
+      the page gets the address only after it. Each address waits once, 1.5 s at most: a dapp must not hang on Canary. */
+  function addAddresses(list: unknown, chainId?: unknown): Promise<void> | undefined {
     const addrs = (Array.isArray(list) ? list : [])
       .filter((a): a is string => typeof a === "string" && /^0x[0-9a-fA-F]{40}$/.test(a))
       .map((a) => a.toLowerCase());
     const fresh = addrs.filter((a) => !needles.some((n) => n.address === a));
     if (fresh.length) needles = [...needles, ...fresh.map(needlesFor)];
-    if (fresh.length || chainId !== undefined) void ready.then(() => port?.postMessage({ type: "wallet", addresses: addrs, chainId }));
+    const unasked = addrs.filter((a) => !ruled.has(a) && !ruling.has(a));
+    if (unasked.length || chainId !== undefined) {
+      const told = ready.then(() => port && ask({ type: "wallet", addresses: addrs, chainId }));
+      const settled = Promise.race([told, new Promise((r) => setTimeout(r, 1500))]);
+      for (const a of unasked) ruling.set(a, settled.then(() => void (ruled.add(a), ruling.delete(a))));
+    }
+    const waits = addrs.filter((a) => !ruled.has(a)).map((a) => ruling.get(a));
+    return waits.length ? Promise.all(waits).then(() => {}) : undefined;
   }
 
   /* --- learning your address from the wallet --------------------------- */
@@ -111,7 +124,9 @@ import {
     try {
       p.request = async (args: any) => {
         const res = await orig(args);
-        if (args?.method === "eth_accounts" || args?.method === "eth_requestAccounts") addAddresses(res);
+        // A new address reaches the page only once it's blocked in URLs: a pixel fired the
+        // moment the dapp learns it would otherwise go out before the rule exists.
+        if (args?.method === "eth_accounts" || args?.method === "eth_requestAccounts") await addAddresses(res);
         if (args?.method === "eth_chainId") addAddresses([], Number(res));
         return res;
       };
@@ -124,10 +139,42 @@ import {
     } catch {
       /* ignore */
     }
+    holdAccountsChanged(p);
     // Ask once, silently: eth_accounts never prompts.
     orig({ method: "eth_accounts" }).then((a: unknown) => addAddresses(a), () => {});
     orig({ method: "eth_chainId" }).then((c: unknown) => addAddresses([], Number(c)), () => {});
   }
+  /* The page's accountsChanged listeners get a new address only once it's blocked in URLs, as
+     eth_requestAccounts above: switching to an account Canary hasn't seen fires the same pixels. */
+  function holdAccountsChanged(p: any) {
+    const held = new WeakMap<Function, Function>();
+    const heldFor = (f: Function) => {
+      let g = held.get(f);
+      if (!g) {
+        g = function (this: unknown, ...args: unknown[]) {
+          const wait = addAddresses(args[0]);
+          if (!wait) return f.apply(this, args);
+          void wait.then(() => f.apply(this, args));
+        };
+        held.set(f, g);
+      }
+      return g;
+    };
+    const patch = (name: string, map: (f: Function) => Function | undefined) => {
+      const orig = p[name];
+      if (typeof orig !== "function") return;
+      try {
+        p[name] = function (this: unknown, event: unknown, f: unknown, ...rest: unknown[]) {
+          return orig.call(this, event, event === "accountsChanged" && typeof f === "function" ? (map(f) ?? f) : f, ...rest);
+        };
+      } catch {
+        /* frozen provider: its listeners hear new accounts unheld */
+      }
+    };
+    for (const name of ["on", "addListener", "once", "prependListener", "prependOnceListener"]) patch(name, heldFor);
+    for (const name of ["removeListener", "off"]) patch(name, (f) => held.get(f));
+  }
+
   window.addEventListener("eip6963:announceProvider", (ev: any) => wrapProvider(ev?.detail?.provider));
   const pollEthereum = () => W.ethereum && wrapProvider(W.ethereum);
   queueMicrotask(pollEthereum);

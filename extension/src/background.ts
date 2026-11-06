@@ -85,7 +85,15 @@ async function addAddresses(key: "walletAddresses" | "manualAddresses", addrs: s
    catch everything else whose URL carries your address: images, pixels,
    scripts, iframes. Third-party only; never the extension's own requests. */
 
-async function syncBlockRules() {
+// One update at a time: two overlapping ones would both add the same rule ids, and the second would fail.
+let syncing: Promise<void> = Promise.resolve();
+function syncBlockRules(): Promise<void> {
+  const run = syncing.then(syncBlockRulesNow, syncBlockRulesNow);
+  syncing = run.catch(() => {});
+  return run;
+}
+
+async function syncBlockRulesNow() {
   const { all } = await getAddresses();
   const sites = await getSites();
   const disabled = Object.entries(sites).filter(([, s]) => !s.enabled).map(([o]) => new URL(o).hostname);
@@ -688,6 +696,7 @@ chrome.runtime.onMessage.addListener((msg: any, sender: any, respond: (r: unknow
         // A frame inherits the blocks set on the page it's in.
         const top = tabId !== undefined && sender.frameId !== 0 ? (await tabState(tabId))?.origin : undefined;
         const blockHosts = [...new Set([...site.blockHosts, ...(top && top !== msg.origin ? (await getSite(top)).blockHosts : [])])];
+        await syncing; // the page treats these addresses as already blocked in URLs
         return { enabled: site.enabled, addresses: (await getAddresses()).all, blockHosts };
       }
       case "rpc":
