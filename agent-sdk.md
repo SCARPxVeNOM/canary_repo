@@ -32,7 +32,7 @@ Draft v1.1 · 6 Nov 2026 · brainstorm first, then the blueprint. v1 applies the
 
 ## 0. Implementation status (6 Nov 2026)
 
-Everything below is in `packages/` and `examples/`; each package README has the API and config reference. **Tests:** 61 pass (`npm test` at the repo root), plus the extension's 24/24 now that it runs on `@canary/core`. They run against EF's passthrough reference worker (hash-verified as on chain), local fixtures, and a local chain with mock ENSv2 contracts. **Not yet run live over tor-js, nor on ENS's Sepolia deployment.** Those are the first two things to do with a network.
+Everything below is in `packages/` and `examples/`; each package README has the API and config reference. **Tests:** 61 pass (`npm test` at the repo root), plus the extension's 24/24 now that it runs on `@canary/core`. They run against EF's passthrough reference worker (hash-verified as on chain), local fixtures, and a local chain with mock ENSv2 contracts. **Live since 6 Nov:** over tor-js (through our own gateways), and on ENS's Sepolia deployment: `agents.canary.eth` is a subname registry, and `trader-01.agents.canary.eth` has its own Permissioned Resolver; the gateway reads its policy from that name, publishes the signed report with a one-key grant, and the revoke shows (`packages/ens/README.md`, test-repo.md §16).
 
 | Blueprint part | Where | Status |
 |---|---|---|
@@ -43,7 +43,7 @@ Everything below is in `packages/` and `examples/`; each package README has the 
 | MITM CA (option C) | `packages/gateway/src/mitm.ts` | done, opt-in: `canary-gateway ca`, per-host certs, passthrough list, bundle for Python/curl |
 | SDK (§3.4) | `packages/agent` | done: `viemTransport`, `ethersProvider`, `fetch`, `llmFetch`/`wrapLLM`, `wrapTools`, events, report, embedded mode |
 | Ledger, signed report, coarse form (§3.5) | `packages/gateway/src/ledger.ts`, `report.ts` | done |
-| ENSv2: manifest as policy, report role, revocation (§4) | `packages/ens`, `packages/gateway/src/ens.ts` | done against mocks: policy read over anon-rpc and re-read live, signed `privacy.report` published over anon-rpc, revocation detected, `canary-ens` CLI |
+| ENSv2: manifest as policy, report role, revocation (§4) | `packages/ens`, `packages/gateway/src/ens.ts` | done, and live on Sepolia (`trader-01.agents.canary.eth`): policy read over anon-rpc and re-read live, signed `privacy.report` published over anon-rpc, revocation detected, `canary-ens` CLI |
 | Demo agent with leaky mode, Python agent (§6, §7) | `examples/viem-agent`, `examples/python-agent` | done; Python tested end to end |
 | AgentKit / Eliza / LangChain adapters, verifier role, Sepolia swap | — | not built |
 

@@ -24,6 +24,16 @@
       "resolver": "0x43971D30D3BdE33bBE8E39FDCD60Fc13fAB8620c",
       "addr": "0x0f17A972C98f06BB128d8d8B971c33E631b351De",
       "labelhash": "0xd8d69c1da829f8277e4e80945a974b3ca009835eb268c14bf9321952f1cf169e"
+    },
+    "agents.canary.eth": {
+      "owner": "0x7fCD34282e0d69A6E5c2c0D66d27C333bFC36256",
+      "resolver": "0x43971D30D3BdE33bBE8E39FDCD60Fc13fAB8620c",
+      "subregistry": "0x7417c0e3233824B157ce27A6700E7643100E5917"
+    },
+    "trader-01.agents.canary.eth": {
+      "owner": "0x7fCD34282e0d69A6E5c2c0D66d27C333bFC36256",
+      "resolver": "0x936557a320aFb6a8dCa1FC9e6fFbad3e3Cdb1Fb0",
+      "reporter": "0x19E16ABD42DE0EB8E4a4eE73ed63151a471334b4"
     }
   },
   "txs": {
@@ -41,7 +51,13 @@
     "register verifier.canary.eth": "0xc5791e0f1eb50b9affc00a4c70d5def787363caab3383546e934e461a0ee41a2",
     "addr verifier.canary.eth": "0x4e27fe3123d4b3591b4c5f3f4edebf2616314e413917ec85e848533f8d7b891f",
     "text canary.eth url": "0xdc0b664f482dbd4a4475c187ac331c5b3576a889be1d1b26e767e8c7cd0f8809",
-    "text canary.eth description": "0x1aa62db8973dcf86d142753baac7c3957fafbac675c3d567d8da8b90a62e6f03"
+    "text canary.eth description": "0x1aa62db8973dcf86d142753baac7c3957fafbac675c3d567d8da8b90a62e6f03",
+    "fund reporter": "0x1f07e2e3646cc039eb135c157430c431d6761ebe55cd60b0bc03ff6565823d49",
+    "deploy UserRegistry for agents.canary.eth": "0xbff897ef4635ef0ffdeb8fb07e5202cc341e9dce702fa6381b83b7847417556e",
+    "deploy PermissionedResolver for trader-01.agents.canary.eth": "0xdb44a7d470436c9daa8828ba198a168a2c2e0f02f4578d16d5894951a5c8aa5f",
+    "register agents.canary.eth": "0xfab250c9851a4d54db04de62d429deb42992123cadd7c79a6cda42ac0fcba438",
+    "setParent agents registry": "0x20658ca83b0cd0ab3878787becaaa4970d7636fa1d28ac3d9942302ab40e8c72",
+    "register trader-01.agents.canary.eth": "0xdd224aca3d8fc0714c5b754bd2af6777c0066baa0a4104aa7db2db960d0b5e7d"
   },
   "records": {
     "leakydash.eth": {
@@ -64,6 +80,14 @@
         "0xb9ed8b0b5e1deefb3b815917adcc0f535b688cbe473ff6a7862615185757e114"
       ],
       "publish-verdict from a scan of the deployed LeakyDash (current record)": "0xd8f641db3dd01b6a205883925f78bbefd4d47199a0574b8f1402918da91a1aa1"
+    },
+    "trader-01.agents.canary.eth": {
+      "set-manifest (privacy.manifest: the agent's policy, reporter = the report key)": "0xb383b6eb5da9ac3d717357562b61f5da2a96f0a6189c2f0cc002fc0f41f23fb8",
+      "grant-reporter privacy.report \u2192 the report key": "0xcc53c733fdeb87887348f415720ae190bf4599f942a66a94e6a0cb6b061881a1",
+      "publish privacy.report (gateway, policy read from this name, signed and sent by the report key)": "0xe0beaa42bc8d8584dad5aecac00a2a93f8fcfe68185104864375b5708ee9d309",
+      "revoke-reporter (readers see reporterCanWrite: false; the gateway's publish gets 409)": "0x3a538b796440bcf41746f02c653014955f4bb5a1a51994290e9b57e71113f932",
+      "grant-reporter again": "0xf7ac82ce7c0efe48ffee8ece5253cb0bf029d3b1db1c07d31528cae100ea497e"
     }
-  }
+  },
+  "reporter": "0x19E16ABD42DE0EB8E4a4eE73ed63151a471334b4"
 }

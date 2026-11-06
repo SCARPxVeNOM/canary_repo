@@ -21,7 +21,7 @@ On Windows (cmd), set variables first: `set WALLET=0x…` then `npm run agent`.
 | `canary.config.json` | gateway config: tor-js (same as the extension's `config/live.json`), Sepolia + mainnet read endpoints, local manifest |
 | `manifest.json` | the policy: LLM hosts `direct` (keyed; addresses pseudonymized), `api.coingecko.com` `anon`, everything else blocked; Sepolia USDC and WETH allow-listed for the LLM |
 | `canary.ens.config.json` | the same gateway, but the policy comes from the agent's ENSv2 name (below) |
-| `canary.local.config.json` | the same gateway through three tor-js gateways run on this machine |
+| `canary.local.config.json`, `canary.ens.local.config.json` | the same two, through three tor-js gateways run on this machine |
 
 Notes:
 - **Chrome:** the configs use your installed Chrome (`"channel": "chrome"`). Or set `"executablePath"`, or run `npx playwright install chromium` and remove `channel`.
@@ -36,17 +36,17 @@ Notes:
 ```sh
 # operator, once (owner key controls the name's resolver); these also go through the gateway
 export CANARY_OWNER_KEY=0x…
-npx canary-ens set-manifest trader-01.agents.canary.eth manifest.json      # add "reporter": "<report key address>" first
+npx canary-ens set-manifest trader-01.agents.canary.eth manifest.json      # "reporter" is the report key's address
 npx canary-ens grant-reporter trader-01.agents.canary.eth <report key address>
 
-# gateway with reporting
+# gateway with reporting (gateway:ens:local through your own gateways)
 CANARY_REPORT_KEY=0x… npm run gateway:ens
 
 # anyone
 npx canary-ens read trader-01.agents.canary.eth
 ```
 
-Replace `trader-01.agents.canary.eth` with a name you control on Sepolia (with a Permissioned Resolver), in both the config and the commands. See `packages/ens/README.md` for the ENSv2 compatibility note.
+`trader-01.agents.canary.eth` is live on Sepolia with this manifest and its report key granted (`packages/ens/README.md`, *Live on Sepolia*), so `canary-ens read` works for anyone, and the gateway runs against it as is. To write its records you need its owner key; for your own agent, replace the name with one you control (with a Permissioned Resolver) in the config, the manifest's `agent` and the commands.
 
 ## Demo beats (agent-sdk.md §7)
 

@@ -8,16 +8,22 @@
      canary.eth             Canary's namespace: a UserRegistry is its subregistry
      verifier.canary.eth    the verifier: a subname owned by the verifier key,
                             addr = that key (readers check verdict signers against it)
+     agents.canary.eth      the agents' namespace (agent-sdk.md §4): its own
+                            UserRegistry, one subname per agent
+     trader-01.agents.canary.eth
+                            the example agent, with its own Permissioned Resolver
+                            (so its report key's grant covers this agent only)
 
    The records themselves are written with canary-ens afterwards (set-dapp,
-   grant-verifier, sign-verdict, publish-verdict; see packages/ens/README.md).
+   grant-verifier, sign-verdict, publish-verdict for the dapp; set-manifest,
+   grant-reporter for the agent; see packages/ens/README.md).
 
    usage: node scripts/sepolia-setup.mjs --owner-key-file <file> --verifier-key-file <file>
-            [--rpc <url>] [--out sepolia.json]
+            --report-key-file <file> [--rpc <url>] [--out sepolia.json]
 
    A key file holds a hex key, alone or as `name=key` (first line used). Keys
-   are never printed. A missing verifier key file is created (mode 600) with a
-   fresh key, and the owner sends it a little Sepolia ETH for gas.
+   are never printed. A missing verifier or report key file is created (mode
+   600) with a fresh key, and the owner sends it a little Sepolia ETH for gas.
    Registration is paid in Sepolia MockUSDC, which anyone can mint.
 
    Contract addresses: docs.ens.domains/ensv2 (Sepolia, Nov 2026); ABIs checked
@@ -46,6 +52,8 @@ const A = {
 const DAPP = "leakydash";
 const NAMESPACE = "canary";
 const VERIFIER = "verifier";
+const AGENTS = "agents";
+const AGENT = "trader-01";
 const DURATION = 365n * 86400n;
 // every role, admin roles included, for the owner of a resolver or registry it deploys
 const ALL_ROLES = ((1n << 256n) - 1n) / 15n; // 0x1111…1
@@ -94,12 +102,12 @@ const addrAbi = parseAbi(["function addr(bytes32,uint256) view returns (bytes)",
 
 const { values: opt } = parseArgs({
   options: {
-    "owner-key-file": { type: "string" }, "verifier-key-file": { type: "string" },
+    "owner-key-file": { type: "string" }, "verifier-key-file": { type: "string" }, "report-key-file": { type: "string" },
     rpc: { type: "string", default: "https://ethereum-sepolia-rpc.publicnode.com" }, out: { type: "string", default: "sepolia.json" },
   },
 });
-if (!opt["owner-key-file"] || !opt["verifier-key-file"]) {
-  console.error("usage: node scripts/sepolia-setup.mjs --owner-key-file <file> --verifier-key-file <file> [--rpc url] [--out sepolia.json]");
+if (!opt["owner-key-file"] || !opt["verifier-key-file"] || !opt["report-key-file"]) {
+  console.error("usage: node scripts/sepolia-setup.mjs --owner-key-file <file> --verifier-key-file <file> --report-key-file <file> [--rpc url] [--out sepolia.json]");
   process.exit(2);
 }
 
@@ -109,16 +117,17 @@ const readKey = (file) => {
   if (!/^(0x)?[0-9a-fA-F]{64}$/.test(hex)) throw new Error(`${file}: no private key found`);
   return hex.startsWith("0x") ? hex : `0x${hex}`;
 };
-if (!existsSync(opt["verifier-key-file"])) writeFileSync(opt["verifier-key-file"], generatePrivateKey() + "\n", { mode: 0o600 });
+for (const f of [opt["verifier-key-file"], opt["report-key-file"]]) if (!existsSync(f)) writeFileSync(f, generatePrivateKey() + "\n", { mode: 0o600 });
 
 const owner = privateKeyToAccount(readKey(opt["owner-key-file"]));
 const verifier = privateKeyToAccount(readKey(opt["verifier-key-file"]));
+const reporter = privateKeyToAccount(readKey(opt["report-key-file"]));
 const transport = http(opt.rpc);
 const client = createPublicClient({ chain: sepolia, transport });
 const wallet = createWalletClient({ chain: sepolia, transport, account: owner });
 
 const out = existsSync(opt.out) ? JSON.parse(readFileSync(opt.out, "utf8")) : {};
-Object.assign(out, { chainId: sepolia.id, contracts: A, owner: owner.address, verifier: verifier.address, names: out.names ?? {}, txs: out.txs ?? {} });
+Object.assign(out, { chainId: sepolia.id, contracts: A, owner: owner.address, verifier: verifier.address, reporter: reporter.address, names: out.names ?? {}, txs: out.txs ?? {} });
 const save = () => writeFileSync(opt.out, JSON.stringify(out, null, 2) + "\n");
 const same = (a, b) => a?.toLowerCase() === b?.toLowerCase();
 const dns = (name) => toHex(packetToBytes(name));
@@ -148,21 +157,26 @@ const grants = [{ account: owner.address, roleBitmap: ALL_ROLES }];
 const resolverInit = encodeFunctionData({ abi: initAbi, functionName: "initialize", args: [grants, []] });
 const registryInit = encodeFunctionData({ abi: [initAbi[1]], functionName: "initialize", args: [grants] });
 
-console.log(`owner ${owner.address} · verifier ${verifier.address}`);
+console.log(`owner ${owner.address} · verifier ${verifier.address} · reporter ${reporter.address}`);
 
-// 0. gas for the verifier (it publishes verdicts itself)
-if ((await client.getBalance({ address: verifier.address })) < parseEther("0.001")) {
-  const hash = await wallet.sendTransaction({ to: verifier.address, value: parseEther("0.003") });
+// 0. gas for the verifier and the agent's report key (each writes its own record)
+for (const [who, address] of [["verifier", verifier.address], ["reporter", reporter.address]]) {
+  if ((await client.getBalance({ address })) >= parseEther("0.001")) continue;
+  const hash = await wallet.sendTransaction({ to: address, value: parseEther("0.003") });
   await client.waitForTransactionReceipt({ hash });
-  out.txs["fund verifier"] = hash;
+  out.txs[`fund ${who}`] = hash;
   save();
-  console.log(`  fund verifier: ${hash}`);
+  console.log(`  fund ${who}: ${hash}`);
 }
 
 // 1. contracts the names point at: one resolver each, and canary.eth's subregistry
 const dappResolver = await deployProxy(`${DAPP}.eth`, A.resolverImpl, "PermissionedResolver", resolverInit);
 const canaryResolver = await deployProxy(`${NAMESPACE}.eth`, A.resolverImpl, "PermissionedResolver", resolverInit);
 const canaryRegistry = await deployProxy(`${NAMESPACE}.eth`, A.userRegistryImpl, "UserRegistry", registryInit);
+const agentsName = `${AGENTS}.${NAMESPACE}.eth`;
+const agentName = `${AGENT}.${agentsName}`;
+const agentsRegistry = await deployProxy(agentsName, A.userRegistryImpl, "UserRegistry", registryInit);
+const agentResolver = await deployProxy(agentName, A.resolverImpl, "PermissionedResolver", resolverInit);
 out.names[`${DAPP}.eth`] = { resolver: dappResolver };
 out.names[`${NAMESPACE}.eth`] = { resolver: canaryResolver, subregistry: canaryRegistry };
 save();
@@ -212,6 +226,18 @@ if (!same(await client.readContract({ address: canaryRegistry, abi: registry, fu
   await send(`register ${VERIFIER}.${NAMESPACE}.eth`, canaryRegistry, registry, "register", [VERIFIER, verifier.address, zeroAddress, canaryResolver, NAME_OWNER_ROLES, expiry]);
 }
 
+// 3b. agents.canary.eth: a subname whose own subregistry holds one subname per agent
+if (!same(await client.readContract({ address: canaryRegistry, abi: registry, functionName: "findOwner", args: [AGENTS] }), owner.address)) {
+  const expiry = await client.readContract({ address: A.ethRegistry, abi: registry, functionName: "findExpiry", args: [NAMESPACE] });
+  await send(`register ${agentsName}`, canaryRegistry, registry, "register", [AGENTS, owner.address, agentsRegistry, canaryResolver, NAME_OWNER_ROLES, expiry]);
+}
+const [agentsParent, agentsLabel] = await client.readContract({ address: agentsRegistry, abi: registry, functionName: "getParent" });
+if (!same(agentsParent, canaryRegistry) || agentsLabel !== AGENTS) await send("setParent agents registry", agentsRegistry, registry, "setParent", [canaryRegistry, AGENTS]);
+if (!same(await client.readContract({ address: agentsRegistry, abi: registry, functionName: "findOwner", args: [AGENT] }), owner.address)) {
+  const expiry = await client.readContract({ address: A.ethRegistry, abi: registry, functionName: "findExpiry", args: [NAMESPACE] });
+  await send(`register ${agentName}`, agentsRegistry, registry, "register", [AGENT, owner.address, zeroAddress, agentResolver, NAME_OWNER_ROLES, expiry]);
+}
+
 // 4. records the setup owns: the verifier's addr; canary.eth points at the code
 const verifierName = `${VERIFIER}.${NAMESPACE}.eth`;
 /** A record through the Universal Resolver, decoded; null if the name doesn't resolve yet. */
@@ -229,5 +255,7 @@ for (const [key, value] of [["url", "https://github.com/SCARPxVeNOM/canary_repo"
   if ((await record(`${NAMESPACE}.eth`, "text", [key])) !== value) await send(`text ${NAMESPACE}.eth ${key}`, canaryResolver, resolver, "setText", [dns(`${NAMESPACE}.eth`), key, value]);
 
 out.names[verifierName] = { owner: verifier.address, resolver: canaryResolver, addr: verifier.address, labelhash: labelhash(VERIFIER) };
+out.names[agentsName] = { owner: owner.address, resolver: canaryResolver, subregistry: agentsRegistry };
+out.names[agentName] = { owner: owner.address, resolver: agentResolver, reporter: reporter.address };
 save();
 console.log(JSON.stringify(out.names, null, 2));

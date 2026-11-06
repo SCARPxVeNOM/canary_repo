@@ -96,15 +96,20 @@ Every record above is on ENSv2 Sepolia, written by these commands. Addresses and
 | `leakydash.eth` | the demo dapp (`leakydash/`, live at https://canary-leakydash.vercel.app): `url`, `privacy.manifest`, and `privacy.verdict.canary` | ETHRegistrar (commit/register, paid in MockUSDC); its own Permissioned Resolver from the Verifiable Factory; a one-key EAC grant (`grantSetterRoles`) to the verifier |
 | `canary.eth` | Canary's namespace: `url`, `description` | a UserRegistry as its subregistry (`setParent` → the .eth registry) |
 | `verifier.canary.eth` | the verifier: a subname owned by the verifier key, `addr` = that key | a subname in that registry, resolved through the Universal Resolver |
+| `agents.canary.eth` | the agents' namespace: one subname per agent | a subname with its own UserRegistry as subregistry (`setParent` → canary.eth's registry) |
+| `trader-01.agents.canary.eth` | the example agent (`examples/viem-agent`): `privacy.manifest` is its policy, `privacy.report` its signed egress report | its own Permissioned Resolver, so the report key's one-key grant covers this agent only; a one-key EAC grant to the report key |
 
 ```sh
 # names, resolvers and the subregistry (rerunnable: it skips what's on chain)
-node scripts/sepolia-setup.mjs --owner-key-file ../../keys.txt --verifier-key-file ../../verifier.key
-# the records, as above, with --rpc https://ethereum-sepolia-rpc.publicnode.com
+node scripts/sepolia-setup.mjs --owner-key-file ../../keys.txt --verifier-key-file ../../verifier.key --report-key-file ../../report.key
+# the records, as above, with --rpc https://ethereum-sepolia-rpc.publicnode.com (or a gateway's RPC_URL)
 canary-ens read-dapp leakydash.eth --rpc https://ethereum-sepolia-rpc.publicnode.com
+canary-ens read trader-01.agents.canary.eth --rpc https://ethereum-sepolia-rpc.publicnode.com
 ```
 
 The verdict was made from a real baseline scan of the deployed LeakyDash ([`test-artifacts/sepolia/`](../../test-artifacts/sepolia/): the report, and the signed verdict as published). It says `undeclared`: `canary-leakydash-tracker.vercel.app` received the address in three encodings and isn't in the manifest. (The first verdict, from a scan of the local LeakyDash, is `leakydash.localhost.verdict.json`.) Checked live: the signer is `verifier.canary.eth`'s `addr`; the verifier holds `ROLE_SET_TEXT` on that key only; after `revoke-verifier`, both `read-dapp` and the extension's reader (`extension/test/ens-live.mjs`) show the verifier can no longer write, and after `grant-verifier` again, that it can. The name's `url` and the verdict's origin are the deployed site, so a LeakyDash run locally (`npm start`) reads as unbound; point the name back with `set-dapp leakydash.eth leakydash/privacy.manifest.json` to demo it offline.
+
+The agent's names were set up and written through a Canary gateway (`examples/viem-agent`, `npm run gateway:local`), so every read and transaction went over anon-rpc. Then a gateway started with `npm run gateway:ens:local` loaded its policy from `trader-01.agents.canary.eth` (policy hash `0x280b5592…`), the example agent ran through it, and `POST /canary/publish` signed the coarse report with the report key and wrote it to `privacy.report`. Checked live: `canary-ens read` shows `reportSigned`, `signerIsReporter`, `policyMatches` and `reporterCanWrite` all true; after `revoke-reporter`, `reporterCanWrite` is false and the gateway's publish gets 409; after `grant-reporter` again, it's true.
 
 ## Test
 

@@ -9,6 +9,7 @@
   "undeclared": "block",
   "rpc": { "write": "anon" },
   "wallets": "undisclosed",
+  "reporter": "0x19E16ABD42DE0EB8E4a4eE73ed63151a471334b4",
   "llm": {
     "allow": [
       "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238",
