@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Canary">
+  <defs>
+    <linearGradient id="cb" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#9b6bff"/>
+      <stop offset="1" stop-color="#5a28d8"/>
+    </linearGradient>
+    <linearGradient id="cw" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#d9ccff"/>
+      <stop offset="1" stop-color="#a78bfa"/>
+    </linearGradient>
+  </defs>
+  <path d="M4 33c3-1 6-3 8-6 4-6 11-11 20-11 5 0 9 2 12 5l8 1-6 5c0 11-9 21-22 21-6 0-11-2-15-6l-5 3z" fill="url(#cb)"/>
+  <path d="M19 33c8-3 17 0 24 8-9 6-21 4-24-8z" fill="url(#cw)"/>
+  <path d="M46 21l10 4-10 3z" fill="#7c3aed"/>
+  <circle cx="43" cy="24" r="2.2" fill="#fff"/>
+</svg>

@@ -1,0 +1,214 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Canary: see what a dapp leaks</title>
+  <meta name="description" content="Canary shows what a dapp leaks before you connect, and stops third parties from seeing your address once you do." />
+  <link rel="icon" href="assets/canary.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <!-- Icon sprite (24x24, stroke icons). Zero-size so it can never cause overflow. -->
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+    <symbol id="i-laptop" viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="11" rx="1.5"/><path d="M2 19.5h20"/></symbol>
+    <symbol id="i-code" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M10 10l-2 2 2 2M14 10l2 2-2 2"/></symbol>
+    <symbol id="i-server" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="7" rx="1.5"/><rect x="3" y="13" width="18" height="7" rx="1.5"/><path d="M7 7.5h.01M7 16.5h.01"/></symbol>
+    <symbol id="i-bars" viewBox="0 0 24 24"><path d="M5 20v-8M12 20V5M19 20v-11"/></symbol>
+    <symbol id="i-shield-check" viewBox="0 0 24 24"><path d="M12 3l8 3v6c0 4.5-3.2 8-8 9-4.8-1-8-4.5-8-9V6z"/><path d="M8.5 12l2.5 2.5 4.5-5"/></symbol>
+    <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 3l8 3v6c0 4.5-3.2 8-8 9-4.8-1-8-4.5-8-9V6z"/></symbol>
+    <symbol id="i-ban" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M6 6l12 12"/></symbol>
+    <symbol id="i-bolt" viewBox="0 0 24 24"><path d="M13 3L5 13h6l-1 8 8-10h-6z"/></symbol>
+    <symbol id="i-doc" viewBox="0 0 24 24"><path d="M7 3h7l4 4v14H7z"/><path d="M14 3v4h4M10 12h5M10 16h5"/></symbol>
+    <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l5 5"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></symbol>
+    <symbol id="i-warn" viewBox="0 0 24 24"><path d="M12 3.5l9.5 16.5h-19z"/><path d="M12 10v4.5M12 17.5h.01"/></symbol>
+    <symbol id="i-user" viewBox="0 0 24 24"><circle cx="12" cy="8.5" r="3.5"/><path d="M5 20c1-4 3.8-6 7-6s6 2 7 6"/></symbol>
+    <symbol id="i-ext" viewBox="0 0 24 24"><path d="M14 4h6v6M20 4l-9 9M18 14v5H5V6h5"/></symbol>
+    <symbol id="i-eth" viewBox="0 0 24 24"><path d="M12 2.5l6 9.5-6 3.5-6-3.5zM12 17.5l6-3.5-6 7.5-6-7.5z"/></symbol>
+    <symbol id="i-back" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></symbol>
+    <symbol id="i-fwd" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></symbol>
+    <symbol id="i-reload" viewBox="0 0 24 24"><path d="M19 12a7 7 0 1 1-2.1-5M19 4v4h-4"/></symbol>
+  </svg>
+
+  <a class="skip" href="#main">Skip to content</a>
+
+  <header class="hero">
+    <div class="brand">
+      <img src="assets/canary.svg" alt="" class="brand-mark" width="64" height="64" />
+      <span class="brand-name">Canary</span>
+    </div>
+    <h1 class="headline">
+      See what a dapp leaks before you connect,
+      <span class="accent">and stop it once you do.</span>
+    </h1>
+    <p class="badge">
+      <svg class="i" aria-hidden="true"><use href="#i-eth"/></svg>
+      <span>Built for ETHGlobal Mumbai 2026</span>
+    </p>
+  </header>
+
+  <main id="main" class="stage">
+    <!-- Browser mock with the interactive Canary panel -->
+    <section class="col-center" aria-labelledby="demo-h">
+      <h2 id="demo-h" class="sr-only">Canary panel preview</h2>
+      <div class="browser">
+        <div class="browser-chrome">
+          <span class="dots" aria-hidden="true"><i></i><i></i><i></i></span>
+          <span class="tab"><span>Canary</span><span aria-hidden="true" class="tab-x">×</span></span>
+        </div>
+        <div class="browser-bar">
+          <span class="nav-btns" aria-hidden="true">
+            <svg class="i"><use href="#i-back"/></svg>
+            <svg class="i"><use href="#i-fwd"/></svg>
+            <svg class="i"><use href="#i-reload"/></svg>
+          </span>
+          <span class="url">leakydash.example</span>
+        </div>
+
+        <div class="browser-body">
+          <div class="page">
+            <div class="page-nav">
+              <span class="dapp-logo" aria-hidden="true"></span>
+              <strong>LeakyDash</strong>
+              <span class="page-links"><span>Swap</span><span>Pool</span><span>Explorer</span></span>
+            </div>
+            <div class="page-hero">
+              <h3>Swap tokens instantly.</h3>
+              <p>Trade, provide liquidity, and explore tokens on Ethereum.</p>
+              <button type="button" class="btn-primary" tabindex="-1">Connect Wallet</button>
+            </div>
+          </div>
+
+          <aside class="panel" id="panel" aria-label="Canary extension panel (sample)">
+            <div class="panel-head">
+              <span class="panel-brand">
+                <img src="assets/canary.svg" alt="" width="24" height="24" />
+                <span>Canary</span>
+              </span>
+              <span class="switch-wrap">
+                <span id="switch-label" class="switch-text">Protection On</span>
+                <button type="button" id="switch" class="switch" role="switch" aria-checked="true" aria-labelledby="switch-label"><span class="knob"></span></button>
+              </span>
+            </div>
+
+            <div class="panel-site">
+              <span class="site-dot" aria-hidden="true"></span>
+              <span class="site-host">leakydash.example</span>
+              <span class="chip chip--ok"><svg class="i i-sm" aria-hidden="true"><use href="#i-check"/></svg>Signed</span>
+              <svg class="i i-sm site-ext" aria-hidden="true"><use href="#i-ext"/></svg>
+            </div>
+
+            <div class="tabs" role="tablist" aria-label="Canary views">
+              <button type="button" role="tab" id="tab-overview" aria-controls="view" aria-selected="true">Overview</button>
+              <button type="button" role="tab" id="tab-activity" aria-controls="view" aria-selected="false" tabindex="-1">Activity</button>
+              <button type="button" role="tab" id="tab-manifest" aria-controls="view" aria-selected="false" tabindex="-1">Manifest (ENS)</button>
+            </div>
+
+            <div id="view" class="view" role="tabpanel" aria-labelledby="tab-overview" tabindex="0">
+              <noscript><p class="muted">Turn on JavaScript to try the panel.</p></noscript>
+            </div>
+          </aside>
+        </div>
+      </div>
+      <p class="caption">Illustrative sample data. The panel is interactive: try the switch and the tabs.</p>
+    </section>
+
+    <!-- Without / With -->
+    <aside class="col-left" aria-label="Before and after">
+      <article class="card card--bad" aria-labelledby="without-h">
+        <h2 id="without-h" class="card-title"><svg class="i" aria-hidden="true"><use href="#i-warn"/></svg>Without Canary</h2>
+        <div class="flow">
+          <div class="node"><svg class="i i-lg" aria-hidden="true"><use href="#i-laptop"/></svg><span>You</span></div>
+          <span class="arrow" aria-hidden="true"></span>
+          <div class="node"><svg class="i i-lg" aria-hidden="true"><use href="#i-code"/></svg><span>Dapp</span></div>
+          <span class="branch" aria-hidden="true"></span>
+          <ul class="targets">
+            <li><svg class="i" aria-hidden="true"><use href="#i-server"/></svg><span><strong>RPC provider</strong><small>sees your address + IP</small></span></li>
+            <li><svg class="i" aria-hidden="true"><use href="#i-bars"/></svg><span><strong>Analytics</strong><small>tracks you</small></span></li>
+          </ul>
+        </div>
+      </article>
+
+      <article class="card card--good" aria-labelledby="with-h">
+        <h2 id="with-h" class="card-title"><svg class="i" aria-hidden="true"><use href="#i-shield-check"/></svg>With Canary</h2>
+        <div class="flow">
+          <div class="node"><svg class="i i-lg" aria-hidden="true"><use href="#i-laptop"/></svg><span>You</span></div>
+          <span class="arrow" aria-hidden="true"></span>
+          <div class="node node--brand"><img src="assets/canary.svg" alt="" width="36" height="36" /><span>Canary</span></div>
+          <span class="branch" aria-hidden="true"></span>
+          <ul class="targets">
+            <li><svg class="i" aria-hidden="true"><use href="#i-user"/></svg><span><strong>anon-rpc</strong><small>anonymous reads</small></span></li>
+            <li><svg class="i" aria-hidden="true"><use href="#i-ban"/></svg><span><strong>Third-party leaks</strong><small>blocked</small></span></li>
+          </ul>
+        </div>
+      </article>
+    </aside>
+
+    <!-- The Four Moves -->
+    <section class="col-right" aria-labelledby="moves-h">
+      <h2 id="moves-h" class="moves-title">The Four Moves</h2>
+      <ol class="moves">
+        <li class="move">
+          <span class="tile"><svg class="i" aria-hidden="true"><use href="#i-doc"/></svg></span>
+          <div><h3>Declare</h3><p>Dapp publishes a privacy manifest in its ENSv2 name.</p></div>
+        </li>
+        <li class="move">
+          <span class="tile"><svg class="i" aria-hidden="true"><use href="#i-search"/></svg></span>
+          <div><h3>Observe</h3><p>Scanner loads the dapp with a canary address and records leaks.</p></div>
+        </li>
+        <li class="move">
+          <span class="tile"><svg class="i" aria-hidden="true"><use href="#i-shield"/></svg></span>
+          <div><h3>Enforce</h3><p>Route reads through <strong>anon-rpc</strong> and block third-party requests.</p></div>
+        </li>
+        <li class="move">
+          <span class="tile"><svg class="i" aria-hidden="true"><use href="#i-bars"/></svg></span>
+          <div><h3>Measure</h3><p>Show coverage: protected, blocked, left exposed, not inspected.</p></div>
+        </li>
+      </ol>
+    </section>
+  </main>
+
+  <!-- How a read travels + the manifest -->
+  <section class="pipeline" aria-labelledby="pipe-h">
+    <h2 id="pipe-h" class="sr-only">How a read travels</h2>
+    <div class="route">
+      <div class="route-node">
+        <svg class="i i-xl" aria-hidden="true"><use href="#i-laptop"/></svg>
+        <span><strong>Your browser</strong><small>(with Canary)</small></span>
+      </div>
+      <span class="route-arrow" aria-hidden="true"></span>
+      <div class="route-node route-node--brand">
+        <img src="assets/canary.svg" alt="" width="40" height="40" />
+        <span><strong>anon-rpc</strong><small>(Ethereum Foundation) + Tor (WASM)</small></span>
+      </div>
+      <span class="route-arrow" aria-hidden="true"></span>
+      <div class="route-node">
+        <svg class="i i-xl" aria-hidden="true"><use href="#i-server"/></svg>
+        <span><strong>RPC read</strong><small>(e.g. eth_call, balanceOf)</small></span>
+      </div>
+    </div>
+
+    <div class="ens">
+      <span class="ens-mark" aria-hidden="true"><svg class="i"><use href="#i-eth"/></svg></span>
+      <span class="ens-name">ENSv2</span>
+    </div>
+
+    <article class="manifest" aria-labelledby="manifest-h">
+      <h3 id="manifest-h"><svg class="i" aria-hidden="true"><use href="#i-doc"/></svg>Privacy manifest</h3>
+      <ul>
+        <li>Who gets your address</li>
+        <li>Why (purpose)</li>
+        <li>Signed &amp; verifiable</li>
+      </ul>
+    </article>
+  </section>
+
+  <footer class="foot">
+    <p><strong>The dapp itself can always see your address and your IP.</strong> Canary keeps them from third parties: RPC providers, analytics, trackers.</p>
+    <p class="muted">Not inspected: service workers, WebRTC, binary bodies, hashed or encrypted payloads. “Nothing observed” is not “nothing sent”.</p>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>
