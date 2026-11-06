@@ -552,3 +552,81 @@ Scanner fixes from these runs:
 - **The agent's names on ENSv2 Sepolia** (`packages/ens/scripts/sepolia-setup.mjs`, run with `--rpc` = the gateway): `agents.canary.eth` (its own UserRegistry) and `trader-01.agents.canary.eth` (its own Permissioned Resolver), plus a funded report key. All 6 transactions, and the 5 record writes after them, went through the gateway, so `eth_sendRawTransaction` over anon-rpc now works live (write mode `anon`). A second run of the setup sent nothing.
 - **Policy from ENS** (`npm run gateway:ens:local`): the gateway started fail-closed, then loaded the manifest from the name (policy `0x280b5592…`, reporter declared). The agent's 3 reads were protected (1.1–1.6 s), and `POST /canary/publish` wrote the signed report. `canary-ens read`: `reportSigned`, `signerIsReporter`, `policyMatches`, `reporterCanWrite` true. After `revoke-reporter`: `reporterCanWrite` false, and the gateway's publish got HTTP 409; after `grant-reporter`, true again.
 - Not run live yet: an LLM call, `examples/python-agent`.
+
+---
+
+# Round 3: full test pass against the prize criteria (6 Nov 2026)
+
+Fresh clone of `main` at `83d52aa`, plus live runs in a real Chrome with the Canary extension loaded.
+
+## 15. Offline suites (fresh clone, Chrome for Testing): all pass
+
+| Suite | Result |
+|---|---|
+| `@canary/core` | 11/11 |
+| `@canary/ens` (mock ENSv2) | 8/8 |
+| `@canary/gateway` (passthrough worker) | 39/39 |
+| `@canary/agent` | 13/13 |
+| `extension` unit + e2e | 20/20 + 32/32 checks |
+| `leakydash` | 4/4 |
+
+The root suite is 71 tests; the README says 61.
+
+## 16. Live: the extension on the deployed LeakyDash
+
+`https://canary-leakydash.vercel.app`, leaky mode, watching vitalik.eth's address on Sepolia.
+
+- **The data is correct.** Every value matches Blockscout's independent REST API, read at the same moment:
+
+  | Value | LeakyDash via Canary | Blockscout |
+  |---|---|---|
+  | ETH balance | 61.7233 | 61.7233 |
+  | USDC | 1,831.3359 | 1,831.3359 |
+  | WETH | 0.1371 | 0.1371 |
+  | LINK | 67.111 | 67.1110 |
+  | latest block | 12,074,871 | 12,074,871 |
+
+- **It went through anon-rpc.** On refresh, the page made two JSON-RPC calls (`eth_call` multicall, `eth_gasPrice`) to its own provider. Both were answered in 1.46–1.66 s, which is Tor latency. The tab's network log recorded **no** request to the provider host. As a control, a plain `fetch` to Blockscout from the same tab did show up in that log.
+- **What the other parties received.** The log viewer, per visitor, showed **0** provider entries. The first-party `/api/points` call and the tracker pings appeared there. (The watched address isn't one of *your* addresses, so Canary correctly let those through. Blocking your own address is covered by the e2e and the scanner.)
+- **Flaky:** the deployed tracker answered 503 to all three pings once, and only one of the three was logged. A minute later it answered 204. The logs live in each serverless instance's memory, so the viewer can miss entries on Vercel. Warm the deployment up before demoing.
+
+## 17. Live: the extension on an unmodified real dapp (app.ens.domains)
+
+- Navigating to `vitalik.eth` produced **7 JSON-RPC batches** to the app's own keyed dRPC endpoint. All 7 were answered through Canary in 1.2–6.4 s.
+- The network log shows only the two non-RPC calls to the indexer (`api.bigname.sh`), and **zero** requests to dRPC.
+- The page rendered correctly: registered Feb 6 2020, expires Jan 31 2048.
+
+## 18. Findings, and what was done about them
+
+| # | Finding | Fix |
+|---|---|---|
+| 1 | The default configs (`extension/config/live.json`, `examples/viem-agent/canary.config.json`, `canary.ens.config.json`) listed only EF's demo gateway, which was down: in §19 it was still "warming" after 123 s. | The defaults now list our gateways. New `npm run gateways -- <address> … [--with-ef]` (`scripts/set-gateways.mjs`) points all three configs at anyone's gateway. The README Quick start starts with running one in Docker. |
+| 2 | The gateway sent each anon read once, so a stuck Tor circuit or exit stalled an agent's read until the timeout. The extension already hedged reads. | The gateway now hedges reads like the extension (`hedgeMs`, default 3000): the read is re-sent under a fresh isolation key, the first answer wins, and the working circuit is kept for that wallet. Never for broadcasts. New `test/hedge.test.mjs` (2 tests). Gateway suite 41/41, root suite 73/73. |
+| 3 | The LeakyDash log viewer on Vercel lost entries: logs are per serverless instance. Probe: 20 tracker pings, then 10 reads of the log; the first read saw 19 entries and the other 9 saw **0**. | Entry ids are now unique per instance (`<instance>-<seq>`), and the viewer merges what every poll returns ("merged from N server instances"). "Clear" hides everything before it, on every instance. Simulated with two instances behind a round-robin proxy: one poll sees 5 of 10 entries, and the viewer shows 10/10 from its first poll. No database (chosen). |
+| 4 | The deployed tracker answered 503 to all three pings once, and 1 of 20 probe pings failed. A minute later it was fine. Most likely cold starts; Vercel's logs weren't readable from here. | Open the site once before demoing. |
+| 5 | The README said 61 tests. | It now says 73. |
+| 6 | No demo video yet. | Out of scope for this pass. |
+
+## 19. Agents (gateway + SDK) live over tor-js: 24/24 on our gateways
+
+`scripts/live-e2e.mjs` (double-click `run-live-e2e.command` or `run-live-e2e-own.command` next to the repo). Run on macOS (arm64), Node 24, Chrome. Ground truth is direct reads at a pinned block (latest − 12) of a public address (vitalik.eth's).
+
+| Gateways | Result |
+|---|---|
+| EF's demo gateway (the old default) | ✗ the worker was still "warming" after 123 s: no boot |
+| Our three gateways (before the hedge) | 22/22 (the ENS step wasn't in the script yet). Boot 7.6–8.0 s; reads 0.85–2.3 s |
+| Our three gateways (after the hedge, final) | **24/24.** Boot 4.4 s; reads 0.68–0.90 s |
+
+What the 24 checks cover:
+
+- **Any-language path:** JSON-RPC to the gateway's endpoint on Sepolia and mainnet. `eth_chainId`; `eth_getBalance`, `eth_call` (USDC `balanceOf`) and `eth_getBlockByNumber` at the pinned block: every value **identical** to the direct read. The latest block was within 1 block of direct.
+- **TypeScript SDK:** viem `getBalance` and `readContract` on both chains, and ethers `getBalance`: identical.
+- **Tor:** `check.torproject.org` through the SDK's policy-checked `fetch` answers `IsTor: true`, from an IP that isn't this machine's (direct: `IsTor: false`).
+- **LLM:** a local echo server playing the provider received `You manage wallet WALLET_1…`. The allow-listed USDC contract passed unchanged, and the reply came back with the real address restored.
+- **Policy:** `example.com` (undeclared) → 403 `blocked`. Report: `total 14, protected 14, direct 0, failedClosed 0`.
+- **Python agent** (`examples/python-agent`, standard library only): read block and balance through the gateway with no code changes.
+- **ENSv2 on Sepolia, read over anon-rpc:**
+  - `leakydash.eth` → own resolver `0xD9aB…99ba`, `url` = the deployed site, `privacy.manifest`, and the verifier's signed verdict: **`undeclared`**, host `canary-leakydash-tracker.vercel.app`, signer `0x0f17…51De`.
+  - `trader-01.agents.canary.eth` → resolver `0x9365…1Fb0`; `reportSigned`, `signerIsReporter`, `policyMatches` and `reporterCanWrite` all **true**.
+
+Raw results: `../live-check/results.json` (outside the repo: it holds this machine's IP via the direct Tor check).
