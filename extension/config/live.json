@@ -6,9 +6,9 @@
     "bootstrapRpc": "https://ethereum-rpc.publicnode.com",
     "workerConfig": {
       "gateways": [
-        "127.0.0.1:12298:uEiA7-gErW8ncO5ilJnuAcDIYIn-eaeWW46qB8FvCrfqeyA",
-        "127.0.0.1:12299:uEiBqhyrM1xJQYDQbjN4te03xCNEfsFknwcPtgjNtQgXKVA",
-        "127.0.0.1:12300:uEiDoBVlkflIij7JzMopAcK1czhz_m85dpqaNESJFz4nKEw"
+        "147.185.221.216:10955:uEiA7-gErW8ncO5ilJnuAcDIYIn-eaeWW46qB8FvCrfqeyA",
+        "147.185.221.216:27282:uEiBqhyrM1xJQYDQbjN4te03xCNEfsFknwcPtgjNtQgXKVA",
+        "147.185.221.215:10991:uEiDoBVlkflIij7JzMopAcK1czhz_m85dpqaNESJFz4nKEw"
       ]
     }
   },
