@@ -37,7 +37,7 @@ npm run gateway:local                                # terminal 1
 AGENT_KEY_FILE=../../agent.key npm run swap          # terminal 2: 0.0001 ETH → CNRY on Sepolia (AMOUNT=… to change it)
 ```
 
-The same swap as [Canary Swap](../../swap/)'s page, with the same code (`swap/src/v4.js`): a quote from the v4 Quoter over `eth_call` (the pool key and the amount, no address), then one Universal Router transaction (`V4_SWAP`). The agent fills and signs it locally and sends it as `eth_sendRawTransaction`; the manifest's `rpc.write: "anon"` sends that over anon-rpc too, so the RPC learns neither this machine's IP nor that the quote and the wallet belong together. The key file holds a Sepolia test key with a little ETH, and is never printed. A run: [`test-artifacts/swap/agent-swap.log`](../../test-artifacts/swap/agent-swap.log) (18 of 19 calls protected, the broadcast IP-only, none direct).
+The same swap as [Canary Swap](../../swap/)'s page, with the same code (`swap/src/v4.js`): a quote from the v4 Quoter over `eth_call` (the pool key and the amount, no address), then one Universal Router transaction (`V4_SWAP`). viem signs it with the local key and sends it as `eth_sendRawTransaction` (the gateway answers viem's `eth_fillTransaction` with "method not found", so viem fills it from the standard reads); the manifest's `rpc.write: "anon"` sends that over anon-rpc too, so the RPC learns neither this machine's IP nor that the quote and the wallet belong together. The key file holds a Sepolia test key with a little ETH, and is never printed. A run: [`test-artifacts/swap/agent-swap.log`](../../test-artifacts/swap/agent-swap.log) (16 of 17 calls protected, the broadcast IP-only, none direct).
 
 ## Policy from ENS (`npm run gateway:ens`)
 

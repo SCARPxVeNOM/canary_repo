@@ -1,0 +1,911 @@
+{
+  "url": "https://canary-swap.vercel.app/",
+  "at": "2026-11-06T11:46:39.270Z",
+  "rounds": 5,
+  "quotes": [
+    {
+      "chain": 11155111,
+      "amount": "0.00005",
+      "out": "4.64601",
+      "ms": 7900,
+      "requests": 3,
+      "addr": "Your address 0xE9bb…3d19 is in none of them."
+    },
+    {
+      "chain": 11155111,
+      "amount": "0.0002",
+      "out": "18.451006",
+      "ms": 2505,
+      "requests": 3,
+      "addr": "Your address 0xE9bb…3d19 is in none of them."
+    },
+    {
+      "chain": 11155111,
+      "amount": "0.0001",
+      "out": "9.2697415",
+      "ms": 2239,
+      "requests": 3,
+      "addr": "Your address 0xE9bb…3d19 is in none of them."
+    },
+    {
+      "chain": 11155111,
+      "amount": "9",
+      "out": "0.000096523236",
+      "ms": 3369,
+      "requests": 3,
+      "addr": "Your address 0xE9bb…3d19 is in none of them."
+    },
+    {
+      "chain": 11155111,
+      "amount": "0.00005",
+      "out": "4.6445855",
+      "ms": 2123,
+      "requests": 3,
+      "addr": "Your address 0xE9bb…3d19 is in none of them."
+    },
+    {
+      "chain": 11155111,
+      "amount": "0.0002",
+      "out": "18.445369",
+      "ms": 2025,
+      "requests": 3,
+      "addr": "Your address 0xE9bb…3d19 is in none of them."
+    },
+    {
+      "chain": 11155111,
+      "amount": "0.0001",
+      "out": "9.2669026",
+      "ms": 3155,
+      "requests": 3,
+      "addr": "Your address 0xE9bb…3d19 is in none of them."
+    },
+    {
+      "chain": 11155111,
+      "amount": "9",
+      "out": "0.000095631175",
+      "ms": 2220,
+      "requests": 5,
+      "addr": "Your address 0xE9bb…3d19 is in none of them."
+    },
+    {
+      "chain": 11155111,
+      "amount": "0.00005",
+      "out": "4.6431748",
+      "ms": 2075,
+      "requests": 3,
+      "addr": "Your address 0xE9bb…3d19 is in none of them."
+    },
+    {
+      "chain": 11155111,
+      "amount": "0.0002",
+      "out": "18.439787",
+      "ms": 2225,
+      "requests": 3,
+      "addr": "Your address 0xE9bb…3d19 is in none of them."
+    },
+    {
+      "chain": 11155111,
+      "amount": "0.0001",
+      "out": "9.2640914",
+      "ms": 2023,
+      "requests": 3,
+      "addr": "Your address 0xE9bb…3d19 is in none of them."
+    },
+    {
+      "chain": 11155111,
+      "amount": "9",
+      "out": "0.000096581827",
+      "ms": 3464,
+      "requests": 3,
+      "addr": "Your address 0xE9bb…3d19 is in none of them."
+    },
+    {
+      "chain": 11155111,
+      "amount": "0.00005",
+      "out": "4.6417778",
+      "ms": 2098,
+      "requests": 3,
+      "addr": "Your address 0xE9bb…3d19 is in none of them."
+    },
+    {
+      "chain": 11155111,
+      "amount": "0.0002",
+      "out": "18.434259",
+      "ms": 2257,
+      "requests": 3,
+      "addr": "Your address 0xE9bb…3d19 is in none of them."
+    },
+    {
+      "chain": 11155111,
+      "amount": "0.0001",
+      "out": "9.2613074",
+      "ms": 2022,
+      "requests": 3,
+      "addr": "Your address 0xE9bb…3d19 is in none of them."
+    },
+    {
+      "chain": 11155111,
+      "amount": "9",
+      "out": "0.000096610723",
+      "ms": 3681,
+      "requests": 5,
+      "addr": "Your address 0xE9bb…3d19 is in none of them."
+    },
+    {
+      "chain": 11155111,
+      "amount": "0.00005",
+      "out": "4.6403944",
+      "ms": 2225,
+      "requests": 3,
+      "addr": "Your address 0xE9bb…3d19 is in none of them."
+    },
+    {
+      "chain": 11155111,
+      "amount": "0.0002",
+      "out": "18.428784",
+      "ms": 2121,
+      "requests": 3,
+      "addr": "Your address 0xE9bb…3d19 is in none of them."
+    },
+    {
+      "chain": 11155111,
+      "amount": "0.0001",
+      "out": "9.2585505",
+      "ms": 2109,
+      "requests": 3,
+      "addr": "Your address 0xE9bb…3d19 is in none of them."
+    },
+    {
+      "chain": 11155111,
+      "amount": "9",
+      "out": "0.000095717451",
+      "ms": 3227,
+      "requests": 3,
+      "addr": "Your address 0xE9bb…3d19 is in none of them."
+    },
+    {
+      "chain": 1,
+      "amount": "0.01",
+      "out": "22.419932",
+      "ms": 2339,
+      "requests": 7,
+      "addr": "Your address 0xE9bb…3d19 is in none of them."
+    },
+    {
+      "chain": 1,
+      "amount": "0.1",
+      "out": "224.14943",
+      "ms": 2240,
+      "requests": 5,
+      "addr": "Your address 0xE9bb…3d19 is in none of them."
+    },
+    {
+      "chain": 1,
+      "amount": "0.5",
+      "out": "1,120.2318",
+      "ms": 2152,
+      "requests": 5,
+      "addr": "Your address 0xE9bb…3d19 is in none of them."
+    },
+    {
+      "chain": 1,
+      "amount": "1",
+      "out": "2,240.1105",
+      "ms": 2138,
+      "requests": 5,
+      "addr": "Your address 0xE9bb…3d19 is in none of them."
+    },
+    {
+      "chain": 1,
+      "amount": "2",
+      "out": "4,478.8088",
+      "ms": 1990,
+      "requests": 5,
+      "addr": "Your address 0xE9bb…3d19 is in none of them."
+    },
+    {
+      "chain": 1,
+      "amount": "5",
+      "out": "11,186.45",
+      "ms": 2142,
+      "requests": 5,
+      "addr": "Your address 0xE9bb…3d19 is in none of them."
+    },
+    {
+      "chain": 1,
+      "amount": "10",
+      "out": "22,337.764",
+      "ms": 2037,
+      "requests": 5,
+      "addr": "Your address 0xE9bb…3d19 is in none of them."
+    },
+    {
+      "chain": 1,
+      "amount": "25",
+      "out": "55,611.847",
+      "ms": 2311,
+      "requests": 5,
+      "addr": "Your address 0xE9bb…3d19 is in none of them."
+    },
+    {
+      "chain": 1,
+      "amount": "50",
+      "out": "110,967.37",
+      "ms": 2072,
+      "requests": 5,
+      "addr": "Your address 0xE9bb…3d19 is in none of them."
+    },
+    {
+      "chain": 1,
+      "amount": "100",
+      "out": "220,909.35",
+      "ms": 2305,
+      "requests": 5,
+      "addr": "Your address 0xE9bb…3d19 is in none of them."
+    }
+  ],
+  "swaps": [
+    {
+      "label": "round 1: swap 0.0001 ETH → CNRY",
+      "status": "Swapped. At least 9.22339 CNRY received. 0x86f4…4a7a",
+      "ms": 9405,
+      "tx": "0x86f4bb33ecc35ad5b77405fc883d118bafcf577ca0044e82eb66ce994a874a7a"
+    },
+    {
+      "label": "round 1: swap 9 CNRY → ETH",
+      "status": "Swapped. At least 0.0000960406 ETH received. 0xb81b…4f83",
+      "ms": 8176,
+      "tx": "0xb81b479a4c004ad1e157c756e7efde1853d3d50571f4b1bd9796613da4744f83"
+    },
+    {
+      "label": "round 2: swap 0.0001 ETH → CNRY",
+      "status": "Swapped. At least 9.22057 CNRY received. 0xdce9…d06c",
+      "ms": 19570,
+      "tx": "0xdce9f92fe18516079c86f04149240dbd66282f9199292c4dc27be5a8f486d06c"
+    },
+    {
+      "label": "round 2: swap 9 CNRY → ETH",
+      "status": "Swapped. At least 0.0000960699 ETH received. 0xc3f9…2e41",
+      "ms": 22725,
+      "tx": "0xc3f919f4b6011ba9d5cd22dd5063f635801b3a26619e1b940def53e118c42e41"
+    },
+    {
+      "label": "round 3: swap 0.0001 ETH → CNRY",
+      "status": "Swapped. At least 9.21777 CNRY received. 0xfcf5…4bad",
+      "ms": 14012,
+      "tx": "0xfcf53ddd113b4b5d93682afc7944950d84735af9eda2669a6f3dc984fbd14bad"
+    },
+    {
+      "label": "round 3: swap 9 CNRY → ETH",
+      "status": "Swapped. At least 0.0000960989 ETH received. 0xc34f…d9ab",
+      "ms": 21764,
+      "tx": "0xc34f406c750c130a4cdad608669afee0a469abc29619a5d358b15fb081a7d9ab"
+    },
+    {
+      "label": "round 4: swap 0.0001 ETH → CNRY",
+      "status": "Swapped. At least 9.215 CNRY received. 0x9617…ce9f",
+      "ms": 19088,
+      "tx": "0x96178febf5178c2f30988bbd88dbead4510a849b1a9521338a3bbbf3e469ce9f"
+    },
+    {
+      "label": "round 4: swap 9 CNRY → ETH",
+      "status": "Swapped. At least 0.0000961277 ETH received. 0xba60…d551",
+      "ms": 20138,
+      "tx": "0xba601dc6c0aa48bc9c74024802e78b24b0ebcba0f220ba7b201505259d80d551"
+    },
+    {
+      "label": "round 5: swap 0.0001 ETH → CNRY",
+      "status": "Swapped. At least 9.21226 CNRY received. 0x9cc9…200f",
+      "ms": 14125,
+      "tx": "0x9cc917cb9dc8af4223e8dcb5a3375928c94e584fcc07853cfb3e30a54d95200f"
+    },
+    {
+      "label": "round 5: swap 9 CNRY → ETH",
+      "status": "Swapped. At least 0.0000961562 ETH received. 0x02ec…b17d",
+      "ms": 7672,
+      "tx": "0x02ecc364d994b6fa6285828c5fdf6b0b580fe4a07529659db8ae216bab68b17d"
+    }
+  ],
+  "bursts": [
+    {
+      "name": "sepolia-1",
+      "chainId": 11155111,
+      "requests": 32,
+      "calls": 48,
+      "wallMs": 1814,
+      "canaryCounted": 48,
+      "mismatches": 0,
+      "hosts": [
+        "ethereum-sepolia-rpc.publicnode.com",
+        "1rpc.io",
+        "sepolia.drpc.org",
+        "sepolia.gateway.tenderly.co",
+        "eth-sepolia.g.alchemy.com"
+      ]
+    },
+    {
+      "name": "sepolia-2",
+      "chainId": 11155111,
+      "requests": 36,
+      "calls": 52,
+      "wallMs": 1514,
+      "canaryCounted": 52,
+      "mismatches": 0,
+      "hosts": [
+        "ethereum-sepolia-rpc.publicnode.com",
+        "1rpc.io",
+        "sepolia.drpc.org",
+        "sepolia.gateway.tenderly.co",
+        "eth-sepolia.g.alchemy.com"
+      ]
+    },
+    {
+      "name": "sepolia-3",
+      "chainId": 11155111,
+      "requests": 36,
+      "calls": 52,
+      "wallMs": 1467,
+      "canaryCounted": 52,
+      "mismatches": 0,
+      "hosts": [
+        "ethereum-sepolia-rpc.publicnode.com",
+        "1rpc.io",
+        "sepolia.drpc.org",
+        "sepolia.gateway.tenderly.co",
+        "eth-sepolia.g.alchemy.com"
+      ]
+    },
+    {
+      "name": "sepolia-4",
+      "chainId": 11155111,
+      "requests": 36,
+      "calls": 52,
+      "wallMs": 1424,
+      "canaryCounted": 52,
+      "mismatches": 0,
+      "hosts": [
+        "ethereum-sepolia-rpc.publicnode.com",
+        "1rpc.io",
+        "sepolia.drpc.org",
+        "sepolia.gateway.tenderly.co",
+        "eth-sepolia.g.alchemy.com"
+      ]
+    },
+    {
+      "name": "sepolia-5",
+      "chainId": 11155111,
+      "requests": 36,
+      "calls": 52,
+      "wallMs": 1477,
+      "canaryCounted": 52,
+      "mismatches": 0,
+      "hosts": [
+        "ethereum-sepolia-rpc.publicnode.com",
+        "1rpc.io",
+        "sepolia.drpc.org",
+        "sepolia.gateway.tenderly.co",
+        "eth-sepolia.g.alchemy.com"
+      ]
+    },
+    {
+      "name": "ethereum-1",
+      "chainId": 1,
+      "requests": 33,
+      "calls": 49,
+      "wallMs": 1486,
+      "canaryCounted": 49,
+      "mismatches": 0,
+      "hosts": [
+        "ethereum-rpc.publicnode.com",
+        "eth.llamarpc.com",
+        "cloudflare-eth.com",
+        "eth.merkle.io",
+        "1rpc.io",
+        "rpc.flashbots.net"
+      ]
+    },
+    {
+      "name": "ethereum-2",
+      "chainId": 1,
+      "requests": 33,
+      "calls": 49,
+      "wallMs": 1601,
+      "canaryCounted": 49,
+      "mismatches": 0,
+      "hosts": [
+        "ethereum-rpc.publicnode.com",
+        "eth.llamarpc.com",
+        "cloudflare-eth.com",
+        "eth.merkle.io",
+        "1rpc.io",
+        "rpc.flashbots.net"
+      ]
+    },
+    {
+      "name": "receipts",
+      "chainId": 11155111,
+      "requests": 27,
+      "calls": 43,
+      "wallMs": 1342,
+      "canaryCounted": 43,
+      "mismatches": 0,
+      "hosts": [
+        "ethereum-sepolia-rpc.publicnode.com",
+        "1rpc.io",
+        "sepolia.drpc.org",
+        "sepolia.gateway.tenderly.co",
+        "eth-sepolia.g.alchemy.com"
+      ]
+    }
+  ],
+  "txs": [
+    {
+      "hash": "0x86f4bb33ecc35ad5b77405fc883d118bafcf577ca0044e82eb66ce994a874a7a",
+      "to": "0x3A9D48AB9751398BbFa63ad67599Bb04e4BdF98b",
+      "selector": "0x3593564c",
+      "status": "success",
+      "block": "12076363",
+      "what": "Universal Router: execute (V4_SWAP)"
+    },
+    {
+      "hash": "0xb81b479a4c004ad1e157c756e7efde1853d3d50571f4b1bd9796613da4744f83",
+      "to": "0x3A9D48AB9751398BbFa63ad67599Bb04e4BdF98b",
+      "selector": "0x3593564c",
+      "status": "success",
+      "block": "12076364",
+      "what": "Universal Router: execute (V4_SWAP)"
+    },
+    {
+      "hash": "0xdce9f92fe18516079c86f04149240dbd66282f9199292c4dc27be5a8f486d06c",
+      "to": "0x3A9D48AB9751398BbFa63ad67599Bb04e4BdF98b",
+      "selector": "0x3593564c",
+      "status": "success",
+      "block": "12076367",
+      "what": "Universal Router: execute (V4_SWAP)"
+    },
+    {
+      "hash": "0xc3f919f4b6011ba9d5cd22dd5063f635801b3a26619e1b940def53e118c42e41",
+      "to": "0x3A9D48AB9751398BbFa63ad67599Bb04e4BdF98b",
+      "selector": "0x3593564c",
+      "status": "success",
+      "block": "12076369",
+      "what": "Universal Router: execute (V4_SWAP)"
+    },
+    {
+      "hash": "0xfcf53ddd113b4b5d93682afc7944950d84735af9eda2669a6f3dc984fbd14bad",
+      "to": "0x3A9D48AB9751398BbFa63ad67599Bb04e4BdF98b",
+      "selector": "0x3593564c",
+      "status": "success",
+      "block": "12076372",
+      "what": "Universal Router: execute (V4_SWAP)"
+    },
+    {
+      "hash": "0xc34f406c750c130a4cdad608669afee0a469abc29619a5d358b15fb081a7d9ab",
+      "to": "0x3A9D48AB9751398BbFa63ad67599Bb04e4BdF98b",
+      "selector": "0x3593564c",
+      "status": "success",
+      "block": "12076374",
+      "what": "Universal Router: execute (V4_SWAP)"
+    },
+    {
+      "hash": "0x96178febf5178c2f30988bbd88dbead4510a849b1a9521338a3bbbf3e469ce9f",
+      "to": "0x3A9D48AB9751398BbFa63ad67599Bb04e4BdF98b",
+      "selector": "0x3593564c",
+      "status": "success",
+      "block": "12076376",
+      "what": "Universal Router: execute (V4_SWAP)"
+    },
+    {
+      "hash": "0xba601dc6c0aa48bc9c74024802e78b24b0ebcba0f220ba7b201505259d80d551",
+      "to": "0x3A9D48AB9751398BbFa63ad67599Bb04e4BdF98b",
+      "selector": "0x3593564c",
+      "status": "success",
+      "block": "12076378",
+      "what": "Universal Router: execute (V4_SWAP)"
+    },
+    {
+      "hash": "0x9cc917cb9dc8af4223e8dcb5a3375928c94e584fcc07853cfb3e30a54d95200f",
+      "to": "0x3A9D48AB9751398BbFa63ad67599Bb04e4BdF98b",
+      "selector": "0x3593564c",
+      "status": "success",
+      "block": "12076381",
+      "what": "Universal Router: execute (V4_SWAP)"
+    },
+    {
+      "hash": "0x02ecc364d994b6fa6285828c5fdf6b0b580fe4a07529659db8ae216bab68b17d",
+      "to": "0x3A9D48AB9751398BbFa63ad67599Bb04e4BdF98b",
+      "selector": "0x3593564c",
+      "status": "success",
+      "block": "12076382",
+      "what": "Universal Router: execute (V4_SWAP)"
+    }
+  ],
+  "mismatches": [],
+  "errors": [],
+  "wallet": "0xE9bb50BCfC7C97320903645D0eEBe79650593d19",
+  "before": {
+    "ETH": "0.00270211792341958",
+    "CNRY": "3027.828918836303345377"
+  },
+  "after": {
+    "ETH": "0.002685025703826701",
+    "CNRY": "3029.149512284465941486"
+  },
+  "canary": {
+    "counts": {
+      "backend": 0,
+      "blocked": 0,
+      "detected": 0,
+      "direct": 0,
+      "failedClosed": 0,
+      "localNode": 0,
+      "notInspected": 0,
+      "protected": 651,
+      "protectedIpOnly": 0
+    },
+    "rpcCalls": 651,
+    "answeredWithoutRequest": 188,
+    "fromBursts": 397,
+    "fromThePage": 254,
+    "readsVia": [
+      "ethereum-sepolia-rpc.publicnode.com",
+      "ethereum-rpc.publicnode.com"
+    ],
+    "hosts": [
+      "sepolia.drpc.org",
+      "eth-sepolia.g.alchemy.com",
+      "ethereum-sepolia-rpc.publicnode.com",
+      "1rpc.io",
+      "sepolia.gateway.tenderly.co",
+      "ethereum-rpc.publicnode.com",
+      "eth.llamarpc.com",
+      "eth.merkle.io",
+      "cloudflare-eth.com",
+      "rpc.flashbots.net"
+    ],
+    "eventsKept": 400,
+    "notProtected": [],
+    "latency": {
+      "n": 200,
+      "mean": 1171,
+      "p50": 1288,
+      "p95": 1461,
+      "max": 1751
+    },
+    "popup": {
+      "badge": "8 undeclared",
+      "headline": "Your reads are going through anon-rpc",
+      "summary": [
+        "Reads via anon-rpc",
+        "651",
+        "Third-party leaks blocked",
+        "0",
+        "On ENS",
+        "8 undeclared",
+        "Coverage",
+        "100 % protected or blocked"
+      ]
+    }
+  },
+  "latency": {
+    "single": {
+      "n": 229,
+      "mean": 1363,
+      "p50": 1338,
+      "p95": 1806,
+      "max": 1806
+    },
+    "batch": {
+      "n": 16,
+      "mean": 1481,
+      "p50": 1467,
+      "p95": 1806,
+      "max": 1806
+    },
+    "xhr": {
+      "n": 24,
+      "mean": 1412,
+      "p50": 1429,
+      "p95": 1615,
+      "max": 1615
+    },
+    "quote": {
+      "n": 30,
+      "mean": 2560,
+      "p50": 2225,
+      "p95": 3681,
+      "max": 7900
+    },
+    "swap": {
+      "n": 10,
+      "mean": 15668,
+      "p50": 19088,
+      "p95": 22725,
+      "max": 22725
+    },
+    "allBurstRequests": {
+      "n": 269,
+      "mean": 1374,
+      "p50": 1382,
+      "p95": 1805,
+      "max": 1806
+    },
+    "raw": {
+      "single": [
+        17,
+        1806,
+        1806,
+        1612,
+        1615,
+        1805,
+        1612,
+        1615,
+        1615,
+        1615,
+        1805,
+        1806,
+        1806,
+        1615,
+        1615,
+        1805,
+        1806,
+        1806,
+        1615,
+        1806,
+        1805,
+        1806,
+        1806,
+        1615,
+        1806,
+        1806,
+        1806,
+        20,
+        1336,
+        1336,
+        1506,
+        1336,
+        1336,
+        1506,
+        1336,
+        1506,
+        1506,
+        1336,
+        1336,
+        1336,
+        1337,
+        1506,
+        1337,
+        1337,
+        1337,
+        1506,
+        1337,
+        1337,
+        1337,
+        1337,
+        1506,
+        1338,
+        1338,
+        1338,
+        1338,
+        1338,
+        1339,
+        1339,
+        16,
+        1292,
+        1292,
+        1458,
+        1292,
+        1292,
+        1458,
+        1292,
+        1458,
+        1458,
+        1292,
+        1293,
+        1293,
+        1293,
+        1458,
+        1293,
+        1293,
+        1293,
+        1458,
+        1293,
+        1293,
+        1293,
+        1293,
+        1458,
+        1293,
+        1294,
+        1294,
+        1294,
+        1294,
+        1289,
+        1290,
+        14,
+        1382,
+        1382,
+        1415,
+        1382,
+        1382,
+        1415,
+        1382,
+        1415,
+        1415,
+        1383,
+        1383,
+        1383,
+        1383,
+        1415,
+        1383,
+        1383,
+        1384,
+        1415,
+        1384,
+        1384,
+        1384,
+        1384,
+        1415,
+        1384,
+        1384,
+        1384,
+        1384,
+        1384,
+        1417,
+        1417,
+        16,
+        1307,
+        1307,
+        1467,
+        1307,
+        1307,
+        1467,
+        1307,
+        1467,
+        1467,
+        1308,
+        1308,
+        1308,
+        1308,
+        1468,
+        1308,
+        1308,
+        1309,
+        1468,
+        1309,
+        1309,
+        1309,
+        1309,
+        1468,
+        1309,
+        1309,
+        1309,
+        1309,
+        1309,
+        1301,
+        1301,
+        14,
+        1284,
+        1285,
+        1284,
+        1284,
+        1284,
+        1284,
+        1284,
+        1285,
+        1285,
+        1285,
+        1477,
+        1284,
+        1284,
+        1285,
+        1477,
+        1477,
+        1477,
+        1284,
+        1284,
+        1285,
+        1286,
+        1305,
+        1305,
+        1477,
+        1284,
+        1285,
+        1286,
+        12,
+        1429,
+        1429,
+        1429,
+        1429,
+        1430,
+        1430,
+        1430,
+        1430,
+        1430,
+        1430,
+        1594,
+        1431,
+        1431,
+        1431,
+        1594,
+        1431,
+        1594,
+        1431,
+        1431,
+        1432,
+        1432,
+        1432,
+        1432,
+        1594,
+        1425,
+        1425,
+        1425,
+        1298,
+        1299,
+        1299,
+        1299,
+        1299,
+        1299,
+        1299,
+        1299,
+        1299,
+        1299,
+        1300,
+        1300,
+        1300,
+        1300,
+        1300,
+        1300,
+        1300,
+        1300,
+        1300,
+        1300,
+        1333,
+        1333
+      ],
+      "batch": [
+        1805,
+        1806,
+        1506,
+        1506,
+        1458,
+        1458,
+        1415,
+        1415,
+        1467,
+        1468,
+        1285,
+        1477,
+        1430,
+        1594,
+        1300,
+        1300
+      ],
+      "xhr": [
+        1614,
+        1615,
+        1615,
+        1336,
+        1505,
+        1505,
+        1292,
+        1458,
+        1458,
+        1382,
+        1415,
+        1415,
+        1307,
+        1467,
+        1468,
+        1284,
+        1285,
+        1285,
+        1429,
+        1430,
+        1431,
+        1299,
+        1299,
+        1300
+      ]
+    }
+  }
+}

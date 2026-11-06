@@ -4,6 +4,7 @@
    other method            → FORWARD: the chain's upstream, via anon-rpc           (Protected, IP only)
    eth_sendRawTransaction  → per manifest rpc.write: anon | private | direct
    eth_chainId/net_version → answered locally (the operator configured the chain)
+   eth_fillTransaction     → answered locally: not supported (clients fill from the standard reads)
    node-side signing       → refused: agents sign locally
    anon path down          → FAIL CLOSED: a JSON-RPC error, never a direct retry
 
@@ -48,6 +49,16 @@ export type RpcContext = {
 };
 
 type Route = { via: "anon" | "direct"; url: string; category: Category; note?: string };
+
+/* viem's sendTransaction with a local account asks for eth_fillTransaction
+   first, and falls back to eth_getTransactionCount / eth_estimateGas / fees
+   when the node says "method not found" (-32601), remembering that per
+   client. Forwarded, the call depended on the upstream: a load-balanced one
+   (1rpc.io) answered some requests over Tor with a body that isn't JSON-RPC,
+   which became -32603 here, which viem retries three times before falling
+   back, on every transaction. Answered here, the client goes straight to the
+   standard reads, which are substituted like any other. */
+const FILL = new Set(["eth_fillTransaction"]);
 type Plan = { i: number; call: RpcCall; route?: Route; local?: RpcResponse; key?: string; address?: string; linked: boolean; category?: Category; note?: string };
 
 const host = (u: string) => {
@@ -65,6 +76,7 @@ function plan(ctx: RpcContext, chainId: string, call: RpcCall, i: number): Plan 
   const m = call.method;
   if (m === "eth_chainId") return { ...base, local: rpcResult(call.id, "0x" + Number(chainId).toString(16)), category: "protected", note: "answered locally" };
   if (m === "net_version") return { ...base, local: rpcResult(call.id, String(Number(chainId))), category: "protected", note: "answered locally" };
+  if (FILL.has(m)) return { ...base, local: rpcError(call.id, `${m} is not supported by the Canary gateway: fill the transaction from eth_getTransactionCount, eth_estimateGas and the fee reads`, -32601), category: "protected", note: "answered locally: not supported" };
   if (NODE_SIGNING.has(m)) return { ...base, local: rpcError(call.id, `Canary never signs: sign locally and send eth_sendRawTransaction (${m} refused)`, -32601), category: "blocked" };
   if (m === "eth_getCode") {
     const hit = ctx.codeCache.get(`${chainId}:${JSON.stringify(call.params)}`);

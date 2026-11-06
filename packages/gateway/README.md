@@ -32,6 +32,7 @@ The control API answers loopback clients only: requests with a non-loopback `Hos
 | other method (`alchemy_*`, `debug_*`, …) | the chain's `upstream` (or `read`), via anon-rpc | Protected (IP only) |
 | `eth_sendRawTransaction` | manifest `rpc.write`: `anon` → `broadcast` (or `read`) via anon-rpc; `private` → `privateRelay` via anon-rpc; `direct` → sent directly | IP only / Direct |
 | `eth_chainId`, `net_version` | answered locally | Protected |
+| `eth_fillTransaction` | answered locally: "method not found", so the client fills from the standard reads (viem falls back without retrying) | Protected |
 | `eth_getCode` | cached for `codeCacheMs` | Protected |
 | `eth_sendTransaction`, `eth_sign`, … | refused: agents sign locally | Blocked |
 | anon path down, or no answer | JSON-RPC error. Never a direct retry | Failed closed |

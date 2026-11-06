@@ -686,6 +686,49 @@ Three things went wrong on the way:
 - Read back with `canary-ens read-dapp` and `extension/test/ens-live.mjs`: signed, signer is the verifier, delegated, matches the site.
 - Transactions are in `packages/ens/sepolia.json`.
 
-**The agent's swap** (`examples/viem-agent/swap.mjs`, `test-artifacts/swap/agent-swap.log`): it quoted and swapped through `npm run gateway:local`, and the raw transaction went over anon-rpc. 19 calls: 18 `protected`, 1 `protectedIpOnly` (the broadcast), none direct or failed. On the first try, viem's `sendTransaction` asked for `eth_fillTransaction` first. The upstream doesn't answer it, so the gateway failed closed four times before viem fell back. The agent now fills and signs locally. A dapp's agent using `sendTransaction` with a local account through the gateway would see the same retries; answering `eth_fillTransaction` locally with "method not found" would avoid them. Not done.
+**The agent's swap** (`examples/viem-agent/swap.mjs`, `test-artifacts/swap/agent-swap.log`): it quoted and swapped through `npm run gateway:local` with viem's `sendTransaction` and a local account, and the raw transaction went over anon-rpc. 17 calls: 16 `protected`, 1 `protectedIpOnly` (the broadcast), none direct or failed. Swap `0x771e…615a`, block 12076229.
+
+**`eth_fillTransaction` through the gateway, fixed.** On the first agent run, viem's `sendTransaction` asked for `eth_fillTransaction` first, and the gateway failed closed four times before viem fell back to the standard reads. The gateway forwarded the call to the upstream (1rpc.io). Over Tor, 1rpc.io's load balancer answered some of these requests with a body that isn't JSON-RPC (`{"timestamp":…,"status":200,"error":"method error; invalid method: eth_fillTransaction",…}`). The gateway turned that body into -32603, and viem retries -32603 three times. The gateway now answers `eth_fillTransaction` itself with -32601 "method not found" (`packages/gateway/src/rpc.ts`). viem then falls back at once and remembers that for the client. The agent uses `sendTransaction` again, and in the run above the call appears once, as "answered locally: not supported". Gateway suite 42/42 (one new test).
 
 **Popup summary rows** (`Summary` in `extension/src/ui/parts.tsx`): reads via anon-rpc, third-party leaks blocked, what ENS says about the site, and coverage, under the headline. Extension e2e **51/51** (new: the summary). `swap/` unit tests 6/6: the v4 encodings decoded back, against the mainnet ETH/USDC pool id and the Sepolia pool's start price.
+
+## 22. Stress: the extension on Canary Swap, 651 calls (6 Nov)
+
+`swap/test/stress.mjs` loads `extension/dist-local` (our three tor-js gateways) into Chromium with the test wallet (`swap/test/wallet.mjs`, now shared with `live.mjs`), opens the deployed Canary Swap, connects, and runs:
+- **Five rounds** on Sepolia. Each round quotes ETH → CNRY at three amounts, swaps 0.0001 ETH → CNRY, flips, quotes, and swaps 9 CNRY → ETH. Then it fires one burst of reads from the page, all at once.
+- **A burst** is about 50 calls spread over the chain's RPC URLs: about 30 single `fetch`es, two 9-call batches (string ids, one call twice), and 3 XHRs. It holds balances, `balanceOf`, allowances, StateView, the Quoter, nonces, code, storage, a block, `eth_feeHistory`, `eth_getLogs`, `eth_estimateGas`, earlier swaps' receipts, and one invalid address whose node error must come back unchanged.
+- **The URLs:** Sepolia through publicnode, 1rpc.io, drpc, tenderly and alchemy; Ethereum through publicnode, llamarpc, cloudflare-eth, merkle, 1rpc.io and flashbots. Canary knows each one's chain from its URL and answers from its read endpoint, so none of them receives anything.
+- **Ethereum:** ten quotes at 0.01–100 ETH, and two bursts of StateView, Quoter and USDC reads.
+- **A last burst** of every swap's receipt and transaction.
+
+Every burst read is pinned to a block (head − 5). Its answer is compared with the same call sent from Node straight to the read endpoint. Before and after each burst, the run waits until Canary has seen no new call for 2.5 s, then checks that Canary's count went up by exactly the calls sent.
+
+| | Result |
+|---|---|
+| Calls Canary saw on the tab | **651**: 397 from the bursts, 254 from the page's own quotes and swaps |
+| Answered through anon-rpc | 651 `protected`, 0 `protectedIpOnly`, 0 failed closed, 0 direct |
+| Burst answers equal to the direct read | 397 of 397; every id answered once, batches as arrays |
+| Counted per burst | exact in all 8 bursts |
+| Swaps | 10 of 10 mined (`test-artifacts/swap/stress-canary.json`) |
+| Popup | "Reads via anon-rpc 651", coverage 100 %, and "8 undeclared": the 8 RPC hosts the run asked that `swap.canary.eth` doesn't declare (none of them received anything) |
+
+Latency, in ms, from the page:
+
+| | n | mean | p50 | p95 | max |
+|---|---|---|---|---|---|
+| single `fetch` | 229 | 1,363 | 1,338 | 1,806 | 1,806 |
+| batch (9 calls) | 16 | 1,481 | 1,467 | 1,806 | 1,806 |
+| XHR | 24 | 1,412 | 1,429 | 1,615 | 1,615 |
+| all burst requests | 269 | 1,374 | 1,382 | 1,805 | 1,806 |
+| Canary's own round trips (the tab's last 200) | 200 | 1,171 | 1,288 | 1,461 | 1,751 |
+| a quote on the page (3–5 calls in sequence) | 30 | 2,560 | 2,225 | 3,681 | 7,900 |
+| a swap on the page (mostly waiting for the block) | 10 | 15,668 | 19,088 | 22,725 | 22,725 |
+
+Tor's latency varies from run to run. The previous complete run, an hour earlier, measured a mean of 1,870 ms (p95 2,470) over the same 269 requests.
+
+The one-round smoke run and three earlier full runs (one stopped after a minute) found nothing wrong with Canary. They did turn up three problems in the test itself, each fixed:
+- **`eth_feeHistory`:** publicnode's backends answer the same `eth_feeHistory` with its keys in either order. On Sepolia they also disagree on the `reward` percentiles of the same block (in 30 direct calls, 23 gave one answer and 7 the other). The comparison now ignores key order, and checks only the shape of `reward`.
+- **Rate limits:** after a few runs, publicnode rate-limited this machine's direct reference reads (`-32005`). Canary's answers through Tor were unaffected. Rate-limited reference reads are now asked again after a pause.
+- **An empty batch:** with a short call list, one batch came out empty, which sent a malformed entry, so one burst was counted one short. Batches now wrap around the list.
+
+One burst in the first full run took 11.4 s, its first: probably a circuit being built. It didn't recur.

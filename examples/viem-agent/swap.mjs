@@ -13,7 +13,7 @@
 // never printed. It needs a little Sepolia ETH.
 
 import { readFileSync } from "node:fs";
-import { createPublicClient, formatEther, formatUnits, parseEther } from "viem";
+import { createPublicClient, createWalletClient, formatEther, formatUnits, parseEther } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { sepolia } from "viem/chains";
 import { createCanary } from "@canary/agent";
@@ -35,6 +35,7 @@ const canary = await createCanary({ gateway: process.env.CANARY_GATEWAY ?? "http
 const stop = canary.on("egress", (e) => console.log(`  [canary] ${e.category.padEnd(16)} ${e.channel.padEnd(4)} ${e.host}${e.methods ? " " + e.methods.join(",") : ""}${e.ms ? ` ${e.ms} ms` : ""}${e.note ? ` (${e.note})` : ""}`));
 const transport = canary.viemTransport();
 const client = createPublicClient({ chain: sepolia, transport });
+const wallet = createWalletClient({ chain: sepolia, transport, account });
 
 const balances = async () => {
   const [eth, cnry] = await Promise.all([
@@ -53,14 +54,8 @@ console.log(`  ${formatUnits(q.amountOut, CNRY.decimals)} ${CNRY.symbol}, at lea
 
 console.log("\nswap: Universal Router execute(V4_SWAP), signed here, sent as eth_sendRawTransaction via the gateway…");
 const tx = swapExactInSingle({ chainId: sepolia.id, key: q.key, zeroForOne: true, amountIn, minAmountOut: min, deadline: BigInt(Math.floor(Date.now() / 1000) + 600) });
-// Filled and signed here, so the only write the gateway sees is the signed transaction.
-const [nonce, gas, fees] = await Promise.all([
-  client.getTransactionCount({ address: account.address, blockTag: "pending" }),
-  client.estimateGas({ account: account.address, ...tx }),
-  client.estimateFeesPerGas(),
-]);
-const signedTx = await account.signTransaction({ chainId: sepolia.id, type: "eip1559", ...tx, nonce, gas: (gas * 12n) / 10n, ...fees });
-const hash = await client.sendRawTransaction({ serializedTransaction: signedTx });
+// viem signs with the local key in this process; the only write the gateway sees is eth_sendRawTransaction.
+const hash = await wallet.sendTransaction(tx);
 console.log(`  sent ${hash}`);
 const r = await client.waitForTransactionReceipt({ hash });
 console.log(`  ${r.status} in block ${r.blockNumber} · ${market.explorer}/tx/${hash}`);

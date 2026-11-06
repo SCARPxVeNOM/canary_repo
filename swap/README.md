@@ -21,7 +21,7 @@ Every call is in [`src/v4.js`](src/v4.js), shared by the page, the agent and the
 | PoolManager | [`0xE03A…3543`](https://sepolia.etherscan.io/address/0xE03A1074c86CFeDd5C142C4F04F1a1536e203543) | | `initialize`, [`scripts/sepolia-pool.mjs#L103`](scripts/sepolia-pool.mjs#L103) |
 | PositionManager | [`0x429b…09b4`](https://sepolia.etherscan.io/address/0x429ba70129df741B2Ca2a85BC3A2a3328e5c09b4) | | `modifyLiquidities(MINT_POSITION → SETTLE_PAIR → SWEEP)`, [`v4.js#L137`](src/v4.js#L137) (`mintFullRange`), sent at [`sepolia-pool.mjs#L127`](scripts/sepolia-pool.mjs#L127) |
 
-Where the page uses them: the quote at [`src/app.ts#L145`](src/app.ts#L145), the price impact at [`#L148`](src/app.ts#L148), approvals and the swap at [`#L259`–`L264`](src/app.ts#L259-L264), and the capture of every request body for "What this quote sent" at [`#L43`](src/app.ts#L43). The agent quotes at [`swap.mjs#L49`](../examples/viem-agent/swap.mjs#L49) and signs and broadcasts at [`#L62`–`L63`](../examples/viem-agent/swap.mjs#L62-L63).
+Where the page uses them: the quote at [`src/app.ts#L145`](src/app.ts#L145), the price impact at [`#L148`](src/app.ts#L148), approvals and the swap at [`#L259`–`L264`](src/app.ts#L259-L264), and the capture of every request body for "What this quote sent" at [`#L43`](src/app.ts#L43). The agent quotes at [`swap.mjs#L50`](../examples/viem-agent/swap.mjs#L50) and signs and broadcasts at [`#L58`](../examples/viem-agent/swap.mjs#L58).
 
 Addresses are from Uniswap's v4 deployments page, each checked on chain: code at the address, and the periphery contracts' `poolManager()` is the PoolManager. The encodings follow v4-periphery's `Actions.sol` and `V4Router.sol` and universal-router's `Commands.sol`; [`test/v4.test.mjs`](test/v4.test.mjs) decodes them back, and the live runs below executed them.
 
@@ -46,7 +46,8 @@ Addresses are from Uniswap's v4 deployments page, each checked on chain: code at
 |---|---|
 | The deployed page with Canary ([`live-canary.json`](../test-artifacts/swap/live-canary.json), [popup](../test-artifacts/swap/popup-canary.png), [page](../test-artifacts/swap/swap-canary.png)) | Quote, connect, swap 0.0001 ETH → CNRY, mint, swap 5 CNRY → ETH: 3 transactions mined. Canary answered every read the page made through anon-rpc (50 by the end of the run, 53 when the popup opened); nothing was blocked or left exposed. Popup: "Matches manifest", coverage 100 %. |
 | The local page without Canary ([`live-local.json`](../test-artifacts/swap/live-local.json)) | The same flow from a fresh wallet: 5 transactions, including the two Permit2 approvals the first CNRY sale needs. |
-| The agent through the Canary gateway ([`agent-swap.log`](../test-artifacts/swap/agent-swap.log)) | Quote and swap, the raw transaction sent over anon-rpc: 18 of 19 calls protected, the broadcast IP-only, none direct or failed. |
+| The agent through the Canary gateway ([`agent-swap.log`](../test-artifacts/swap/agent-swap.log)) | Quote and swap with viem's `sendTransaction`, the raw transaction sent over anon-rpc: 16 of 17 calls protected, the broadcast IP-only, none direct or failed. |
+| Stress: the deployed page with Canary ([`stress-canary.json`](../test-artifacts/swap/stress-canary.json), [popup](../test-artifacts/swap/stress-popup.png)) | 10 swaps, 30 quotes on Sepolia and Ethereum, and bursts of reads from the page to 11 RPC URLs: 651 calls, all answered through anon-rpc, none failed closed or direct. 397 burst answers checked against a direct read at the same block, none different. Mean 1.37 s per request over Tor (p95 1.80 s). |
 | A quote on Ethereum | 1 ETH → 2,236.31 USDC from the best of three v4 ETH/USDC pools, in five `eth_call`s with no address. app.uniswap.org's API, which routes across pools, quoted 2,236.46 for the same trade in the scan about 20 minutes earlier. |
 
 In every run, the page found the connected address in none of the quote requests.
@@ -63,6 +64,12 @@ The live end-to-end run drives a real Chromium with a test wallet that signs in 
 
 ```sh
 node test/live.mjs --key-file ../swap-test.key [--canary ../extension/dist-local] [--url https://canary-swap.vercel.app/] --out <dir>
+```
+
+The stress run, with the extension (10 swaps, about 651 calls, ~6 minutes):
+
+```sh
+node test/stress.mjs --key-file ../swap-test.key --canary ../extension/dist-local --url https://canary-swap.vercel.app/ --out <dir>
 ```
 
 The key file holds a Sepolia test key with a little Sepolia ETH. It is never printed, and `*.key` is gitignored. Deploying: `vercel deploy --prod` from this directory (`.vercelignore` keeps keys, tests and scripts out of the upload).

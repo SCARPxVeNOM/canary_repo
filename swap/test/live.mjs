@@ -14,16 +14,14 @@
    The key file holds a Sepolia test key (fund it with a little Sepolia ETH);
    it is never printed. Not part of `npm test`: it spends test ETH. */
 
-import { readFileSync } from "node:fs";
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import { parseArgs } from "node:util";
 import { chromium } from "playwright";
-import { createPublicClient, createWalletClient, formatEther, formatUnits, http } from "viem";
-import { privateKeyToAccount } from "viem/accounts";
-import { sepolia } from "viem/chains";
-import { ABI, V4 } from "../src/v4.js";
+import { formatEther, formatUnits } from "viem";
+import { ABI } from "../src/v4.js";
+import { TX_LABEL, installWallet } from "./wallet.mjs";
 
 const { values: opt } = parseArgs({
   options: {
@@ -38,23 +36,12 @@ const { values: opt } = parseArgs({
 if (!opt["key-file"]) throw new Error("--key-file <file> is required");
 const HARD_LIMIT = setTimeout(() => (console.log("FAIL: hard limit of 8 minutes"), process.exit(3)), 8 * 60_000);
 
-const readKey = (file) => {
-  const line = readFileSync(file, "utf8").split("\n").map((l) => l.trim()).find(Boolean) ?? "";
-  const hex = line.slice(line.lastIndexOf("=") + 1).trim();
-  if (!/^(0x)?[0-9a-fA-F]{64}$/.test(hex)) throw new Error(`${file}: no private key found`);
-  return hex.startsWith("0x") ? hex : `0x${hex}`;
-};
-
-const account = privateKeyToAccount(readKey(opt["key-file"]));
-const transport = http(opt.rpc);
-const client = createPublicClient({ chain: sepolia, transport });
-const wallet = createWalletClient({ chain: sepolia, transport, account });
 const deployed = JSON.parse(await readFile(new URL("../sepolia.json", import.meta.url), "utf8"));
 const CNRY = deployed.token.address;
 
 const t0 = Date.now();
 const log = (s) => console.log(`[${((Date.now() - t0) / 1000).toFixed(1).padStart(5)}s] ${s}`);
-const result = { url: opt.url, withCanary: !!opt.canary, wallet: account.address, at: new Date().toISOString(), steps: [], txs: [], errors: [] };
+const result = { url: opt.url, withCanary: !!opt.canary, at: new Date().toISOString(), steps: [], txs: [], errors: [] };
 const fail = (why) => {
   result.errors.push(why);
   log(`FAIL: ${why}`);
@@ -67,50 +54,8 @@ const args = opt.canary ? [`--disable-extensions-except=${resolve(opt.canary)}`,
 const ctx = await chromium.launchPersistentContext(profile, { headless: true, executablePath: opt.chrome, args, viewport: { width: 1280, height: 1000 } });
 const sw = opt.canary ? (ctx.serviceWorkers()[0] ?? (await ctx.waitForEvent("serviceworker", { timeout: 30000 }))) : null;
 
-// EIP-1193 + EIP-6963 in the page; requests go to the Node side below.
-await ctx.addInitScript(() => {
-  const listeners = {};
-  const provider = {
-    isCanarySwapTest: true,
-    request: ({ method, params }) =>
-      window.__swapTestWallet(method, params ?? []).then((r) => {
-        if (r.error) throw Object.assign(new Error(r.error.message), { code: r.error.code });
-        return r.result;
-      }),
-    on(e, f) { (listeners[e] = listeners[e] || []).push(f); return provider; },
-    removeListener(e, f) { listeners[e] = (listeners[e] || []).filter((x) => x !== f); return provider; },
-  };
-  const info = Object.freeze({ uuid: "0b1d6c3e-7a51-4f0e-9d7a-5a9c2b7e1c11", name: "Canary Swap test wallet", icon: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1 1'/%3E", rdns: "xyz.canary.swaptest" });
-  const announce = () => window.dispatchEvent(new CustomEvent("eip6963:announceProvider", { detail: Object.freeze({ info, provider }) }));
-  window.addEventListener("eip6963:requestProvider", announce);
-  announce();
-  window.ethereum = provider;
-});
-await ctx.exposeFunction("__swapTestWallet", async (method, params) => {
-  try {
-    switch (method) {
-      case "eth_requestAccounts":
-      case "eth_accounts":
-        return { result: [account.address] };
-      case "eth_chainId":
-        return { result: `0x${sepolia.id.toString(16)}` };
-      case "wallet_switchEthereumChain":
-        return { result: null };
-      case "eth_sendTransaction": {
-        const [tx] = params;
-        const hash = await wallet.sendTransaction({ to: tx.to, data: tx.data, value: BigInt(tx.value ?? 0) });
-        result.txs.push({ hash, to: tx.to, selector: tx.data?.slice(0, 10) });
-        return { result: hash };
-      }
-      default: {
-        const r = await fetch(opt.rpc, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params }) });
-        return await r.json();
-      }
-    }
-  } catch (e) {
-    return { error: { code: e.code ?? -32603, message: e.shortMessage ?? e.message } };
-  }
-});
+const { account, client } = await installWallet(ctx, { keyFile: opt["key-file"], rpc: opt.rpc, onTx: (t) => result.txs.push(t) });
+result.wallet = account.address;
 
 const page = await ctx.newPage();
 page.on("pageerror", (e) => fail(`pageerror: ${e.message}`));
@@ -174,7 +119,7 @@ try {
     const r = await client.waitForTransactionReceipt({ hash: t.hash });
     t.status = r.status;
     t.gasUsed = String(r.gasUsed);
-    t.what = { "0x3593564c": "Universal Router: execute (V4_SWAP)", "0x87517c45": "Permit2: approve the Universal Router", "0x095ea7b3": "CNRY: approve Permit2", "0x40c10f19": "CNRY: mint" }[t.selector] ?? `${t.to} ${t.selector}`;
+    t.what = TX_LABEL[t.selector] ?? `${t.to} ${t.selector}`;
     log(`  ${t.what} ${t.hash} ${r.status}`);
     if (r.status !== "success") fail(`${t.hash} ${r.status}`);
   }

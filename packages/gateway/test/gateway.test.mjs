@@ -65,6 +65,13 @@ test("eth_chainId and net_version are answered locally", async () => {
   assert.equal(fx.logs.read.length + fx.logs.upstream.length, 0);
 });
 
+test("eth_fillTransaction is answered locally as not supported, so clients fill from standard reads", async () => {
+  fx.reset();
+  const r = await rpc(call(1, "eth_fillTransaction", [{ from: A, to: B, value: "0x1" }]));
+  assert.equal(r.error.code, -32601, "method not found: viem falls back without retrying");
+  assert.equal(fx.logs.read.length + fx.logs.upstream.length, 0, "nothing sent");
+});
+
 test("non-standard methods are forwarded to the upstream over anon-rpc (IP only)", async () => {
   fx.reset();
   const r = await rpc(call(1, "alchemy_getTokenBalances", [A]));
