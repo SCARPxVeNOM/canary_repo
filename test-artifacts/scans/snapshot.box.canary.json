@@ -1,0 +1,100 @@
+{
+  "url": "https://snapshot.box/",
+  "scannedAt": "2026-11-06T04:32:43.021Z",
+  "scanner": {
+    "version": "0.1.0",
+    "hash": "d36f3430409d"
+  },
+  "build": {
+    "fingerprint": "8d298afa358e",
+    "documents": 18
+  },
+  "withCanary": true,
+  "canaryAddress": "0x4e05E7adEf36688fE5F6762578D0ba549D1B6187",
+  "flows": [
+    "load https://snapshot.box/",
+    "connect: clicked",
+    "connect: picked the scanner wallet in a modal",
+    "scroll"
+  ],
+  "requestsSeen": 70,
+  "recipients": [
+    {
+      "host": "hub.snapshot.org",
+      "party": "third",
+      "kind": "backend",
+      "requests": 7,
+      "carriedAddress": 0,
+      "encodings": [],
+      "methods": [],
+      "channels": [
+        "empty"
+      ],
+      "declared": null
+    },
+    {
+      "host": "accounts.google.com",
+      "party": "third",
+      "kind": "backend",
+      "requests": 1,
+      "carriedAddress": 0,
+      "encodings": [],
+      "methods": [],
+      "channels": [
+        "empty"
+      ],
+      "declared": null
+    },
+    {
+      "host": "snapshot.box",
+      "party": "first",
+      "kind": "analytics",
+      "requests": 1,
+      "carriedAddress": 0,
+      "encodings": [],
+      "methods": [],
+      "channels": [
+        "script"
+      ],
+      "declared": true
+    }
+  ],
+  "rpc": {
+    "directCalls": 0,
+    "directCallsWithAddress": 0,
+    "viaAnonRpc": 2,
+    "coveragePct": 100
+  },
+  "canary": {
+    "counts": {
+      "backend": 4,
+      "blocked": 6,
+      "detected": 0,
+      "direct": 0,
+      "failedClosed": 0,
+      "localNode": 0,
+      "notInspected": 0,
+      "protected": 2,
+      "protectedIpOnly": 0
+    },
+    "notes": [],
+    "latencyMs": {
+      "p50": 5328,
+      "p95": 5328,
+      "n": 2
+    }
+  },
+  "canaryEgress": {
+    "extension → update.googleapis.com": 1,
+    "extension → ethereum-rpc.publicnode.com": 2,
+    "extension → content-autofill.googleapis.com": 2,
+    "extension → cdn.jsdelivr.net": 1
+  },
+  "undeclared": [],
+  "notInspected": [
+    "service workers' own traffic",
+    "WebRTC",
+    "encrypted or arbitrarily obfuscated payloads",
+    "flows beyond load → connect → scroll"
+  ]
+}

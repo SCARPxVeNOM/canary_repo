@@ -1,0 +1,153 @@
+{
+  "url": "https://app.ens.domains/",
+  "scannedAt": "2026-11-06T03:05:44.955Z",
+  "scanner": {
+    "version": "0.1.0",
+    "hash": "d36f3430409d"
+  },
+  "build": {
+    "fingerprint": "5569cd2fa907",
+    "documents": 113
+  },
+  "withCanary": true,
+  "canaryAddress": "0x783585A4DBE03f050D7c9d1D76FF168E9631CFa6",
+  "flows": [
+    "load https://app.ens.domains/",
+    "connect: no connect button; the dapp already read the account (eth_accounts)",
+    "scroll"
+  ],
+  "requestsSeen": 150,
+  "recipients": [
+    {
+      "host": "app.ens.domains",
+      "party": "first",
+      "kind": "analytics+backend",
+      "requests": 3,
+      "carriedAddress": 0,
+      "encodings": [],
+      "methods": [],
+      "channels": [
+        "script",
+        "empty"
+      ],
+      "declared": true
+    },
+    {
+      "host": "accounts.google.com",
+      "party": "third",
+      "kind": "backend",
+      "requests": 1,
+      "carriedAddress": 0,
+      "encodings": [],
+      "methods": [],
+      "channels": [
+        "empty"
+      ],
+      "declared": null
+    },
+    {
+      "host": "static.cloudflareinsights.com",
+      "party": "third",
+      "kind": "analytics",
+      "requests": 1,
+      "carriedAddress": 0,
+      "encodings": [],
+      "methods": [],
+      "channels": [
+        "script"
+      ],
+      "declared": null
+    },
+    {
+      "host": "api.web3modal.org",
+      "party": "third",
+      "kind": "backend",
+      "requests": 1,
+      "carriedAddress": 0,
+      "encodings": [],
+      "methods": [],
+      "channels": [
+        "empty"
+      ],
+      "declared": null
+    },
+    {
+      "host": "pulse.walletconnect.org",
+      "party": "third",
+      "kind": "analytics",
+      "requests": 1,
+      "carriedAddress": 0,
+      "encodings": [],
+      "methods": [],
+      "channels": [
+        "empty"
+      ],
+      "declared": null
+    },
+    {
+      "host": "widget.intercom.io",
+      "party": "third",
+      "kind": "analytics",
+      "requests": 1,
+      "carriedAddress": 0,
+      "encodings": [],
+      "methods": [],
+      "channels": [
+        "script"
+      ],
+      "declared": null
+    },
+    {
+      "host": "edge.ens.domains",
+      "party": "first",
+      "kind": "backend",
+      "requests": 1,
+      "carriedAddress": 0,
+      "encodings": [],
+      "methods": [],
+      "channels": [
+        "empty"
+      ],
+      "declared": true
+    }
+  ],
+  "rpc": {
+    "directCalls": 0,
+    "directCallsWithAddress": 0,
+    "viaAnonRpc": 3,
+    "coveragePct": 100
+  },
+  "canary": {
+    "counts": {
+      "backend": 5,
+      "blocked": 2,
+      "detected": 0,
+      "direct": 0,
+      "failedClosed": 0,
+      "localNode": 0,
+      "notInspected": 0,
+      "protected": 3,
+      "protectedIpOnly": 0
+    },
+    "notes": [],
+    "latencyMs": {
+      "p50": 3630,
+      "p95": 3630,
+      "n": 1
+    }
+  },
+  "canaryEgress": {
+    "extension → update.googleapis.com": 1,
+    "extension → app.ens.domains": 1,
+    "extension → content-autofill.googleapis.com": 2,
+    "extension → ethereum-rpc.publicnode.com": 2,
+    "extension → cdn.jsdelivr.net": 1
+  },
+  "undeclared": [],
+  "notInspected": [
+    "service workers' own traffic",
+    "WebRTC",
+    "encrypted or arbitrarily obfuscated payloads",
+    "flows beyond load → connect → scroll"
+  ]
+}

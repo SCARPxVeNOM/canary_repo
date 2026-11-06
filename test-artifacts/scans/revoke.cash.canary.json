@@ -1,0 +1,159 @@
+{
+  "url": "https://revoke.cash/",
+  "scannedAt": "2026-11-06T04:27:42.207Z",
+  "scanner": {
+    "version": "0.1.0",
+    "hash": "d36f3430409d"
+  },
+  "build": {
+    "fingerprint": "bbba8860b01a",
+    "documents": 57
+  },
+  "withCanary": true,
+  "canaryAddress": "0x571a180Ca305Fbc963a84F848fa10267d096B434",
+  "flows": [
+    "load https://revoke.cash/",
+    "connect: no connect button; the dapp already read the account (eth_accounts)",
+    "scroll"
+  ],
+  "requestsSeen": 135,
+  "recipients": [
+    {
+      "host": "revoke.cash",
+      "party": "first",
+      "kind": "backend",
+      "requests": 30,
+      "carriedAddress": 4,
+      "encodings": [
+        "hex in URL",
+        "hex in body"
+      ],
+      "methods": [],
+      "channels": [
+        "video",
+        "empty"
+      ],
+      "declared": true
+    },
+    {
+      "host": "auth.privy.io",
+      "party": "third",
+      "kind": "backend",
+      "requests": 6,
+      "carriedAddress": 0,
+      "encodings": [],
+      "methods": [],
+      "channels": [
+        "empty"
+      ],
+      "declared": null
+    },
+    {
+      "host": "accounts.google.com",
+      "party": "third",
+      "kind": "backend",
+      "requests": 1,
+      "carriedAddress": 0,
+      "encodings": [],
+      "methods": [],
+      "channels": [
+        "empty"
+      ],
+      "declared": null
+    },
+    {
+      "host": "static.cloudflareinsights.com",
+      "party": "third",
+      "kind": "analytics",
+      "requests": 1,
+      "carriedAddress": 0,
+      "encodings": [],
+      "methods": [],
+      "channels": [
+        "script"
+      ],
+      "declared": null
+    },
+    {
+      "host": "api.web3modal.org",
+      "party": "third",
+      "kind": "backend",
+      "requests": 1,
+      "carriedAddress": 0,
+      "encodings": [],
+      "methods": [],
+      "channels": [
+        "empty"
+      ],
+      "declared": null
+    },
+    {
+      "host": "api-eu.mixpanel.com",
+      "party": "third",
+      "kind": "analytics",
+      "requests": 1,
+      "carriedAddress": 0,
+      "encodings": [],
+      "methods": [],
+      "channels": [
+        "empty"
+      ],
+      "declared": null
+    },
+    {
+      "host": "pulse.walletconnect.org",
+      "party": "third",
+      "kind": "analytics",
+      "requests": 1,
+      "carriedAddress": 0,
+      "encodings": [],
+      "methods": [],
+      "channels": [
+        "empty"
+      ],
+      "declared": null
+    }
+  ],
+  "rpc": {
+    "directCalls": 0,
+    "directCallsWithAddress": 0,
+    "viaAnonRpc": 2,
+    "coveragePct": 100
+  },
+  "canary": {
+    "counts": {
+      "backend": 27,
+      "blocked": 0,
+      "detected": 4,
+      "direct": 0,
+      "failedClosed": 4,
+      "localNode": 0,
+      "notInspected": 0,
+      "protected": 1,
+      "protectedIpOnly": 1
+    },
+    "notes": [
+      "anon path failed: HTTP 403 from polygon-mainnet.g.alchemy.com",
+      "no read endpoint configured for chain 43114; forwarded instead"
+    ],
+    "latencyMs": {
+      "p50": 5265,
+      "p95": 5265,
+      "n": 2
+    }
+  },
+  "canaryEgress": {
+    "extension → update.googleapis.com": 1,
+    "extension → content-autofill.googleapis.com": 2,
+    "extension → ethereum-rpc.publicnode.com": 2,
+    "extension → revoke.cash": 1,
+    "extension → cdn.jsdelivr.net": 1
+  },
+  "undeclared": [],
+  "notInspected": [
+    "service workers' own traffic",
+    "WebRTC",
+    "encrypted or arbitrarily obfuscated payloads",
+    "flows beyond load → connect → scroll"
+  ]
+}

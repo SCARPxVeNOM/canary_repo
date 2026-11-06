@@ -1,0 +1,229 @@
+{
+  "url": "https://app.aave.com/",
+  "scannedAt": "2026-11-06T04:27:07.797Z",
+  "scanner": {
+    "version": "0.1.0",
+    "hash": "d36f3430409d"
+  },
+  "build": {
+    "fingerprint": "273ee9ea57f8",
+    "documents": 113
+  },
+  "withCanary": true,
+  "canaryAddress": "0xA069d5413124f1683A2f02F2E6Fcb5f921A402f0",
+  "flows": [
+    "load https://app.aave.com/",
+    "connect: no connect button; the dapp already read the account (eth_accounts)",
+    "scroll"
+  ],
+  "requestsSeen": 253,
+  "recipients": [
+    {
+      "host": "app.aave.com",
+      "party": "first",
+      "kind": "backend+rpc",
+      "requests": 48,
+      "carriedAddress": 5,
+      "encodings": [
+        "hex in body",
+        "hex in URL"
+      ],
+      "methods": [
+        "eth_call",
+        "eth_getCode"
+      ],
+      "channels": [
+        "speculationrules",
+        "empty",
+        "object"
+      ],
+      "declared": true
+    },
+    {
+      "host": "api.v3.aave.com",
+      "party": "first",
+      "kind": "backend",
+      "requests": 9,
+      "carriedAddress": 3,
+      "encodings": [
+        "hex in body"
+      ],
+      "methods": [],
+      "channels": [
+        "empty"
+      ],
+      "declared": true
+    },
+    {
+      "host": "data-api.fun.xyz",
+      "party": "third",
+      "kind": "backend",
+      "requests": 6,
+      "carriedAddress": 0,
+      "encodings": [],
+      "methods": [],
+      "channels": [
+        "empty"
+      ],
+      "declared": null
+    },
+    {
+      "host": "app.family.co",
+      "party": "third",
+      "kind": "backend",
+      "requests": 3,
+      "carriedAddress": 0,
+      "encodings": [],
+      "methods": [],
+      "channels": [
+        "empty"
+      ],
+      "declared": null
+    },
+    {
+      "host": "static.cloudflareinsights.com",
+      "party": "third",
+      "kind": "analytics",
+      "requests": 2,
+      "carriedAddress": 0,
+      "encodings": [],
+      "methods": [],
+      "channels": [
+        "script"
+      ],
+      "declared": null
+    },
+    {
+      "host": "sr-client-cfg.amplitude.com",
+      "party": "third",
+      "kind": "analytics",
+      "requests": 2,
+      "carriedAddress": 0,
+      "encodings": [],
+      "methods": [],
+      "channels": [
+        "empty"
+      ],
+      "declared": null
+    },
+    {
+      "host": "api.merkl.xyz",
+      "party": "third",
+      "kind": "backend",
+      "requests": 2,
+      "carriedAddress": 0,
+      "encodings": [],
+      "methods": [],
+      "channels": [
+        "empty"
+      ],
+      "declared": null
+    },
+    {
+      "host": "cca-lite.coinbase.com",
+      "party": "third",
+      "kind": "backend",
+      "requests": 2,
+      "carriedAddress": 0,
+      "encodings": [],
+      "methods": [],
+      "channels": [
+        "empty"
+      ],
+      "declared": null
+    },
+    {
+      "host": "accounts.google.com",
+      "party": "third",
+      "kind": "backend",
+      "requests": 1,
+      "carriedAddress": 0,
+      "encodings": [],
+      "methods": [],
+      "channels": [
+        "empty"
+      ],
+      "declared": null
+    },
+    {
+      "host": "sdk-cdn.fun.xyz",
+      "party": "third",
+      "kind": "backend",
+      "requests": 1,
+      "carriedAddress": 0,
+      "encodings": [],
+      "methods": [],
+      "channels": [
+        "empty"
+      ],
+      "declared": null
+    },
+    {
+      "host": "api.moonpay.com",
+      "party": "third",
+      "kind": "backend",
+      "requests": 1,
+      "carriedAddress": 0,
+      "encodings": [],
+      "methods": [],
+      "channels": [
+        "empty"
+      ],
+      "declared": null
+    },
+    {
+      "host": "apps.aavechan.com",
+      "party": "third",
+      "kind": "backend",
+      "requests": 1,
+      "carriedAddress": 0,
+      "encodings": [],
+      "methods": [],
+      "channels": [
+        "empty"
+      ],
+      "declared": null
+    }
+  ],
+  "rpc": {
+    "directCalls": 11,
+    "directCallsWithAddress": 4,
+    "viaAnonRpc": 2,
+    "coveragePct": 15
+  },
+  "canary": {
+    "counts": {
+      "backend": 34,
+      "blocked": 9,
+      "detected": 8,
+      "direct": 0,
+      "failedClosed": 0,
+      "localNode": 0,
+      "notInspected": 1,
+      "protected": 2,
+      "protectedIpOnly": 0
+    },
+    "notes": [
+      "unreadable body"
+    ],
+    "latencyMs": {
+      "p50": 2366,
+      "p95": 2366,
+      "n": 2
+    }
+  },
+  "canaryEgress": {
+    "extension → update.googleapis.com": 1,
+    "extension → app.aave.com": 1,
+    "extension → ethereum-rpc.publicnode.com": 2,
+    "extension → cdn.jsdelivr.net": 1,
+    "extension → content-autofill.googleapis.com": 1
+  },
+  "undeclared": [],
+  "notInspected": [
+    "service workers' own traffic",
+    "WebRTC",
+    "encrypted or arbitrarily obfuscated payloads",
+    "flows beyond load → connect → scroll"
+  ]
+}

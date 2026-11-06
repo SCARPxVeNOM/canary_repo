@@ -1,0 +1,253 @@
+{
+  "url": "https://app.aave.com/",
+  "scannedAt": "2026-11-06T04:26:50.211Z",
+  "scanner": {
+    "version": "0.1.0",
+    "hash": "d36f3430409d"
+  },
+  "build": {
+    "fingerprint": "f1d35f147d22",
+    "documents": 113
+  },
+  "withCanary": false,
+  "canaryAddress": "0x0Cf35Bf35c87Da773d80db191F3d1c19db309ae0",
+  "flows": [
+    "load https://app.aave.com/",
+    "connect: no connect button; the dapp already read the account (eth_accounts)",
+    "scroll"
+  ],
+  "requestsSeen": 245,
+  "recipients": [
+    {
+      "host": "app.aave.com",
+      "party": "first",
+      "kind": "backend+rpc",
+      "requests": 48,
+      "carriedAddress": 5,
+      "encodings": [
+        "hex in body",
+        "hex in URL"
+      ],
+      "methods": [
+        "eth_call",
+        "eth_getCode"
+      ],
+      "channels": [
+        "speculationrules",
+        "empty",
+        "object"
+      ],
+      "declared": true
+    },
+    {
+      "host": "api.v3.aave.com",
+      "party": "first",
+      "kind": "backend",
+      "requests": 9,
+      "carriedAddress": 3,
+      "encodings": [
+        "hex in body"
+      ],
+      "methods": [],
+      "channels": [
+        "empty"
+      ],
+      "declared": true
+    },
+    {
+      "host": "browser-intake-datadoghq.com",
+      "party": "third",
+      "kind": "analytics",
+      "requests": 3,
+      "carriedAddress": 3,
+      "encodings": [
+        "hex in body"
+      ],
+      "methods": [],
+      "channels": [
+        "empty"
+      ],
+      "declared": null
+    },
+    {
+      "host": "mainnet.gateway.tenderly.co",
+      "party": "third",
+      "kind": "backend+rpc",
+      "requests": 4,
+      "carriedAddress": 2,
+      "encodings": [
+        "hex in body"
+      ],
+      "methods": [
+        "eth_call"
+      ],
+      "channels": [
+        "empty"
+      ],
+      "declared": null
+    },
+    {
+      "host": "apps.aavechan.com",
+      "party": "third",
+      "kind": "backend",
+      "requests": 2,
+      "carriedAddress": 1,
+      "encodings": [
+        "hex in URL"
+      ],
+      "methods": [],
+      "channels": [
+        "empty"
+      ],
+      "declared": null
+    },
+    {
+      "host": "data-api.fun.xyz",
+      "party": "third",
+      "kind": "backend",
+      "requests": 6,
+      "carriedAddress": 0,
+      "encodings": [],
+      "methods": [],
+      "channels": [
+        "empty"
+      ],
+      "declared": null
+    },
+    {
+      "host": "app.family.co",
+      "party": "third",
+      "kind": "backend",
+      "requests": 3,
+      "carriedAddress": 0,
+      "encodings": [],
+      "methods": [],
+      "channels": [
+        "empty"
+      ],
+      "declared": null
+    },
+    {
+      "host": "static.cloudflareinsights.com",
+      "party": "third",
+      "kind": "analytics",
+      "requests": 2,
+      "carriedAddress": 0,
+      "encodings": [],
+      "methods": [],
+      "channels": [
+        "script"
+      ],
+      "declared": null
+    },
+    {
+      "host": "sr-client-cfg.amplitude.com",
+      "party": "third",
+      "kind": "analytics",
+      "requests": 2,
+      "carriedAddress": 0,
+      "encodings": [],
+      "methods": [],
+      "channels": [
+        "empty"
+      ],
+      "declared": null
+    },
+    {
+      "host": "api.merkl.xyz",
+      "party": "third",
+      "kind": "backend",
+      "requests": 2,
+      "carriedAddress": 0,
+      "encodings": [],
+      "methods": [],
+      "channels": [
+        "empty"
+      ],
+      "declared": null
+    },
+    {
+      "host": "cca-lite.coinbase.com",
+      "party": "third",
+      "kind": "backend",
+      "requests": 2,
+      "carriedAddress": 0,
+      "encodings": [],
+      "methods": [],
+      "channels": [
+        "empty"
+      ],
+      "declared": null
+    },
+    {
+      "host": "accounts.google.com",
+      "party": "third",
+      "kind": "backend",
+      "requests": 1,
+      "carriedAddress": 0,
+      "encodings": [],
+      "methods": [],
+      "channels": [
+        "empty"
+      ],
+      "declared": null
+    },
+    {
+      "host": "o4508407151525888.ingest.de.sentry.io",
+      "party": "third",
+      "kind": "analytics",
+      "requests": 1,
+      "carriedAddress": 0,
+      "encodings": [],
+      "methods": [],
+      "channels": [
+        "empty"
+      ],
+      "declared": null
+    },
+    {
+      "host": "sdk-cdn.fun.xyz",
+      "party": "third",
+      "kind": "backend",
+      "requests": 1,
+      "carriedAddress": 0,
+      "encodings": [],
+      "methods": [],
+      "channels": [
+        "empty"
+      ],
+      "declared": null
+    },
+    {
+      "host": "api.moonpay.com",
+      "party": "third",
+      "kind": "backend",
+      "requests": 1,
+      "carriedAddress": 0,
+      "encodings": [],
+      "methods": [],
+      "channels": [
+        "empty"
+      ],
+      "declared": null
+    }
+  ],
+  "rpc": {
+    "directCalls": 13,
+    "directCallsWithAddress": 6,
+    "viaAnonRpc": 0,
+    "coveragePct": 0
+  },
+  "canary": null,
+  "canaryEgress": {
+    "extension → update.googleapis.com": 1,
+    "extension → content-autofill.googleapis.com": 1
+  },
+  "undeclared": [],
+  "notInspected": [
+    "service workers' own traffic",
+    "WebRTC",
+    "encrypted or arbitrarily obfuscated payloads",
+    "flows beyond load → connect → scroll"
+  ]
+}
