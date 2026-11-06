@@ -122,12 +122,17 @@ function proxyChain(url: string): number | undefined {
   return undefined;
 }
 
-/** A chain id the URL seems to name (`/rpc/8453`, `?chainId=10`): a hint, used only after a probe failed. */
+/** A chain the URL seems to name (`/rpc/8453`, `/web3/1`, `?chainId=10`, `/ethereum-mainnet`): a hint, used
+    only when no probe could ask the endpoint itself. */
 export function chainHintFromUrl(url: string): number | undefined {
   try {
     const u = new URL(url);
-    const m = u.pathname.match(/\/(?:rpc|chains?|networks?|evm)\/(\d{1,10})(?:\/|$)/i) ?? u.search.match(/[?&]chain(?:_?id)?=(\d{1,10})(?:&|$)/i);
-    return m ? Number(m[1]) : undefined;
+    const m = u.pathname.match(/\/(?:rpc|chains?|networks?|evm|web3)\/(\d{1,10})(?:\/|$)/i) ?? u.search.match(/[?&]chain(?:_?id)?=(\d{1,10})(?:&|$)/i);
+    if (m) return Number(m[1]);
+    // The endpoint's last path segment, when it's a network's name as providers spell them (`/ethereum-mainnet`).
+    // Only the last one: names like "base" or "mode" are ordinary words anywhere else in a path.
+    const last = u.pathname.split("/").filter(Boolean).at(-1);
+    return net(last && decodeURIComponent(last)) ?? net(u.searchParams.get("network") ?? undefined);
   } catch {
     return undefined;
   }

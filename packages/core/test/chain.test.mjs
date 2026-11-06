@@ -47,3 +47,16 @@ test("URL hints are strict: a chain-like segment or query, nothing looser", () =
   assert.equal(chainHintFromUrl("https://api.dapp.example/v1/123/data"), undefined);
   assert.equal(chainHintFromUrl("https://api.dapp.example/rpc"), undefined);
 });
+
+test("URL hints read a network's name or a /web3/<id> path", () => {
+  // Compound's own node proxy (seen 7 Nov), and 1inch's web3 proxy shape
+  assert.equal(chainHintFromUrl("https://node-provider-v3-app.compound.xyz/ethereum-mainnet"), 1);
+  assert.equal(chainHintFromUrl("https://proxy-app.dapp.example/v2.0/web3/1"), 1);
+  assert.equal(chainHintFromUrl("https://api.dapp.example/node/arbitrum-one"), 42161);
+  assert.equal(chainHintFromUrl("https://api.dapp.example/rpc/base-sepolia/"), 84532);
+  assert.equal(chainHintFromUrl("https://api.dapp.example/jsonrpc?network=polygon"), 137);
+  // the last segment, whole: names inside other words, or earlier in the path, aren't networks
+  assert.equal(chainHintFromUrl("https://api.dapp.example/database/basement"), undefined);
+  assert.equal(chainHintFromUrl("https://api.dapp.example/base/v1/prices"), undefined);
+  assert.equal(chainHintFromUrl("https://api.dapp.example/v1/prices"), undefined);
+});
