@@ -1,0 +1,72 @@
+{
+  "url": "https://canary-swap.vercel.app/",
+  "scannedAt": "2026-11-06T10:53:25.179Z",
+  "scanner": {
+    "version": "0.1.0",
+    "hash": "6f23dc32b0a4"
+  },
+  "build": {
+    "fingerprint": "c1f1b8e5427e",
+    "documents": 2
+  },
+  "withCanary": false,
+  "canaryAddress": "0x1F60F9ce39eFA18E646E5908c28cB77b51e91241",
+  "flows": [
+    "load https://canary-swap.vercel.app/",
+    "connect: clicked",
+    "quote: typed 0.0001 into the amount field",
+    "scroll"
+  ],
+  "requestsSeen": 14,
+  "recipients": [
+    {
+      "host": "ethereum-sepolia-rpc.publicnode.com",
+      "party": "third",
+      "kind": "backend+rpc",
+      "requests": 7,
+      "carriedAddress": 2,
+      "encodings": [
+        "hex in body"
+      ],
+      "methods": [
+        "eth_call",
+        "eth_getBalance"
+      ],
+      "channels": [
+        "empty"
+      ],
+      "declared": true
+    },
+    {
+      "host": "accounts.google.com",
+      "party": "third",
+      "kind": "backend",
+      "requests": 1,
+      "carriedAddress": 0,
+      "encodings": [],
+      "methods": [],
+      "channels": [
+        "empty"
+      ],
+      "declared": false
+    }
+  ],
+  "rpc": {
+    "directCalls": 5,
+    "directCallsWithAddress": 2,
+    "viaAnonRpc": 0,
+    "coveragePct": 0
+  },
+  "canary": null,
+  "canaryEgress": {
+    "extension → update.googleapis.com": 1,
+    "extension → content-autofill.googleapis.com": 2
+  },
+  "undeclared": [],
+  "notInspected": [
+    "service workers' own traffic",
+    "WebRTC",
+    "encrypted or arbitrarily obfuscated payloads",
+    "flows beyond load → connect → quote → scroll"
+  ]
+}

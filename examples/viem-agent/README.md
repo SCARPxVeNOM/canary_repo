@@ -18,6 +18,7 @@ On Windows (cmd), set variables first: `set WALLET=0x…` then `npm run agent`.
 | File | What |
 |---|---|
 | `agent.mjs` | the agent. The only line that differs between the two modes is the viem transport (plus `llmFetch` for the LLM call) |
+| `swap.mjs` | the agent swaps on Uniswap v4 through the gateway (below) |
 | `canary.config.json` | gateway config: tor-js (same as the extension's `config/live.json`), Sepolia + mainnet read endpoints, local manifest |
 | `manifest.json` | the policy: LLM hosts `direct` (keyed; addresses pseudonymized), `api.coingecko.com` `anon`, everything else blocked; Sepolia USDC and WETH allow-listed for the LLM |
 | `canary.ens.config.json` | the same gateway, but the policy comes from the agent's ENSv2 name (below) |
@@ -28,6 +29,15 @@ Notes:
 - **Gateways:** EF's demo gateway is shared and unreliable (on 6 Nov it stopped completing boots). `canary.local.config.json` uses three run from [`../../gateway/`](../../gateway/) with `ADVERTISE=127.0.0.1` on ports 12298–12300 (`KPS_PORT`, one volume each); put in the addresses `docker logs` prints for yours (the certhash comes from each gateway's key). `canary.config.json` (`npm run gateway`) now uses the same gateways by default; `npm run gateways -- <address> …` at the repo root rewrites all of them.
 - **Read endpoints** must accept Tor traffic: publicnode and 1rpc do, Tenderly doesn't (test-repo.md §5).
 - **ethers instead of viem:** `const provider = await canary.ethersProvider(11155111)`.
+
+## Swap on Uniswap v4 (`npm run swap`)
+
+```sh
+npm run gateway:local                                # terminal 1
+AGENT_KEY_FILE=../../agent.key npm run swap          # terminal 2: 0.0001 ETH → CNRY on Sepolia (AMOUNT=… to change it)
+```
+
+The same swap as [Canary Swap](../../swap/)'s page, with the same code (`swap/src/v4.js`): a quote from the v4 Quoter over `eth_call` (the pool key and the amount, no address), then one Universal Router transaction (`V4_SWAP`). The agent fills and signs it locally and sends it as `eth_sendRawTransaction`; the manifest's `rpc.write: "anon"` sends that over anon-rpc too, so the RPC learns neither this machine's IP nor that the quote and the wallet belong together. The key file holds a Sepolia test key with a little ETH, and is never printed. A run: [`test-artifacts/swap/agent-swap.log`](../../test-artifacts/swap/agent-swap.log) (18 of 19 calls protected, the broadcast IP-only, none direct).
 
 ## Policy from ENS (`npm run gateway:ens`)
 

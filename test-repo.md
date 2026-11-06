@@ -650,3 +650,42 @@ Raw results: `../live-check/results.json` (outside the repo: it holds this machi
 
 **Fixed: the scanner's fake wallet froze Uniswap.** `scanner/lib/wallet.js` emitted `connect` on every `eth_accounts`; Uniswap re-reads accounts on `connect`, so the two looped and its main thread stalled 10–90 s in Chrome for Testing, with or without Canary (2 ms with no wallet). It now emits `connect` once, as a wallet does: main thread back to 1–2 ms with the wallet. Earlier Uniswap scans finished despite the stall, so their results stand.
 
+
+## 21. Uniswap: what a quote sends, and Canary Swap (6 Nov)
+
+**What app.uniswap.org sends for a quote.** The scanner gained `--amount <n>`: after connecting, it types `n` into the page's amount field. `/swap` with no output token sends no quote, so the run used `?inputCurrency=ETH&outputCurrency=<USDC>` and typed `1`. Before anything is signed, `entry-gateway.backend-prod.api.uniswap.org` received `POST /check_approval` (`walletAddress`, amount 1e18), `POST /quote` ×2 (`swapper` = the address, `tokenIn`, `tokenOut`, amount) and `POST /swap` ×3 (the quote with `swapper` and `recipient`). It is first party, so the label's "no third parties" stands. Canary allows first-party requests and reports them, so it can't remove this from the outside. Bodies and report: `test-artifacts/scans/quote/`.
+
+**A pool on Sepolia v4** (`swap/scripts/sepolia-pool.mjs`, `swap/sepolia.json`):
+- CNRY deployed (`0x77a4…8584`).
+- ETH/CNRY initialized at 1 ETH = 100,000 CNRY (0.3 %, spacing 60, no hooks).
+- Permit2 approvals.
+- A full-range position of 0.02 ETH through the PositionManager (liquidity 6.32e18). The spare ETH was swept back.
+- First try reverted with `CannotUpdateEmptyPosition()`. The pool read as uninitialized straight after `initialize` (publicnode's "latest" lagged the receipt), so the liquidity came out 0. The script now waits for the read to catch up.
+- Before any swap was signed, the Universal Router swap was simulated with `eth_call`. It passed, and a `minAmountOut` 1 wei above the quote reverted. The two Sepolia Quoters (`0x61b3…`, `0x68aF…`) returned the same quote.
+
+**Canary Swap, live at https://canary-swap.vercel.app** (`swap/`). `swap/test/live.mjs` drives Chromium with a test wallet that signs in Node:
+
+| Run | Transactions (all mined) | Canary |
+|---|---|---|
+| localhost, no Canary, fresh wallet | swap 0.0001 ETH → CNRY, mint, approve Permit2, Permit2 approve UR, swap 5 CNRY → ETH | — |
+| localhost, `dist-local` | swap, mint, swap (approvals already held) | 50 reads, all `protected` |
+| deployed, `dist-local` | swap `0x93ee…3b2c`, mint, swap `0xe742…71c2` | 50 reads, all `protected`; popup "Matches manifest", reads via anon-rpc 53, third-party leaks blocked 0, coverage 100 % |
+
+In every run the page found the connected address in none of the quote requests. On Ethereum, quote only: 1 ETH → 2,236.31 USDC, the best of three v4 pools, in five `eth_call`s.
+
+Three things went wrong on the way:
+- The local server crashed on a 404: it wrote the headers before the file read failed.
+- Vercel took `server.mjs`, the local dev server, as a Node entry point, and every path returned `FUNCTION_INVOCATION_FAILED`. Fixed by excluding it from the upload and setting the project's framework preset to Other.
+- `vercel link` writes a `.env.local` with an OIDC token. `.gitignore` and `.vercelignore` both exclude it.
+
+**`swap.canary.eth`:**
+- Its own Permissioned Resolver (`sepolia-setup.mjs`).
+- `set-dapp` (`url` + `privacy.manifest`) and `grant-verifier`.
+- A baseline scan of the deployed site: only the declared RPC received the address, for the balance reads.
+- `sign-verdict` and `publish-verdict`: `matches`.
+- Read back with `canary-ens read-dapp` and `extension/test/ens-live.mjs`: signed, signer is the verifier, delegated, matches the site.
+- Transactions are in `packages/ens/sepolia.json`.
+
+**The agent's swap** (`examples/viem-agent/swap.mjs`, `test-artifacts/swap/agent-swap.log`): it quoted and swapped through `npm run gateway:local`, and the raw transaction went over anon-rpc. 19 calls: 18 `protected`, 1 `protectedIpOnly` (the broadcast), none direct or failed. On the first try, viem's `sendTransaction` asked for `eth_fillTransaction` first. The upstream doesn't answer it, so the gateway failed closed four times before viem fell back. The agent now fills and signs locally. A dapp's agent using `sendTransaction` with a local account through the gateway would see the same retries; answering `eth_fillTransaction` locally with "method not found" would avoid them. Not done.
+
+**Popup summary rows** (`Summary` in `extension/src/ui/parts.tsx`): reads via anon-rpc, third-party leaks blocked, what ENS says about the site, and coverage, under the headline. Extension e2e **51/51** (new: the summary). `swap/` unit tests 6/6: the v4 encodings decoded back, against the mainnet ETH/USDC pool id and the Sepolia pool's start price.

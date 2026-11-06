@@ -1,0 +1,32 @@
+{
+  "name": "swap.canary.eth",
+  "origin": "https://canary-swap.vercel.app",
+  "verifier": "verifier.canary.eth",
+  "buildHash": "c1f1b8e5427e",
+  "scannerHash": "6f23dc32b0a4",
+  "flows": [
+    "load https://canary-swap.vercel.app/",
+    "connect: clicked",
+    "quote: typed 0.0001 into the amount field",
+    "scroll"
+  ],
+  "result": "matches",
+  "undeclaredHosts": [],
+  "addressRecipients": [
+    {
+      "host": "ethereum-sepolia-rpc.publicnode.com",
+      "kind": "backend+rpc"
+    }
+  ],
+  "notInspected": [
+    "service workers' own traffic",
+    "WebRTC",
+    "encrypted or arbitrarily obfuscated payloads",
+    "flows beyond load → connect → quote → scroll"
+  ],
+  "issuedAt": 1793962405,
+  "expiresAt": 1796554405,
+  "evidenceURI": "https://github.com/SCARPxVeNOM/canary_repo/blob/main/test-artifacts/scans/canary-swap.vercel.app.baseline.md",
+  "signer": "0x0f17A972C98f06BB128d8d8B971c33E631b351De",
+  "signature": "0x95bda53908ae3e41ab74a245cc4d50621f1bf11863e64602d517b8afd5aa5e31225b78b4f3c39d42f5aaf84cfa2cd6e9d706a19bf1709fcdb8eda7f87c8a23171c"
+}

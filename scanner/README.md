@@ -23,6 +23,7 @@ Output in `scans/`: `<host>.baseline.md/.json`, `<host>.canary.md/.json`, `<host
 | `--chain 0x1` | chain the fake wallet reports |
 | `--rpc <url>` | scanner-side RPC for reads the dapp sends to the *wallet* (never goes through the proxy) |
 | `--wait <ms>` | time after connecting before scrolling (default 8000) |
+| `--amount <n>` | after connecting, type `n` into the page's amount field, so a swap form asks for a quote (`../test-artifacts/scans/quote/`) |
 | `--keep` | save the raw captured requests |
 | `--headful` | show the browser |
 
@@ -30,7 +31,7 @@ Output in `scans/`: `<host>.baseline.md/.json`, `<host>.canary.md/.json`, `<host
 
 1. Starts `mitmdump` with `addon.py` (records URL, kept headers, body, WebSocket frames from the client, and hashes of first-party HTML/JS for the build fingerprint).
 2. Launches Chromium through it (`--proxy-bypass-list=<-loopback>` so localhost goes through the proxy too; QUIC off so nothing bypasses it), injects the fake wallet (`lib/wallet.js`: EIP-1193 + EIP-6963, approves connection, rejects every signature).
-3. Flow: load → click "Connect" (and pick "Canary Scanner" in a wallet modal if one opens) → wait → scroll. Short on purpose.
+3. Flow: load → click "Connect" (and pick "Canary Scanner" in a wallet modal if one opens) → with `--amount`, type the amount → wait → scroll. Short on purpose.
 4. Matches the canary address in every request (`lib/matcher.mjs`): hex (covers lowercase, checksummed, no-`0x`, ABI-padded, URL-encoded), base64/base64url of the raw bytes and of each text form, keccak256 and sha256 of each, and raw bytes in binary bodies.
 5. Classifies each destination: first/third party, `rpc` (JSON-RPC body, or JSON-RPC methods in a custom envelope such as `{chainId, method, params}` to a dapp's own RPC proxy), `analytics` (known hosts and paths), `backend`. Traffic from the extension itself is listed separately.
 

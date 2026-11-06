@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Canary Swap</title>
+  <meta name="description" content="Uniswap v4 quotes read from the chain: no quote API, no address in the request." />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Ccircle cx='8' cy='8' r='7' fill='%230e6b80'/%3E%3C/svg%3E" />
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+  <header class="bar">
+    <div class="logo">Canary Swap <span class="muted">on Uniswap v4</span></div>
+    <div class="right">
+      <label class="sr" for="chain">Network</label>
+      <select id="chain">
+        <option value="11155111">Sepolia · quote and swap</option>
+        <option value="1">Ethereum · quote only</option>
+      </select>
+      <button id="connect" class="primary">Connect wallet</button>
+    </div>
+  </header>
+
+  <main>
+    <section class="swap card" aria-label="Swap">
+      <div class="field">
+        <div class="row"><label for="amountIn">You pay</label><span id="balIn" class="muted small"></span></div>
+        <div class="row">
+          <input id="amountIn" inputmode="decimal" autocomplete="off" placeholder="0" aria-describedby="balIn" />
+          <span id="tokenIn" class="token">ETH</span>
+        </div>
+      </div>
+      <button id="flip" class="flip" aria-label="Swap direction">↓</button>
+      <div class="field">
+        <div class="row"><span>You receive</span><span id="balOut" class="muted small"></span></div>
+        <div class="row">
+          <output id="amountOut" for="amountIn" aria-live="polite">0</output>
+          <span id="tokenOut" class="token">CNRY</span>
+        </div>
+      </div>
+      <dl id="details" hidden>
+        <div><dt>Rate</dt><dd id="rate"></dd></div>
+        <div><dt>Pool</dt><dd id="pool"></dd></div>
+        <div><dt>Price impact</dt><dd id="impact"></dd></div>
+        <div><dt>Minimum received</dt><dd id="min"></dd></div>
+        <div><dt>Gas estimate</dt><dd id="gas"></dd></div>
+      </dl>
+      <button id="swap" class="primary wide" disabled>Enter an amount</button>
+      <p id="status" class="status" role="status"></p>
+      <p id="mintRow" class="small" hidden><button id="mint" class="link">Get 1,000 test CNRY</button></p>
+    </section>
+
+    <section class="card" aria-labelledby="sentTitle">
+      <h2 id="sentTitle">What this quote sent</h2>
+      <p id="sentNone" class="muted small">Type an amount. The requests the quote makes show up here.</p>
+      <div id="sent" hidden>
+        <p class="small"><span id="sentCount"></span> to <code id="sentHost"></code>, each an <code>eth_call</code>:</p>
+        <ul id="sentList" class="calls"></ul>
+        <p id="sentAddr" class="small"></p>
+        <details class="small"><summary>The last request body</summary><pre id="sentBody"></pre></details>
+      </div>
+      <p id="canary" class="small"></p>
+      <p class="small muted">For the same trade, app.uniswap.org sends your address to its server as <code>swapper</code>, with the tokens and the amount, before you sign anything (<a href="https://github.com/SCARPxVeNOM/canary_repo/tree/main/test-artifacts/scans/quote">scan</a>).</p>
+    </section>
+
+    <section class="card small" aria-labelledby="howTitle">
+      <h2 id="howTitle">How it works</h2>
+      <ul class="plain">
+        <li><b>Quote</b>: <code>quoteExactInputSingle</code> on the v4 Quoter, over <code>eth_call</code>. The Quoter runs the swap against the pool and reverts with the result, so nothing is sent and the request holds the pool and the amount only.</li>
+        <li><b>Price</b>: <code>getSlot0</code> and <code>getLiquidity</code> on StateView, for the price impact.</li>
+        <li><b>Swap</b>: one Universal Router transaction (<code>V4_SWAP</code>: swap, settle, take) that your wallet signs and sends. Selling CNRY first approves Permit2. Your wallet broadcasts through its own RPC, which Canary can't change; an agent can send through anon-rpc (<a href="https://github.com/SCARPxVeNOM/canary_repo/tree/main/examples/viem-agent">swap.mjs</a>).</li>
+      </ul>
+      <p id="contracts" class="muted"></p>
+    </section>
+  </main>
+  <script src="/app.js" type="module"></script>
+</body>
+</html>

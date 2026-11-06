@@ -19,9 +19,11 @@
      <host>.labels.canary.eth
                             a label per --label scan: url = the site, and the
                             verifier's signed verdict from that baseline scan
+     swap.canary.eth        Canary Swap (swap/), a dapp under Canary's namespace,
+                            with its own Permissioned Resolver like leakydash.eth
 
    The records themselves are written with canary-ens afterwards (set-dapp,
-   grant-verifier, sign-verdict, publish-verdict for the dapp; set-manifest,
+   grant-verifier, sign-verdict, publish-verdict for each dapp; set-manifest,
    grant-reporter for the agent; see packages/ens/README.md).
 
    usage: node scripts/sepolia-setup.mjs --owner-key-file <file> --verifier-key-file <file>
@@ -65,6 +67,7 @@ const VERIFIER = "verifier";
 const AGENTS = "agents";
 const AGENT = "trader-01";
 const LABELS = "labels";
+const SWAP = "swap";
 const REPO = "https://github.com/SCARPxVeNOM/canary_repo";
 const DURATION = 365n * 86400n;
 // every role, admin roles included, for the owner of a resolver or registry it deploys
@@ -193,6 +196,8 @@ const agentResolver = await deployProxy(agentName, A.resolverImpl, "Permissioned
 const labelsName = `${LABELS}.${NAMESPACE}.eth`;
 const labelsRegistry = await deployProxy(labelsName, A.userRegistryImpl, "UserRegistry", registryInit);
 const labelsResolver = await deployProxy(labelsName, A.resolverImpl, "PermissionedResolver", resolverInit);
+const swapName = `${SWAP}.${NAMESPACE}.eth`;
+const swapResolver = await deployProxy(swapName, A.resolverImpl, "PermissionedResolver", resolverInit);
 out.names[`${DAPP}.eth`] = { resolver: dappResolver };
 out.names[`${NAMESPACE}.eth`] = { resolver: canaryResolver, subregistry: canaryRegistry };
 save();
@@ -270,6 +275,12 @@ if (!(await canWriteText(client, labelsResolver, labelsName, vKey, verifier.addr
   console.log(`  grant ${vKey} on the labels resolver: ${hash}`);
 }
 
+// 3d. swap.canary.eth: a dapp's name, so its own resolver (a verifier's grant covers only this name)
+if (!same(await client.readContract({ address: canaryRegistry, abi: registry, functionName: "findOwner", args: [SWAP] }), owner.address)) {
+  const expiry = await client.readContract({ address: A.ethRegistry, abi: registry, functionName: "findExpiry", args: [NAMESPACE] });
+  await send(`register ${swapName}`, canaryRegistry, registry, "register", [SWAP, owner.address, zeroAddress, swapResolver, NAME_OWNER_ROLES, expiry]);
+}
+
 // 4. records the setup owns: the verifier's addr; canary.eth points at the code
 const verifierName = `${VERIFIER}.${NAMESPACE}.eth`;
 /** A record through the Universal Resolver, decoded; null if the name doesn't resolve yet. */
@@ -290,6 +301,7 @@ out.names[verifierName] = { owner: verifier.address, resolver: canaryResolver, a
 out.names[agentsName] = { owner: owner.address, resolver: canaryResolver, subregistry: agentsRegistry };
 out.names[agentName] = { owner: owner.address, resolver: agentResolver, reporter: reporter.address };
 out.names[labelsName] = { owner: owner.address, resolver: canaryResolver, subregistry: labelsRegistry, labelsResolver };
+out.names[swapName] = { owner: owner.address, resolver: swapResolver };
 save();
 
 // 5. a label per baseline scan: Canary binds it to the site (url), the verifier signs and writes the verdict

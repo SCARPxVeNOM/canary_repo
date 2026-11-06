@@ -8,7 +8,8 @@
     "gateway:local": "canary-gateway --config canary.local.config.json",
     "gateway:ens:local": "canary-gateway --config canary.ens.local.config.json",
     "agent": "node agent.mjs",
-    "agent:leaky": "node agent.mjs --leaky"
+    "agent:leaky": "node agent.mjs --leaky",
+    "swap": "node swap.mjs"
   },
   "dependencies": {
     "@canary/agent": "0.1.0",

@@ -1,0 +1,22 @@
+{
+  "name": "canary-swap",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "license": "MIT",
+  "description": "Canary Swap: Uniswap v4 quotes read from the chain (no quote API, no address), swaps through the Universal Router on Sepolia.",
+  "scripts": {
+    "start": "node server.mjs",
+    "build": "node build.mjs",
+    "pool": "node scripts/sepolia-pool.mjs --owner-key-file ../keys.txt",
+    "test": "node --test \"test/*.test.mjs\""
+  },
+  "dependencies": {
+    "esbuild": "^0.28.0",
+    "viem": "^2.57.0"
+  },
+  "devDependencies": {
+    "playwright": "^1.65.0",
+    "solc": "^0.8.30"
+  }
+}

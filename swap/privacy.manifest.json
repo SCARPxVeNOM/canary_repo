@@ -1,0 +1,9 @@
+{
+  "name": "swap.canary.eth",
+  "origin": "https://canary-swap.vercel.app",
+  "recipients": [
+    { "host": "ethereum-sepolia-rpc.publicnode.com", "kind": "rpc", "purpose": "Sepolia: quotes (v4 Quoter), pool state (StateView), balances and receipts" },
+    { "host": "ethereum-rpc.publicnode.com", "kind": "rpc", "purpose": "Ethereum: quotes and pool state (quote only)" }
+  ],
+  "rpc": { "anonByDefault": false }
+}

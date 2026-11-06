@@ -1,0 +1,106 @@
+{
+  "url": "http://localhost:3300/",
+  "withCanary": false,
+  "wallet": "0xE9bb50BCfC7C97320903645D0eEBe79650593d19",
+  "at": "2026-11-06T10:40:57.177Z",
+  "steps": [
+    {
+      "step": "quote, not connected",
+      "out": "9.9205461",
+      "details": "Rate 1 ETH = 99,205.5 CNRY Pool ETH/CNRY · 0.3 % Price impact 0.50 % Minimum received 9.8709433 CNRY (0.5 % slippage) Gas estimate 51,398 units",
+      "sent": [
+        "Quoter.quoteExactInputSingle: pool ETH/CNRY 0.3 %, ETH → CNRY, exactAmount 100000000000000 (0.0001 ETH)",
+        "StateView.getSlot0: pool id 0xff4f…1531",
+        "StateView.getLiquidity: pool id 0xff4f…1531"
+      ],
+      "addr": "No wallet connected, so no address to send. Connected, the requests are the same."
+    },
+    {
+      "step": "quote, connected",
+      "out": "…",
+      "details": "Rate 1 ETH = 99,205.5 CNRY Pool ETH/CNRY · 0.3 % Price impact 0.50 % Minimum received 9.8709433 CNRY (0.5 % slippage) Gas estimate 51,398 units",
+      "sent": [
+        "Quoter.quoteExactInputSingle: pool ETH/CNRY 0.3 %, ETH → CNRY, exactAmount 100000000000000 (0.0001 ETH)",
+        "StateView.getSlot0: pool id 0xff4f…1531",
+        "StateView.getLiquidity: pool id 0xff4f…1531"
+      ],
+      "addr": "Your address 0xE9bb…3d19 is in none of them."
+    },
+    {
+      "step": "swap ETH → CNRY",
+      "status": "Swapped. At least 9.87094 CNRY received. 0x49bf…3073",
+      "tx": "0x49bfe68fe929da4ad351e409af2924b424874dc8b51bc8df5a11318415f23073"
+    },
+    {
+      "step": "mint CNRY",
+      "status": "1,000 CNRY minted. 0xdeeb…b2b4"
+    },
+    {
+      "step": "quote, CNRY → ETH",
+      "out": "0.00005022244",
+      "details": "Rate 1 CNRY = 0.0000100445 ETH Pool ETH/CNRY · 0.3 % Price impact 0.25 % Minimum received 0.000049971328 ETH (0.5 % slippage) Gas estimate 51,861 units",
+      "sent": [
+        "Quoter.quoteExactInputSingle: pool ETH/CNRY 0.3 %, CNRY → ETH, exactAmount 5000000000000000000 (5 CNRY)",
+        "StateView.getSlot0: pool id 0xff4f…1531",
+        "StateView.getLiquidity: pool id 0xff4f…1531"
+      ],
+      "addr": "Your address 0xE9bb…3d19 is in none of them."
+    },
+    {
+      "step": "swap CNRY → ETH",
+      "status": "Swapped. At least 0.0000499713 ETH received. 0xcb78…4f15",
+      "tx": "0xcb781b1f41974498ad45089b13b1e46ff27211ef8b077e7bb3b35572c3e74f15"
+    }
+  ],
+  "txs": [
+    {
+      "hash": "0x49bfe68fe929da4ad351e409af2924b424874dc8b51bc8df5a11318415f23073",
+      "to": "0x3A9D48AB9751398BbFa63ad67599Bb04e4BdF98b",
+      "status": "success",
+      "gasUsed": "325215",
+      "what": "Universal Router: execute (V4_SWAP)",
+      "selector": "0x3593564c"
+    },
+    {
+      "hash": "0xdeeb39c6cc6566325a8bb72fae42e0c91486328d7ad7d01603430fd0434ab2b4",
+      "to": "0x77a487307169cffc9dbdd6588d2d85ebf7288584",
+      "status": "success",
+      "gasUsed": "42551",
+      "what": "CNRY: mint",
+      "selector": "0x40c10f19"
+    },
+    {
+      "hash": "0x699aba6af5fcd433d049cca8e969ec1be29196040f8268ecea593f44f0ae6df2",
+      "to": "0x77a487307169cffc9dbdd6588d2d85ebf7288584",
+      "status": "success",
+      "gasUsed": "128323",
+      "what": "CNRY: approve Permit2",
+      "selector": "0x095ea7b3"
+    },
+    {
+      "hash": "0xe4a93e3eb178400e131b0e9fd24e486f029b2122767178a81019a98304d8b742",
+      "to": "0x000000000022D473030F116dDEE9F6B43aC78BA3",
+      "status": "success",
+      "gasUsed": "129838",
+      "what": "Permit2: approve the Universal Router",
+      "selector": "0x87517c45"
+    },
+    {
+      "hash": "0xcb781b1f41974498ad45089b13b1e46ff27211ef8b077e7bb3b35572c3e74f15",
+      "to": "0x3A9D48AB9751398BbFa63ad67599Bb04e4BdF98b",
+      "status": "success",
+      "gasUsed": "233043",
+      "what": "Universal Router: execute (V4_SWAP)",
+      "selector": "0x3593564c"
+    }
+  ],
+  "errors": [],
+  "before": {
+    "ETH": "0.003",
+    "CNRY": "0"
+  },
+  "after": {
+    "ETH": "0.002950222422162363",
+    "CNRY": "1004.920546077802156251"
+  }
+}

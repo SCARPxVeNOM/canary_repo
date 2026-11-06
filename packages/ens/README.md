@@ -105,6 +105,7 @@ Every record above is on ENSv2 Sepolia, written by these commands. Addresses and
 | Name | What it is | ENSv2 parts used |
 |---|---|---|
 | `leakydash.eth` | the demo dapp (`leakydash/`, live at https://canary-leakydash.vercel.app): `url`, `privacy.manifest`, and `privacy.verdict.canary` | ETHRegistrar (commit/register, paid in MockUSDC); its own Permissioned Resolver from the Verifiable Factory; a one-key EAC grant (`grantSetterRoles`) to the verifier |
+| `swap.canary.eth` | Canary Swap (`swap/`, live at https://canary-swap.vercel.app): `url`, `privacy.manifest`, and the verifier's `privacy.verdict.canary` (`matches`, from a scan of the deployed site) | a subname in canary.eth's registry with its own Permissioned Resolver, like a dapp's own name; a one-key EAC grant to the verifier |
 | `canary.eth` | Canary's namespace: `url`, `description` | a UserRegistry as its subregistry (`setParent` → the .eth registry) |
 | `verifier.canary.eth` | the verifier: a subname owned by the verifier key, `addr` = that key | a subname in that registry, resolved through the Universal Resolver |
 | `agents.canary.eth` | the agents' namespace: one subname per agent | a subname with its own UserRegistry as subregistry (`setParent` → canary.eth's registry) |

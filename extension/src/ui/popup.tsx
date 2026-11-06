@@ -8,7 +8,7 @@ import {
   activeTabId, applyTheme, coverage, declaredCount, hostOf, manifestOf, send,
   type Coverage, type Filter, type ManifestView, type Settings, type Site, type TabState, type Worker,
 } from "./model.js";
-import { CoverageBlock, Empty, EventRow, FILTER_LABEL, FilterChips, headline, LabelCard, Logo, manifestStatusFor, ManifestStatus, ProtectionSwitch, RowStatus, useFiltered, cx } from "./parts.js";
+import { CoverageBlock, Empty, EventRow, FILTER_LABEL, FilterChips, headline, LabelCard, Logo, manifestStatusFor, ManifestStatus, ProtectionSwitch, RowStatus, Summary, useFiltered, cx } from "./parts.js";
 import { verdictOf } from "./model.js";
 import { privacyLabel } from "../privacy-label.js";
 
@@ -88,7 +88,7 @@ function App() {
           </Tabs.ListContainer>
           <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-4 pt-3">
             <Tabs.Panel id="overview">
-              <Overview tab={tab} site={st.site!} cov={cov} worker={st.worker} />
+              <Overview tab={tab} site={st.site!} cov={cov} m={m} worker={st.worker} />
             </Tabs.Panel>
             <Tabs.Panel id="activity">
               <Activity tab={tab} m={m} />
@@ -124,15 +124,16 @@ function workerLine(w: Worker, tab: TabState) {
   return `anon-rpc ${state}${lat}`;
 }
 
-function Overview({ tab, site, cov, worker }: { tab: TabState; site: Site; cov: Coverage; worker: Worker }) {
+function Overview({ tab, site, cov, m, worker }: { tab: TabState; site: Site; cov: Coverage; m: ManifestView; worker: Worker }) {
   const [title, sub] = headline(tab, site, cov, worker);
   return (
     <div className="space-y-4">
-      <LabelCard l={privacyLabel(tab.declared)} />
       <div>
         <h1 id="headline" className="font-display text-[21px] font-bold leading-[1.2] tracking-[-0.01em] text-ink">{title}</h1>
         <p className="mt-1.5 text-[14px] leading-snug text-ink-2">{sub}</p>
       </div>
+      <Summary tab={tab} cov={cov} m={m} worker={worker} />
+      <LabelCard l={privacyLabel(tab.declared)} />
       <section className="rounded-2xl border border-line bg-surface p-4">
         <CoverageBlock cov={cov} at={lastEvent(tab)} compact />
       </section>

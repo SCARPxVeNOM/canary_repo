@@ -1,0 +1,237 @@
+{
+  "url": "https://app.uniswap.org/swap?chain=mainnet&inputCurrency=ETH&outputCurrency=0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+  "scannedAt": "2026-11-06T10:23:46.011Z",
+  "scanner": {
+    "version": "0.1.0",
+    "hash": "6f23dc32b0a4"
+  },
+  "build": {
+    "fingerprint": "cac3dc07a9ea",
+    "documents": 815
+  },
+  "withCanary": false,
+  "canaryAddress": "0xA683CdaA4cCfeF93863dDa136BD6554f33e6d4b8",
+  "flows": [
+    "load https://app.uniswap.org/swap?chain=mainnet&inputCurrency=ETH&outputCurrency=0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+    "connect: no connect button; the dapp already read the account (eth_accounts)",
+    "quote: typed 1 into the amount field",
+    "scroll"
+  ],
+  "requestsSeen": 987,
+  "recipients": [
+    {
+      "host": "entry-gateway.backend-prod.api.uniswap.org",
+      "party": "first",
+      "kind": "backend+rpc",
+      "requests": 124,
+      "carriedAddress": 31,
+      "encodings": [
+        "hex in body"
+      ],
+      "methods": [
+        "eth_blockNumber",
+        "eth_call",
+        "eth_getBalance",
+        "eth_chainId",
+        "net_version",
+        "eth_getCode"
+      ],
+      "channels": [
+        "empty",
+        "fetch/xhr"
+      ],
+      "declared": true
+    },
+    {
+      "host": "app.uniswap.org",
+      "party": "first",
+      "kind": "backend",
+      "requests": 8,
+      "carriedAddress": 2,
+      "encodings": [
+        "hex in body"
+      ],
+      "methods": [],
+      "channels": [
+        "empty"
+      ],
+      "declared": true
+    },
+    {
+      "host": "metrics.interface.gateway.uniswap.org",
+      "party": "first",
+      "kind": "backend",
+      "requests": 7,
+      "carriedAddress": 0,
+      "encodings": [],
+      "methods": [],
+      "channels": [
+        "empty"
+      ],
+      "declared": true
+    },
+    {
+      "host": "cdn.app.uniswap.org",
+      "party": "first",
+      "kind": "analytics+backend",
+      "requests": 3,
+      "carriedAddress": 0,
+      "encodings": [],
+      "methods": [],
+      "channels": [
+        "script",
+        "worker"
+      ],
+      "declared": true
+    },
+    {
+      "host": "nbstream.binance.com",
+      "party": "third",
+      "kind": "backend",
+      "requests": 3,
+      "carriedAddress": 0,
+      "encodings": [],
+      "methods": [],
+      "channels": [
+        "fetch/xhr",
+        "websocket"
+      ],
+      "declared": null
+    },
+    {
+      "host": "auth.privy.io",
+      "party": "third",
+      "kind": "backend",
+      "requests": 2,
+      "carriedAddress": 0,
+      "encodings": [],
+      "methods": [],
+      "channels": [
+        "empty"
+      ],
+      "declared": null
+    },
+    {
+      "host": "privy.app.uniswap.org",
+      "party": "first",
+      "kind": "backend",
+      "requests": 2,
+      "carriedAddress": 0,
+      "encodings": [],
+      "methods": [],
+      "channels": [
+        "empty"
+      ],
+      "declared": true
+    },
+    {
+      "host": "raw.githubusercontent.com",
+      "party": "third",
+      "kind": "backend",
+      "requests": 2,
+      "carriedAddress": 0,
+      "encodings": [],
+      "methods": [],
+      "channels": [
+        "empty"
+      ],
+      "declared": null
+    },
+    {
+      "host": "accounts.google.com",
+      "party": "third",
+      "kind": "backend",
+      "requests": 1,
+      "carriedAddress": 0,
+      "encodings": [],
+      "methods": [],
+      "channels": [
+        "empty"
+      ],
+      "declared": null
+    },
+    {
+      "host": "explorer-api.walletconnect.com",
+      "party": "third",
+      "kind": "backend",
+      "requests": 1,
+      "carriedAddress": 0,
+      "encodings": [],
+      "methods": [],
+      "channels": [
+        "empty"
+      ],
+      "declared": null
+    },
+    {
+      "host": "nbstream.binance.info",
+      "party": "third",
+      "kind": "backend",
+      "requests": 1,
+      "carriedAddress": 0,
+      "encodings": [],
+      "methods": [],
+      "channels": [
+        "fetch/xhr"
+      ],
+      "declared": null
+    },
+    {
+      "host": "api.web3modal.org",
+      "party": "third",
+      "kind": "backend",
+      "requests": 1,
+      "carriedAddress": 0,
+      "encodings": [],
+      "methods": [],
+      "channels": [
+        "empty"
+      ],
+      "declared": null
+    },
+    {
+      "host": "nbstream.yshyqxx.com",
+      "party": "third",
+      "kind": "backend",
+      "requests": 1,
+      "carriedAddress": 0,
+      "encodings": [],
+      "methods": [],
+      "channels": [
+        "fetch/xhr"
+      ],
+      "declared": null
+    },
+    {
+      "host": "pulse.walletconnect.org",
+      "party": "third",
+      "kind": "analytics",
+      "requests": 1,
+      "carriedAddress": 0,
+      "encodings": [],
+      "methods": [],
+      "channels": [
+        "empty"
+      ],
+      "declared": null
+    }
+  ],
+  "rpc": {
+    "directCalls": 25,
+    "directCallsWithAddress": 8,
+    "viaAnonRpc": 0,
+    "coveragePct": 0
+  },
+  "canary": null,
+  "canaryEgress": {
+    "extension → update.googleapis.com": 1,
+    "extension → content-autofill.googleapis.com": 1
+  },
+  "undeclared": [],
+  "notInspected": [
+    "service workers' own traffic",
+    "WebRTC",
+    "encrypted or arbitrarily obfuscated payloads",
+    "flows beyond load → connect → quote → scroll"
+  ]
+}

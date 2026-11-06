@@ -1,0 +1,51 @@
+{
+  "chainId": 11155111,
+  "v4": {
+    "poolManager": "0xE03A1074c86CFeDd5C142C4F04F1a1536e203543",
+    "universalRouter": "0x3A9D48AB9751398BbFa63ad67599Bb04e4BdF98b",
+    "positionManager": "0x429ba70129df741B2Ca2a85BC3A2a3328e5c09b4",
+    "stateView": "0xe1dd9c3fa50edb962e442f60dfbc432e24537e4c",
+    "quoter": "0x61b3f2011a92d183c7dbadbda940a7555ccf9227",
+    "permit2": "0x000000000022D473030F116dDEE9F6B43aC78BA3"
+  },
+  "owner": "0x7fCD34282e0d69A6E5c2c0D66d27C333bFC36256",
+  "txs": {
+    "deploy CNRY": "0x2d307b9e26df7df43245323d8059de798e2a673730c4a9e98ea33e0eebfcad99",
+    "initialize ETH/CNRY": "0x6bffa2dbdf9994ace869645452a8e7f75b798b016c6e8bed1acf468b8cbf0a73",
+    "approve CNRY to Permit2": "0x3d66ff6d258606cb5dde84db87283d40b723253258857a40b78ea5ca67031e88",
+    "Permit2: approve PositionManager": "0x1f70a52707a04c6eb202d719339d0e481af8619f4b743b34274d2a365b4db02e",
+    "mint full-range position": "0x70caf38efccba36e358a8e67e52d3a1a512137463025f79aaaf6db4a21eb1748"
+  },
+  "token": {
+    "symbol": "CNRY",
+    "name": "Canary Test Token",
+    "decimals": 18,
+    "address": "0x77a487307169cffc9dbdd6588d2d85ebf7288584",
+    "compiler": "0.8.38+commit.1835d247.Emscripten.clang"
+  },
+  "pool": {
+    "key": {
+      "currency0": "0x0000000000000000000000000000000000000000",
+      "currency1": "0x77a487307169cffc9dbdd6588d2d85ebf7288584",
+      "fee": 3000,
+      "tickSpacing": 60,
+      "hooks": "0x0000000000000000000000000000000000000000"
+    },
+    "id": "0xff4f7d40d418c774dae403fe0bab371baf531ec849e86fa5f5cd0e9f298c1531",
+    "price": "1 ETH = 100000 CNRY at open",
+    "sqrtPriceX96": "25054144837504793118641380156960",
+    "liquidity": "6324555320336758663"
+  },
+  "position": {
+    "tokenId": "41446",
+    "liquidity": "6324555320336758663",
+    "eth": "0.02",
+    "maxCnry": "2001.999999999999999684"
+  },
+  "check": {
+    "at": "2026-11-06T10:33:34.239Z",
+    "tick": 115135,
+    "lpFee": 3000,
+    "quote": "0.0001 ETH → 9.920546077802156251 CNRY (gas 51398)"
+  }
+}

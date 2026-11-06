@@ -5,7 +5,7 @@ import { useMemo, type ReactNode } from "react";
 import { CATEGORY_LABEL } from "../shared.js";
 import { Check, Chevron, Copy, Dotted, Eye, Half, Hatch, Shield, Slash, Warn } from "./icons.js";
 import {
-  ago, BUCKET_LABEL, BUCKETS, channelLabel, clock, filterOf, ipVisible, labelBadge, receiptsOf, sentenceOf, short, titleOf,
+  ago, BUCKET_LABEL, BUCKETS, channelLabel, clock, filterOf, ipVisible, labelBadge, manifestBadge, receiptsOf, sentenceOf, short, titleOf,
   type Bucket, type Coverage, type Ev, type Filter, type ManifestView, type Site, type TabState, type Worker,
 } from "./model.js";
 import type { PrivacyLabel } from "../privacy-label.js";
@@ -148,6 +148,37 @@ export function CoverageBlock({ cov, at, compact }: { cov: Coverage; at?: number
         </div>
       )}
     </div>
+  );
+}
+
+/** Four lines at a glance: reads through anon-rpc, third-party leaks blocked, what ENS says about the site, coverage. */
+export function Summary({ tab, cov, m, worker }: { tab: TabState; cov: Coverage; m: ManifestView; worker: Worker }) {
+  const anon = cov.protected + cov.partial;
+  const blocked = tab.counts?.blocked ?? 0;
+  const direct = tab.counts?.direct ?? 0; // RPC calls sent without anon-rpc
+  const pct = cov.total ? Math.round((cov.good / cov.total) * 100) : null;
+  const ens = manifestBadge(m);
+  const rows: [string, string, "good" | "bad" | "warn" | "muted"][] = [
+    [
+      "Reads via anon-rpc",
+      anon ? `${anon}${cov.partial || direct ? ` (${[cov.partial && `${cov.partial} IP only`, direct && `${direct} direct`].filter(Boolean).join(", ")})` : ""}` : worker.state === "failed" ? "anon-rpc unreachable" : "none yet",
+      worker.state === "failed" ? "bad" : anon ? (direct ? "warn" : "good") : "muted",
+    ],
+    ["Third-party leaks blocked", String(blocked), blocked ? "good" : "muted"],
+    ["On ENS", ens.label, ens.tone],
+    ["Coverage", pct === null ? "nothing observed yet" : `${pct} % protected or blocked`, pct === null ? "muted" : cov.exposed ? "warn" : "good"],
+  ];
+  return (
+    <dl id="summary" className="divide-y divide-line rounded-2xl border border-line bg-surface px-4 text-[13.5px]">
+      {rows.map(([k, v, tone]) => (
+        <div key={k} className="flex items-center justify-between gap-3 py-2.5">
+          <dt className="text-ink-2">{k}</dt>
+          <dd className="min-w-0 truncate">
+            <Tone tone={tone} icon={tone === "good" ? <Check size={12} /> : tone === "muted" ? undefined : <Warn size={12} />}>{v}</Tone>
+          </dd>
+        </div>
+      ))}
+    </dl>
   );
 }
 

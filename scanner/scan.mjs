@@ -9,6 +9,7 @@
 //
 // Options: --chain 0x1 (wallet chain) · --rpc <url> (scanner-side RPC for wallet reads)
 //          --manifest <file.json> · --out <dir> · --wait <ms> · --headful · --chrome <path>
+//          --amount <n> (after connecting, type n into the page's amount field: a swap quote)
 
 import { chromium } from "playwright";
 import { spawn } from "node:child_process";
@@ -37,6 +38,7 @@ const { values: opt, positionals } = parseArgs({
     chrome: { type: "string", default: process.env.CHROME_BIN },
     port: { type: "string", default: "8899" },
     keep: { type: "boolean", default: false },
+    amount: { type: "string" },
   },
 });
 const url = positionals[0];
@@ -80,6 +82,15 @@ async function connectFlow(page, log) {
     await pick.click({ timeout: 3000 }).catch(() => {});
     log("connect: picked the scanner wallet in a modal");
   }
+}
+
+/** Type an amount into the first amount field (inputmode=decimal, as swap forms use), so the dapp asks for a quote. */
+async function amountFlow(page, log, amount) {
+  const field = page.locator('input[inputmode="decimal"]:visible, input[placeholder="0"]:visible, input[placeholder="0.0"]:visible').first();
+  if (!(await field.waitFor({ state: "visible", timeout: 10000 }).then(() => true, () => false))) return log("quote: no amount field found");
+  await field.click({ timeout: 3000 }).catch(() => {});
+  await field.pressSequentially(amount, { delay: 80 }).catch(() => {});
+  log(`quote: typed ${amount} into the amount field`);
 }
 
 async function scanOnce({ withCanary }) {
@@ -128,6 +139,7 @@ async function scanOnce({ withCanary }) {
     await page.goto(url, { waitUntil: "domcontentloaded", timeout: 60000 });
     await page.waitForTimeout(4000);
     await connectFlow(page, log);
+    if (opt.amount) await amountFlow(page, log, opt.amount);
     await page.waitForTimeout(Number(opt.wait));
     log("scroll");
     await page.mouse.wheel(0, 2000);
@@ -234,7 +246,7 @@ function analyze({ address, records, canaryStats, steps }, manifest, withCanary)
     canary: canaryStats ? { counts: canaryStats.counts, notes: canaryStats.notes, latencyMs: pcts(canaryStats.latencies) } : null,
     canaryEgress: summarizeEgress(canaryEgress),
     undeclared,
-    notInspected: ["service workers' own traffic", "WebRTC", "encrypted or arbitrarily obfuscated payloads", "flows beyond load → connect → scroll"],
+    notInspected: ["service workers' own traffic", "WebRTC", "encrypted or arbitrarily obfuscated payloads", `flows beyond load → connect${opt.amount ? " → quote" : ""} → scroll`],
   };
 }
 const pcts = (xs) => {

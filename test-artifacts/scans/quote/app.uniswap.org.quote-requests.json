@@ -1,0 +1,157 @@
+{
+  "canaryAddress": "0xA683CdaA4cCfeF93863dDa136BD6554f33e6d4b8",
+  "scannedAt": "2026-11-06T10:23:46.011Z",
+  "url": "https://app.uniswap.org/swap?chain=mainnet&inputCurrency=ETH&outputCurrency=0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+  "requests": [
+    {
+      "t": 1793960621.5104342,
+      "method": "POST",
+      "url": "https://entry-gateway.backend-prod.api.uniswap.org/check_approval",
+      "status": 200,
+      "carriesAddress": true,
+      "body": {
+        "walletAddress": "0xA683CdaA4cCfeF93863dDa136BD6554f33e6d4b8",
+        "token": "0x0000000000000000000000000000000000000000",
+        "amount": "1000000000000000000",
+        "chainId": 1,
+        "includeGasInfo": true,
+        "urgency": "urgent"
+      }
+    },
+    {
+      "t": 1793960622.337597,
+      "method": "POST",
+      "url": "https://entry-gateway.backend-prod.api.uniswap.org/quote",
+      "status": 200,
+      "carriesAddress": true,
+      "body": {
+        "type": "EXACT_INPUT",
+        "amount": "1000000000000000000",
+        "tokenInChainId": 1,
+        "tokenOutChainId": 1,
+        "tokenIn": "0x0000000000000000000000000000000000000000",
+        "tokenOut": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+        "swapper": "0xA683CdaA4cCfeF93863dDa136BD6554f33e6d4b8",
+        "autoSlippage": "DEFAULT",
+        "routingPreference": "FASTEST"
+      }
+    },
+    {
+      "t": 1793960622.3382,
+      "method": "POST",
+      "url": "https://entry-gateway.backend-prod.api.uniswap.org/quote",
+      "status": 200,
+      "carriesAddress": true,
+      "body": {
+        "amount": "1000000000000000000",
+        "generatePermitAsTransaction": false,
+        "swapper": "0xA683CdaA4cCfeF93863dDa136BD6554f33e6d4b8",
+        "tokenIn": "0x0000000000000000000000000000000000000000",
+        "tokenInChainId": 1,
+        "tokenOut": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+        "tokenOutChainId": 1,
+        "type": "EXACT_INPUT",
+        "walletExecutionContext": {
+          "scopes": {
+            "eip155": {
+              "accounts": [
+                "0xA683CdaA4cCfeF93863dDa136BD6554f33e6d4b8"
+              ],
+              "\u2026": "methods, capabilities, chains omitted"
+            }
+          }
+        },
+        "urgency": "urgent",
+        "protocols": [
+          "UNISWAPX_LATEST",
+          "V4",
+          "V3",
+          "V2"
+        ],
+        "hooksOptions": "V4_HOOKS_INCLUSIVE",
+        "autoSlippage": "DEFAULT"
+      }
+    },
+    {
+      "t": 1793960622.901386,
+      "method": "POST",
+      "url": "https://entry-gateway.backend-prod.api.uniswap.org/swap",
+      "status": 200,
+      "carriesAddress": true,
+      "body": {
+        "quote": {
+          "chainId": 1,
+          "swapper": "0xA683CdaA4cCfeF93863dDa136BD6554f33e6d4b8",
+          "tradeType": "EXACT_INPUT",
+          "input": {
+            "amount": "1000000000000000000",
+            "token": "0x0000000000000000000000000000000000000000",
+            "maximumAmount": "1000000000000000000"
+          },
+          "output": {
+            "amount": "2236464658",
+            "token": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+            "recipient": "0xA683CdaA4cCfeF93863dDa136BD6554f33e6d4b8",
+            "minimumAmount": "2225282334"
+          },
+          "slippage": 0.5
+        },
+        "\u2026": "route, gas and permit fields omitted"
+      }
+    },
+    {
+      "t": 1793960624.1738188,
+      "method": "POST",
+      "url": "https://entry-gateway.backend-prod.api.uniswap.org/swap",
+      "status": 200,
+      "carriesAddress": true,
+      "body": {
+        "quote": {
+          "chainId": 1,
+          "swapper": "0xA683CdaA4cCfeF93863dDa136BD6554f33e6d4b8",
+          "tradeType": "EXACT_INPUT",
+          "input": {
+            "amount": "1000000000000000000",
+            "token": "0x0000000000000000000000000000000000000000",
+            "maximumAmount": "1000000000000000000"
+          },
+          "output": {
+            "amount": "2236464658",
+            "token": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+            "recipient": "0xA683CdaA4cCfeF93863dDa136BD6554f33e6d4b8",
+            "minimumAmount": "2225282334"
+          },
+          "slippage": 0.5
+        },
+        "\u2026": "route, gas and permit fields omitted"
+      }
+    },
+    {
+      "t": 1793960625.425098,
+      "method": "POST",
+      "url": "https://entry-gateway.backend-prod.api.uniswap.org/swap",
+      "status": 200,
+      "carriesAddress": true,
+      "body": {
+        "quote": {
+          "chainId": 1,
+          "swapper": "0xA683CdaA4cCfeF93863dDa136BD6554f33e6d4b8",
+          "tradeType": "EXACT_INPUT",
+          "input": {
+            "amount": "1000000000000000000",
+            "token": "0x0000000000000000000000000000000000000000",
+            "maximumAmount": "1000000000000000000"
+          },
+          "output": {
+            "amount": "2236464658",
+            "token": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+            "recipient": "0xA683CdaA4cCfeF93863dDa136BD6554f33e6d4b8",
+            "minimumAmount": "2225282334"
+          },
+          "slippage": 0.5
+        },
+        "\u2026": "route, gas and permit fields omitted"
+      }
+    }
+  ]
+}

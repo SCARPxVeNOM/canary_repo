@@ -1,0 +1,10 @@
+# Only what the build needs goes to Vercel: never keys, tokens, tests or scripts.
+*.key
+.env*
+.vercel
+node_modules
+public
+test
+scripts
+contracts
+server.mjs

@@ -1,0 +1,29 @@
+  [canary] protected        rpc  ethereum-sepolia-rpc.publicnode.com eth_call 1681 ms
+agent wallet 0xf919c3bf1141aD97672ADC700787C9456Aa8EF5b: 0.002799999993158128 ETH, 19.550661268329049509 CNRY
+
+quote 0.0001 ETH → CNRY (v4 Quoter, eth_call via the gateway)…
+  [canary] protected        rpc  ethereum-sepolia-rpc.publicnode.com eth_getBalance 1809 ms
+  9.631991633659043962 CNRY, at least 9.583831675490748742 after 0.5 % slippage
+
+swap: Universal Router execute(V4_SWAP), signed here, sent as eth_sendRawTransaction via the gateway…
+  [canary] protected        rpc  ethereum-sepolia-rpc.publicnode.com eth_call 583 ms
+  [canary] protected        rpc  ethereum-sepolia-rpc.publicnode.com eth_getBlockByNumber 963 ms
+  [canary] protected        rpc  ethereum-sepolia-rpc.publicnode.com eth_getTransactionCount 1131 ms
+  [canary] protected        rpc  ethereum-sepolia-rpc.publicnode.com eth_estimateGas 1257 ms
+  [canary] protected        rpc  ethereum-sepolia-rpc.publicnode.com eth_maxPriorityFeePerGas 705 ms
+  sent 0xd04e26aac8afb508c7bfb24e95ebf72703942eeaa01e8c1dc62cd1d2c155404d
+  [canary] protectedIpOnly  rpc  ethereum-sepolia-rpc.publicnode.com eth_sendRawTransaction 562 ms (broadcast)
+  [canary] protected        rpc  ethereum-sepolia-rpc.publicnode.com eth_getTransactionReceipt 729 ms
+  [canary] protected        rpc  ethereum-sepolia-rpc.publicnode.com eth_blockNumber 757 ms
+  [canary] protected        rpc  ethereum-sepolia-rpc.publicnode.com eth_getTransactionByHash 955 ms
+  [canary] protected        rpc  ethereum-sepolia-rpc.publicnode.com eth_getTransactionReceipt 771 ms
+  [canary] protected        rpc  ethereum-sepolia-rpc.publicnode.com eth_getBlockByNumber 2733 ms
+  [canary] protected        rpc  ethereum-sepolia-rpc.publicnode.com eth_blockNumber 878 ms
+  success in block 12076121 · https://sepolia.etherscan.io/tx/0xd04e26aac8afb508c7bfb24e95ebf72703942eeaa01e8c1dc62cd1d2c155404d
+  [canary] protected        rpc  ethereum-sepolia-rpc.publicnode.com eth_getTransactionReceipt 893 ms
+  [canary] protected        rpc  ethereum-sepolia-rpc.publicnode.com eth_call 951 ms
+
+agent wallet after: 0.002799999993158128 ETH, 29.182652901988093471 CNRY
+  [canary] protected        rpc  ethereum-sepolia-rpc.publicnode.com eth_getBalance 1206 ms
+
+coverage: {"total":19,"protected":18,"ipOnly":1,"direct":0,"blocked":0,"failedClosed":0,"linked":0}

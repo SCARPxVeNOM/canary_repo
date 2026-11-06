@@ -152,6 +152,17 @@
         "issuedAt": 1793939542,
         "expiresAt": 1796531542
       }
+    },
+    "swap.canary.eth": {
+      "owner": "0x7fCD34282e0d69A6E5c2c0D66d27C333bFC36256",
+      "resolver": "0x00381EE8Ff6013Eaa59F3742C6bB797469C986B2",
+      "url": "https://canary-swap.vercel.app",
+      "verdict": {
+        "result": "matches",
+        "buildHash": "c1f1b8e5427e",
+        "issuedAt": 1793962405,
+        "expiresAt": 1796554405
+      }
     }
   },
   "txs": {
@@ -195,7 +206,9 @@
     "verdict revoke-cash.labels.canary.eth": "0x00338590e3afaa620a1cd45284b0075ca6a9d8813117e64c1aba9fac94d22ed8",
     "register snapshot-box.labels.canary.eth": "0x3f60632e67ee4081c9a078578ec387d38dd3d816a2be1591f0b0caadfc029e55",
     "text snapshot-box.labels.canary.eth url": "0x7c75be4d321c34aba66cf08c588b35fcde88dc8bc199f351a597cb1066a1140d",
-    "verdict snapshot-box.labels.canary.eth": "0xae7da93bb5e261e9f7ce0f3fc3c6357fa36ee249b7be9aa1a415d29f4ade9102"
+    "verdict snapshot-box.labels.canary.eth": "0xae7da93bb5e261e9f7ce0f3fc3c6357fa36ee249b7be9aa1a415d29f4ade9102",
+    "deploy PermissionedResolver for swap.canary.eth": "0x34f1fa25b98a4ca6c81762593fd2c0fd86abd4851786eaa8fe8cc0b947df851d",
+    "register swap.canary.eth": "0x83ffeae0c85e71798b085c6235138681f69c325c6e73eaa0ec7d4670ef269770"
   },
   "records": {
     "leakydash.eth": {
@@ -225,6 +238,14 @@
       "publish privacy.report (gateway, policy read from this name, signed and sent by the report key)": "0xe0beaa42bc8d8584dad5aecac00a2a93f8fcfe68185104864375b5708ee9d309",
       "revoke-reporter (readers see reporterCanWrite: false; the gateway's publish gets 409)": "0x3a538b796440bcf41746f02c653014955f4bb5a1a51994290e9b57e71113f932",
       "grant-reporter again": "0xf7ac82ce7c0efe48ffee8ece5253cb0bf029d3b1db1c07d31528cae100ea497e"
+    },
+    "swap.canary.eth": {
+      "set-dapp (url = https://canary-swap.vercel.app, privacy.manifest = swap/privacy.manifest.json)": [
+        "0xc6a9e132a1701f2109a3f2896f8f25732a8a5d569e0786176932672a08de4cae",
+        "0xc7eb8638a56abb5d5aa82b7dc1b220a3cbba485709339df6f49bc57fa0205c18"
+      ],
+      "grant-verifier privacy.verdict.canary → verifier.canary.eth": "0xfdda5493749a58c1ef63eb3168a00cd27849694c5545ee2a9eb9e04e95a80349",
+      "publish-verdict from a scan of the deployed Canary Swap (matches)": "0xcc28632238558b3aae739539c2629ee3adc518d5052fb607f3305589a61c3881"
     }
   },
   "reporter": "0x19E16ABD42DE0EB8E4a4eE73ed63151a471334b4"

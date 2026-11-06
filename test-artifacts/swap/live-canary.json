@@ -1,0 +1,128 @@
+{
+  "url": "https://canary-swap.vercel.app/",
+  "withCanary": true,
+  "wallet": "0xE9bb50BCfC7C97320903645D0eEBe79650593d19",
+  "at": "2026-11-06T11:05:03.543Z",
+  "steps": [
+    {
+      "step": "quote, not connected",
+      "out": "9.5382915",
+      "details": "Rate 1 ETH = 95,382.9 CNRY Pool ETH/CNRY · 0.3 % Price impact 0.49 % Minimum received 9.4906 CNRY (0.5 % slippage) Gas estimate 52,411 units",
+      "sent": [
+        "Quoter.quoteExactInputSingle: pool ETH/CNRY 0.3 %, ETH → CNRY, exactAmount 100000000000000 (0.0001 ETH)",
+        "StateView.getSlot0: pool id 0xff4f…1531",
+        "StateView.getLiquidity: pool id 0xff4f…1531"
+      ],
+      "addr": "No wallet connected, so no address to send. Connected, the requests are the same."
+    },
+    {
+      "step": "quote, connected",
+      "out": "9.5382915",
+      "details": "Rate 1 ETH = 95,382.9 CNRY Pool ETH/CNRY · 0.3 % Price impact 0.49 % Minimum received 9.4906 CNRY (0.5 % slippage) Gas estimate 52,411 units",
+      "sent": [
+        "Quoter.quoteExactInputSingle: pool ETH/CNRY 0.3 %, ETH → CNRY, exactAmount 100000000000000 (0.0001 ETH)",
+        "StateView.getSlot0: pool id 0xff4f…1531",
+        "StateView.getLiquidity: pool id 0xff4f…1531"
+      ],
+      "addr": "Your address 0xE9bb…3d19 is in none of them."
+    },
+    {
+      "step": "swap ETH → CNRY",
+      "status": "Swapped. At least 9.4906 CNRY received. 0x93ee…3b2c",
+      "tx": "0x93eee9713146b4e39558a5d5bed90a7b764a62e07087de83d5f69a20c0a23b2c"
+    },
+    {
+      "step": "mint CNRY",
+      "status": "1,000 CNRY minted. 0xe0a9…cedd"
+    },
+    {
+      "step": "quote, CNRY → ETH",
+      "out": "0.000052227508",
+      "details": "Rate 1 CNRY = 0.0000104455 ETH Pool ETH/CNRY · 0.3 % Price impact 0.25 % Minimum received 0.00005196637 ETH (0.5 % slippage) Gas estimate 51,797 units",
+      "sent": [
+        "Quoter.quoteExactInputSingle: pool ETH/CNRY 0.3 %, CNRY → ETH, exactAmount 5000000000000000000 (5 CNRY)",
+        "StateView.getSlot0: pool id 0xff4f…1531",
+        "StateView.getLiquidity: pool id 0xff4f…1531"
+      ],
+      "addr": "Your address 0xE9bb…3d19 is in none of them."
+    },
+    {
+      "step": "swap CNRY → ETH",
+      "status": "Swapped. At least 0.0000519664 ETH received. 0xe742…71c2",
+      "tx": "0xe7427f4b792329cd873b0a381afcad7a0df4934a73b4eaec5ea0d1b3d04e71c2"
+    }
+  ],
+  "txs": [
+    {
+      "hash": "0x93eee9713146b4e39558a5d5bed90a7b764a62e07087de83d5f69a20c0a23b2c",
+      "to": "0x3A9D48AB9751398BbFa63ad67599Bb04e4BdF98b",
+      "selector": "0x3593564c",
+      "status": "success",
+      "gasUsed": "130388",
+      "what": "Universal Router: execute (V4_SWAP)"
+    },
+    {
+      "hash": "0xe0a9498b89b7c5805448e99fa09e1b144100346e5b3194f32f8f4385416ecedd",
+      "to": "0x77a487307169cffc9dbdd6588d2d85ebf7288584",
+      "selector": "0x40c10f19",
+      "status": "success",
+      "gasUsed": "42551",
+      "what": "CNRY: mint"
+    },
+    {
+      "hash": "0xe7427f4b792329cd873b0a381afcad7a0df4934a73b4eaec5ea0d1b3d04e71c2",
+      "to": "0x3A9D48AB9751398BbFa63ad67599Bb04e4BdF98b",
+      "selector": "0x3593564c",
+      "status": "success",
+      "gasUsed": "135059",
+      "what": "Universal Router: execute (V4_SWAP)"
+    }
+  ],
+  "errors": [],
+  "before": {
+    "ETH": "0.002900692105543057",
+    "CNRY": "2009.792310097057452389"
+  },
+  "after": {
+    "ETH": "0.002852919607291418",
+    "CNRY": "3014.330601601711848027"
+  },
+  "canary": {
+    "counts": {
+      "backend": 0,
+      "blocked": 0,
+      "detected": 0,
+      "direct": 0,
+      "failedClosed": 0,
+      "localNode": 0,
+      "notInspected": 0,
+      "protected": 50,
+      "protectedIpOnly": 0
+    },
+    "byCategory": {
+      "protected": 50
+    },
+    "readsVia": [
+      "ethereum-sepolia-rpc.publicnode.com"
+    ],
+    "hosts": [
+      "ethereum-sepolia-rpc.publicnode.com"
+    ],
+    "notProtected": [],
+    "popup": {
+      "origin": "canary-swap.vercel.app",
+      "badge": "Matches manifest",
+      "headline": "Your reads are going through anon-rpc",
+      "summary": [
+        "Reads via anon-rpc",
+        "53",
+        "Third-party leaks blocked",
+        "0",
+        "On ENS",
+        "Matches manifest",
+        "Coverage",
+        "100 % protected or blocked"
+      ]
+    }
+  }
+}
