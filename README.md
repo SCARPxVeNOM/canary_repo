@@ -62,7 +62,7 @@ flowchart LR
 | Demo dapp ([`leakydash/`](leakydash/)) | Live at https://canary-leakydash.vercel.app: provider, tracker, first-party backend, a per-visitor log viewer, and a native anon-rpc mode. |
 | ENSv2 manifest + signed verdicts for dapps | **Live on Sepolia:** `leakydash.eth` (own Permissioned Resolver, `url` + `privacy.manifest`), `canary.eth` with a subname registry, and `verifier.canary.eth`, whose signed verdict from a scan of the live site is published under a one-key EAC grant. Revocation is visible to readers ([`packages/ens`](packages/ens/README.md#live-on-sepolia)). |
 | **Agents:** `@canary/core` ([`packages/core`](packages/core/)) | Done; the extension imports it. 11/11 tests (+ the extension's 32/32). |
-| **Agents:** gateway ([`packages/gateway`](packages/gateway/)) | Working: anon-rpc in headless Chrome, JSON-RPC endpoint, HTTP(S) proxy, opt-in MITM CA, policy from ENS with live updates, signed reports, timing jitter, crash recovery. 39/39 tests on EF's passthrough worker. **Not yet run live over tor-js.** |
+| **Agents:** gateway ([`packages/gateway`](packages/gateway/)) | Working: anon-rpc in headless Chrome, JSON-RPC endpoint, HTTP(S) proxy, opt-in MITM CA, policy from ENS with live updates, signed reports, timing jitter, crash recovery. Reads re-sent on a fresh Tor circuit when one stalls (as in the extension). 41/41 tests on EF's passthrough worker. **Live over tor-js on our gateways: 24/24 checks** (`scripts/live-e2e.mjs`, [test-repo.md §19](test-repo.md)): every read through the RPC endpoint and the SDK (viem, ethers) matched a direct read exactly at a pinned block, the exit was a Tor exit, the LLM saw `WALLET_1`, undeclared hosts got 403, the Python agent worked, and both ENSv2 names read correctly over anon-rpc. |
 | **Agents:** ENSv2 ([`packages/ens`](packages/ens/)) | Working against mock ENSv2 contracts: manifest loader, one-key report role (both documented delegation APIs), signed `privacy.report`, revocation detection, `canary-ens` CLI. 8/8 tests on mock ENSv2 contracts. **Live on Sepolia:** `agents.canary.eth` (a subname registry) and `trader-01.agents.canary.eth`; the gateway loads its policy from that name over anon-rpc and publishes the signed `privacy.report`, and revoking the report key's role shows ([`packages/ens`](packages/ens/README.md#live-on-sepolia)). |
 | **Agents:** SDK ([`packages/agent`](packages/agent/)) | viem transport, ethers provider, `fetch`, LLM pseudonymizer, `wrapTools`, embedded mode. 13/13 tests. |
 | **Agents:** examples | [`viem-agent`](examples/viem-agent/) (with `--leaky` before/after) and [`python-agent`](examples/python-agent/) (zero code changes, tested). |
@@ -92,10 +92,22 @@ flowchart LR
 
 ## Quick start
 
+**1. A tor-js gateway.** Browsers can't open the raw TCP Tor needs, so tor-js reaches Tor through a gateway. EF's demo gateway stopped completing boots on 6 Nov 2026, so run your own (one Docker container, ~10 min to build the first time; details in [`gateway/README.md`](gateway/README.md)):
+
+```sh
+docker build -t canary-gateway gateway/
+docker run -d --name canary-gateway --restart unless-stopped -p 12298:12298/udp \
+  -e ADVERTISE=127.0.0.1 -v canary-gateway:/data canary-gateway
+docker logs canary-gateway            # prints this gateway's address: 127.0.0.1:12298:<certhash>
+npm run gateways -- <that address>    # at the repo root: writes it into every default config (--with-ef adds EF's as a fallback)
+```
+
+**2. The extension.**
+
 ```sh
 cd extension
 npm install
-npm run build        # → extension/dist, configured for tor-js
+npm run build        # → extension/dist, using the gateways from step 1
 ```
 
 Chrome → `chrome://extensions` → Developer mode → **Load unpacked** → `extension/dist`. Use a separate Chrome profile: it runs on every site. The first boot of the Tor worker takes about 13 s.
@@ -106,9 +118,9 @@ Tests: `CHROME_BIN=/path/to/chromium npm test` (needs full Chromium or Chrome fo
 
 ```sh
 npm install && npm run build     # at the repo root: packages/core, ens, gateway, agent
-npm test                         # 61 tests; needs Chrome (CHROME_BIN, else your installed Chrome); python3 optional
+npm test                         # 73 tests; needs Chrome (CHROME_BIN, else your installed Chrome); python3 optional
 cd examples/viem-agent
-npm run gateway                  # terminal 1: tor-js boots in ~13 s
+npm run gateway                  # terminal 1 (after Quick start step 1): tor-js boots in ~8–13 s
 WALLET=0x… npm run agent         # terminal 2 (npm run agent:leaky for the same agent without Canary)
 ```
 

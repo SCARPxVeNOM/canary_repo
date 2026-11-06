@@ -15,7 +15,7 @@ docker logs canary-gateway                       # prints the address: <ip>:1229
 
 - `ADVERTISE`: the IP(s) clients dial, comma-separated. Behind NAT, the public IP, with UDP 12298 forwarded. On a laptop for a local demo: `127.0.0.1`.
 - `/data` holds the config, the directory cache and the **KPS identity key**. The certhash in the address is derived from the key, so keep the volume: a new key is a new address, and every client config pointing at the old one breaks.
-- Put the printed address in `extension/config/*.json` → `network.workerConfig.gateways`.
+- Put the printed address into the default configs with `npm run gateways -- <address> [<address> ...]` at the repo root (`--with-ef` appends EF's demo gateway as a fallback), then rebuild the extension.
 
 ## How Canary uses gateways (and the caveats)
 
