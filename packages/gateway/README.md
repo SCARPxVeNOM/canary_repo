@@ -61,6 +61,7 @@ A batch is split so calls about different agent wallets never share a request; e
 | `reportKey` | signs reports and writes `privacy.report`. The CLI reads it from `CANARY_REPORT_KEY` only. Never the agent's wallet key | — |
 | `mitm` | `true` or `{ dir?, passthrough? }`: opt-in local CA. HTTPS is decrypted with a per-host certificate, so bodies get the full policy and `anon` hosts go through anon-rpc. `passthrough` hosts (certificate-pinned clients) are tunnelled untouched | off |
 | `jitterMs` | random 0..jitterMs delay before substituted reads, to blur polling schedules (costs latency; shown in status) | 0 |
+| `hedgeMs` | if an anon read hasn't answered in this long (or fails), send it again under a fresh isolation key so tor-js builds a new circuit; first answer wins, and the working circuit is kept for that key. Never for broadcasts. 0 = off | 3000 |
 | `port`, `proxyPort`, `host` | `proxyPort: false` disables the proxy | 18545, 18080, 127.0.0.1 |
 | `timeoutMs`, `codeCacheMs` | per anon request; `eth_getCode` cache | 30000, 60000 |
 

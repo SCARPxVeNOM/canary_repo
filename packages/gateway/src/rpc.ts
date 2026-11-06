@@ -41,6 +41,10 @@ export type RpcContext = {
   codeCache: Map<string, { at: number; result: unknown }>;
   /** random 0..jitterMs delay before substituted reads (blurs polling schedules) */
   jitterMs?: number;
+  /** re-send a read on a fresh circuit if the first hasn't answered in this long (default 3000; 0 = off). Never broadcasts. */
+  hedgeMs?: number;
+  /** isolation key (or "shared") → the key of the circuit currently used for it (see sendHedged) */
+  circuitFor?: Map<string, string>;
 };
 
 type Route = { via: "anon" | "direct"; url: string; category: Category; note?: string };
@@ -77,6 +81,49 @@ function plan(ctx: RpcContext, chainId: string, call: RpcCall, i: number): Plan 
   }
   if (SUBSTITUTABLE.has(m)) return { ...base, route: { via: "anon", url: chain.read, category: "protected" } };
   return { ...base, route: { via: "anon", url: chain.upstream ?? chain.read, category: "protectedIpOnly" } };
+}
+
+/* Hedged on a fresh circuit, as the extension does (extension/src/background.ts):
+   if an anon read fails, or hasn't answered in hedgeMs, the same read goes out
+   again under a new isolation key, so tor-js builds a new circuit, and the first
+   answer wins. Measured in the extension: a circuit whose gateway or exit died
+   otherwise stalls until the request timeout (15-35 s). When the hedge wins, its
+   circuit is used for that key from then on. The hedge key is derived from the
+   original, so a hedge for one wallet never shares a circuit with another.
+   Reads only: a broadcast is never sent twice. */
+let hedgeSeq = 0;
+async function sendHedged(ctx: RpcContext, route: Route, key: string | undefined, body: string): Promise<{ status: number; text: string }> {
+  const hedgeMs = ctx.hedgeMs ?? 3000;
+  if (route.via !== "anon" || !hedgeMs) return send(ctx, route, key, body);
+  const circuits = (ctx.circuitFor ??= new Map());
+  const base = key ?? "shared";
+  const current = circuits.get(base) ?? key;
+  const first = send(ctx, route, current, body);
+  let firstWon = false;
+  first.then(() => (firstWon = true), () => {});
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const second = new Promise<{ status: number; text: string }>((resolve, reject) => {
+    let started = false;
+    const go = () => {
+      if (started) return;
+      started = true;
+      clearTimeout(timer);
+      const fresh = `${base}#hedge${++hedgeSeq}`;
+      send(ctx, route, fresh, body).then((r) => {
+        if (!firstWon && (circuits.get(base) ?? key) === current) circuits.set(base, fresh);
+        resolve(r);
+      }, reject);
+    };
+    timer = setTimeout(go, hedgeMs);
+    first.catch(go);
+  });
+  try {
+    return await Promise.any([first, second]);
+  } catch (e) {
+    throw (e as AggregateError).errors?.[1] ?? (e as AggregateError).errors?.[0] ?? e;
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 async function send(ctx: RpcContext, route: Route, key: string | undefined, body: string): Promise<{ status: number; text: string }> {
@@ -125,7 +172,9 @@ export async function handleRpc(ctx: RpcContext, chainId: string, text: string):
       let answers: RpcResponse[] | undefined;
       let failure: string | undefined;
       try {
-        const r = await send(ctx, route, group[0]!.key, JSON.stringify(wire.length === 1 ? wire[0] : wire));
+        const isBroadcast = group.some((p) => BROADCAST.has(p.call.method));
+        const payload = JSON.stringify(wire.length === 1 ? wire[0] : wire);
+        const r = isBroadcast ? await send(ctx, route, group[0]!.key, payload) : await sendHedged(ctx, route, group[0]!.key, payload);
         try {
           const v = JSON.parse(r.text);
           answers = Array.isArray(v) ? v : [v];

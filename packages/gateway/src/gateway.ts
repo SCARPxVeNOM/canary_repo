@@ -46,6 +46,8 @@ export type GatewayConfig = {
   jitterMs?: number;
   /** opt-in local CA so the proxy can inspect HTTPS and route `anon` hosts through anon-rpc (true = defaults) */
   mitm?: MitmConfig | boolean;
+  /** re-send a read on a fresh Tor circuit if it hasn't answered in this many ms (default 3000; 0 = off). Never broadcasts. */
+  hedgeMs?: number;
   /** per anon request (default 30 s; tor-js cold boot is ~13 s) */
   timeoutMs?: number;
   codeCacheMs?: number;
@@ -103,7 +105,7 @@ export async function createGateway(cfg: GatewayConfig): Promise<Gateway> {
   }
   const ledger = new Ledger();
   const timeoutMs = cfg.timeoutMs ?? 30_000;
-  const rpcCtx: RpcContext = { backend, ledger, manifest, chains: cfg.chains, needles, timeoutMs, codeCacheMs: cfg.codeCacheMs ?? 60_000, codeCache: new Map(), jitterMs: cfg.jitterMs ?? 0 };
+  const rpcCtx: RpcContext = { backend, ledger, manifest, chains: cfg.chains, needles, timeoutMs, codeCacheMs: cfg.codeCacheMs ?? 60_000, codeCache: new Map(), jitterMs: cfg.jitterMs ?? 0, hedgeMs: cfg.hedgeMs ?? 3000, circuitFor: new Map() };
   const httpCtx: HttpContext = { backend, ledger, manifest, needles, timeoutMs };
   const agentName = () => manifest.agent ?? cfg.ens?.name ?? "unnamed-agent";
 
