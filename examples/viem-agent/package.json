@@ -5,6 +5,7 @@
   "scripts": {
     "gateway": "canary-gateway --config canary.config.json",
     "gateway:ens": "canary-gateway --config canary.ens.config.json",
+    "gateway:local": "canary-gateway --config canary.local.config.json",
     "agent": "node agent.mjs",
     "agent:leaky": "node agent.mjs --leaky"
   },

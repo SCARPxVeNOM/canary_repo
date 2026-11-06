@@ -12,7 +12,7 @@
     "examples/viem-agent"
   ],
   "scripts": {
-    "build": "npm run build -w @canary/core -w @canary/ens -w @canary/gateway -w @canary/agent",
+    "build": "npm run build -w @canary/core -w @canary/ens -w @canary/gateway -w @canary/agent && npm rebuild @canary/gateway @canary/ens",
     "test": "npm test -w @canary/core -w @canary/ens -w @canary/gateway -w @canary/agent"
   },
   "devDependencies": {

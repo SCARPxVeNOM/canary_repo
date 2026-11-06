@@ -8,6 +8,7 @@ npm install && npm run build
 
 cd examples/viem-agent
 npm run gateway                                     # terminal 1: tor-js boots in ~13 s
+npm run gateway:local                               # or through your own gateways (below)
 WALLET=0x… OPENAI_API_KEY=sk-… npm run agent         # terminal 2 (no key: prints the redacted prompt)
 WALLET=0x… npm run agent:leaky                       # same agent, no Canary: direct RPC, raw prompt
 ```
@@ -20,9 +21,11 @@ On Windows (cmd), set variables first: `set WALLET=0x…` then `npm run agent`.
 | `canary.config.json` | gateway config: tor-js (same as the extension's `config/live.json`), Sepolia + mainnet read endpoints, local manifest |
 | `manifest.json` | the policy: LLM hosts `direct` (keyed; addresses pseudonymized), `api.coingecko.com` `anon`, everything else blocked; Sepolia USDC and WETH allow-listed for the LLM |
 | `canary.ens.config.json` | the same gateway, but the policy comes from the agent's ENSv2 name (below) |
+| `canary.local.config.json` | the same gateway through three tor-js gateways run on this machine |
 
 Notes:
 - **Chrome:** the configs use your installed Chrome (`"channel": "chrome"`). Or set `"executablePath"`, or run `npx playwright install chromium` and remove `channel`.
+- **Gateways:** EF's demo gateway is shared and unreliable (on 6 Nov it stopped completing boots). `canary.local.config.json` uses three run from [`../../gateway/`](../../gateway/) with `ADVERTISE=127.0.0.1` on ports 12298–12300 (`KPS_PORT`, one volume each); put in the addresses `docker logs` prints for yours (the certhash comes from each gateway's key).
 - **Read endpoints** must accept Tor traffic: publicnode and 1rpc do, Tenderly doesn't (test-repo.md §5).
 - **ethers instead of viem:** `const provider = await canary.ethersProvider(11155111)`.
 

@@ -1,0 +1,33 @@
+{
+  "port": 18545,
+  "proxyPort": 18080,
+  "network": {
+    "id": "tor-js",
+    "label": "tor-js (own gateways)",
+    "specifier": "0x700dA3193D35fA54Cd3fBf29B66f2a2A0385659e",
+    "bootstrapRpc": "https://ethereum-rpc.publicnode.com",
+    "workerConfig": {
+      "gateways": [
+        "127.0.0.1:12298:uEiA7-gErW8ncO5ilJnuAcDIYIn-eaeWW46qB8FvCrfqeyA",
+        "127.0.0.1:12299:uEiBqhyrM1xJQYDQbjN4te03xCNEfsFknwcPtgjNtQgXKVA",
+        "127.0.0.1:12300:uEiDoBVlkflIij7JzMopAcK1czhz_m85dpqaNESJFz4nKEw"
+      ]
+    }
+  },
+  "chromium": {
+    "channel": "chrome",
+    "headless": true
+  },
+  "chains": {
+    "11155111": {
+      "read": "https://ethereum-sepolia-rpc.publicnode.com",
+      "upstream": "https://1rpc.io/sepolia"
+    },
+    "1": {
+      "read": "https://ethereum-rpc.publicnode.com"
+    }
+  },
+  "wallets": [],
+  "manifestFile": "manifest.json",
+  "timeoutMs": 30000
+}
