@@ -21,6 +21,37 @@ The dapp itself can always see your address and your IP. Canary protects you fro
 
 One core, two hosts: `extension/` and `packages/` share `@canary/core`.
 
+## Architecture
+
+```mermaid
+flowchart LR
+  subgraph browser["Browser with the Canary extension"]
+    page["dapp page"] -->|"fetch, XHR, WebSocket, beacons"| shim["shim, in the page"]
+    shim -->|"third party + your address"| blocked["blocked"]
+    shim -->|"JSON-RPC"| sw["service worker: policy, coverage"]
+    sw --> sandbox["offscreen document, null-origin sandbox: anon-rpc worker (tor-js)"]
+  end
+  subgraph agenthost["Agent host"]
+    agent["agent, any language"] -->|"RPC_URL, HTTPS_PROXY"| gw["canary-gateway: policy, ledger, reports"]
+    gw --> chrome["headless Chrome: anon-rpc worker (tor-js)"]
+  end
+  sandbox -->|"WebRTC (KPS)"| kps["tor-js gateway: EF's, or ours from gateway/"]
+  chrome -->|"WebRTC (KPS)"| kps
+  kps --> tor["Tor: guard, middle, exit"] --> read["read endpoint, e.g. publicnode"]
+  subgraph ens["ENSv2 on Sepolia"]
+    dapp["leakydash.eth: url, privacy.manifest, privacy.verdict.canary"]
+    agentname["trader-01.agents.canary.eth: privacy.manifest is the policy, privacy.report"]
+  end
+  sw -. "read over anon-rpc" .-> dapp
+  gw -. "policy in, signed report out" .-> agentname
+  scanner["scanner: Playwright, mitmproxy, synthetic address"] -. "baseline scan, verdict signed by verifier.canary.eth" .-> dapp
+```
+
+- **One anon path for both hosts.** The extension and the gateway run the same anon-rpc worker (tor-js, hash-pinned on chain). It builds Tor circuits in the browser and reaches relays through a tor-js gateway over WebRTC, so the read endpoint sees a Tor exit, not you.
+- **Who learns what:** the tor-js gateway sees your IP but not destinations or contents; the read endpoint sees which addresses are queried but not your IP or which dapp you use; the dapp itself still sees your address and IP.
+- **Shared core:** `@canary/core` (JSON-RPC classifier, address matching, coverage categories, manifest schema) is used by `extension/` and `packages/`.
+- **Declared vs observed:** a name's `privacy.manifest` says who should receive your address. The scanner measures who does, and the verifier signs what it found into `privacy.verdict.canary` under a grant for that one key. For an agent, the manifest is enforced: the gateway blocks what it doesn't declare.
+
 ## Status
 
 | Part | State |
@@ -88,8 +119,8 @@ WALLET=0x… npm run agent         # terminal 2 (npm run agent:leaky for the sam
 
 ## CROPS
 
-- **C (censorship resistance):** Canary depends on a tor-js gateway and on the read endpoints in `extension/config/live.json`. Gateways are a list: tor-js spreads clients across them and fails over on its own, and anyone can run one from [`gateway/`](gateway/) (one Docker container, one UDP port). If all of them or the read endpoint go away, Canary fails closed and the popup says so; a per-site opt-in allows direct requests instead.
-- **O (open source):** MIT. Everything builds from this repo with `npm install && npm run build`.
+- **C (censorship resistance):** Canary depends on a tor-js gateway and on the read endpoints in `extension/config/live.json`. Gateways are a list: tor-js spreads clients across them and fails over on its own, and anyone can run one from [`gateway/`](gateway/) (one Docker container, one UDP port). That matters: EF's demo gateway, the default, stopped completing boots on 6 Nov, and our live runs since then went through three of our own (`extension/config/local-gateway.json`). If every gateway or the read endpoint goes away, Canary fails closed and the popup says so; a per-site opt-in allows direct requests instead. Manifests, verdicts and agent reports are ENS records, readable over anon-rpc through any Ethereum RPC; if our verifier stops, its verdict expires and the popup shows it as expired.
+- **O (open source):** MIT. Everything builds from this repo with `npm install && npm run build`, and the scripts behind the measurements are here too (`scanner/`, `test-artifacts/latency/`).
 - **P (privacy):** the gateway learns your IP, that you use Tor, and traffic volume and timing; not destinations or contents (circuits are built and encrypted in the browser). The read endpoint learns which addresses are queried, but not your IP or which dapp you're using. We never run both a gateway and a read endpoint, so no single operator can match the two by timing. Batching never mixes calls about different addresses. Forwarded non-standard calls reveal the dapp to its provider, not your IP. The dapp itself still sees your address and IP. Canary has no analytics or telemetry.
 - **S (security):** Canary never holds keys or signs anything. The anon-rpc worker is hash-pinned on chain and runs in a null-origin sandbox with none of the extension's permissions. Read endpoints could lie about responses; proof verification is future work.
 - **Agents:**

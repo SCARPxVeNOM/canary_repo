@@ -209,7 +209,7 @@ Record a backup video by hour 30.
 | 3–12 | ~~Substitution, method allowlist, chain-id learning, DNR rules~~ **done** (`extension/`) | ~~Matcher (all encodings), flows, report JSON~~ **done** | ~~Manifest/verdict schema, EIP-712 signer, reader library~~ **done** (`packages/ens/src/verdict.ts`) | Private-quote widget |
 | 12–20 | ~~Blocking, labels, popup~~ **done**; next: live tor-js runs on real dapps, popup polish | ~~Runs with and without Canary, coverage %, build fingerprint~~ **done** (`--compare`) | ~~LeakyDash + observer RPC + tracker + log viewer~~ **done locally** (`leakydash/`, incl. native anon-rpc mode) | Sepolia swap tx, FEEDBACK.md |
 | 20–28 | ~~Fail-closed mode, isolation keys, ENS lookups via anon-rpc~~ **done** (declared vs observed in the popup) | ~~Real-dapp scans (3–5)~~ **done** (5 dapps, test-repo.md §15) | ~~Verdict write + revocation detection~~ **done, live on Sepolia** (`canary-ens`) | UI polish |
-| 28–33 | Bug bash, latency numbers | ~~Results table~~ **done** (`test-artifacts/scans/RESULTS.md`) | README (CROPS section), architecture diagram | Demo video draft |
+| 28–33 | Bug bash, latency numbers | ~~Results table~~ **done** (`test-artifacts/scans/RESULTS.md`) | ~~README (CROPS section), architecture diagram~~ **done** (README) | Demo video draft |
 | 33–36 | Final demo, video, submissions (everyone) | | | |
 
 **Two-person team:** A = extension; B = scanner + ENSv2 + LeakyDash. Cut Uniswap and the real-dapp scans first.
