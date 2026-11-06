@@ -523,3 +523,30 @@ Also: idle connections respect the server's `Keep-Alive: timeout`, HTTP/1.0 resp
 - **Shim race (fixed):** if the wallet handed out an address before the extension's config reply arrived, `applyConfig` replaced the address list and dropped it, so every leak check failed (e2e 20/24 on Chrome for Testing 156, also on the old code). Now merged. e2e 26/26, twice.
 - **app.uniswap.org failed closed (fixed):** its RPC proxy (`/rpc/<chainId>`) answers HTTP 401 to the `eth_chainId` probe over Tor (it wants Cloudflare cookies; even the real site's first request gets 401), so Canary couldn't learn the chain and every call failed closed. Fixed by taking the chain from the URL for that host (and as a hint for `/rpc/<n>`-style URLs after a failed probe), so reads are substituted to our read endpoint: 13/13 protected, 0 failed closed.
 - Claude in Chrome can't load an unpacked extension (`chrome://extensions` isn't scriptable), so live runs used Chrome for Testing 156 with `--load-extension`.
+
+## 15. Real-dapp scans (6 Nov)
+
+`scanner/scan.mjs --compare` on five mainnet dapps, with `extension/dist-local` (tor-js through our 3 gateways). Flow: load → connect → scroll, a fresh synthetic address per run. None of them publishes a manifest, so "declared" isn't checked. Table: [`test-artifacts/scans/RESULTS.md`](test-artifacts/scans/RESULTS.md) (`scanner/summary.mjs`), with each site's reports beside it.
+
+- **Third parties that received the address: 12 → 0** across the five. RPC calls leaving the page directly: 0 on four of them.
+- **Aave: coverage 15%.** Most of its reads go to its own `/api/rpc-proxy/` as `{chainId, method, params}`, not JSON-RPC 2.0, so Canary doesn't recognize them: 11 calls left the page directly, 4 with the address, and Aave's server passes them on to its provider. Canary counts the ones with the address as detected (first party). Its third-party RPC (`mainnet.gateway.tenderly.co`) went through anon-rpc.
+- **Blocking has a cost.** Blocked requests included ones the apps use: app.ens.domains' name list (`api.bigname.sh`), Snapshot's profile and follows (`hub.snapshot.org`, a different site from snapshot.box) and avatars (`stamp.fyi`), Aave's merit APRs (`apps.aavechan.com`). Others were analytics: Aave's Datadog logs (3 requests with the address). Without a manifest, all are undeclared third parties. We didn't check what the pages showed without them.
+- **revoke.cash: 4 failed closed.** Its Polygon reads go to Alchemy with the dapp's key, and over anon-rpc Alchemy answered 403, so they failed instead of going direct. Avalanche has no read endpoint configured, so it was forwarded to the dapp's URL over anon-rpc (IP only). Ethereum reads went to our read endpoint.
+- **First parties still get the address**, by design: Uniswap's feature-flag and metrics endpoints (`app.uniswap.org/config/rgstr`, `metrics.interface.gateway.uniswap.org`), revoke.cash's own pages and API, Aave's GraphQL API and compliance check. Uniswap's own RPC gateway (`entry-gateway…/rpc/1`, an `eth_getBalance` of the address) went through anon-rpc.
+- **Latency:** p50 0.8–5.3 s per read, 1–5 reads per site: too few to compare sites.
+- **Build fingerprints differ between the two runs of each dapp.** On app.ens.domains the HTML document and Cloudflare's challenge script change on every load, so on real dapps the fingerprint names a run, not a release. LeakyDash's is stable (`0678454eabf8` again today, as in its published verdict).
+- The fake wallet answers `eth_accounts`, so Uniswap, Aave and revoke.cash had the address on load without a click.
+- snapshot.box timed out on page load twice through mitmproxy (once in each mode) before a clean run; direct requests to it took < 0.4 s.
+
+Scanner fixes from these runs:
+- JSON-RPC methods in a custom envelope count as RPC (`lib/matcher.mjs`). Before, Aave showed 100% coverage.
+- The build fingerprint no longer includes what Canary itself fetched (`/.well-known/canary.json`), which made every with-Canary fingerprint differ from the baseline.
+- The step log says when the dapp read the account without a click.
+
+## 16. Gateway and SDK live over tor-js (6 Nov)
+
+- `canary-gateway` with `examples/viem-agent/canary.config.json` (EF's demo gateway only): Tor never bootstrapped. The dial to the gateway timed out, then "Reached circuit build retry limit" at ~70 s. The same config with our 3 gateways: worker ready in 3.6 s.
+- Through it: Sepolia `eth_blockNumber` (one block behind publicnode queried directly), `eth_getBalance`, a batch of `eth_chainId` + `eth_call`, and mainnet `eth_blockNumber`, all answered in 0.84–0.87 s. `eth_sendTransaction` was refused locally. Report: 6 RPC calls, 5 protected, 1 blocked.
+- `examples/viem-agent` (`node agent.mjs`, no LLM key): its 3 reads were protected (0.9–1.0 s), the prompt it would send names `WALLET_1` and `AGENT_NAME`, and it printed coverage and the on-chain report form.
+- On a fresh clone, `npm install && npm run build` left `canary-gateway` and `canary-ens` unlinked (their `dist/` doesn't exist yet at install), so `npm run gateway` failed with "command not found". Fixed: the root `build` ends with `npm rebuild @canary/gateway @canary/ens`, which links them. `examples/viem-agent` gained `npm run gateway:local` (our gateways).
+- Not run live yet: the policy from ENS (`gateway:ens`: `trader-01.agents.canary.eth` isn't registered), an LLM call, `examples/python-agent`, `eth_sendRawTransaction`.
