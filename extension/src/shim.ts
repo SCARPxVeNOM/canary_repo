@@ -121,18 +121,14 @@ import {
     if (!p || typeof p.request !== "function" || wrapped.has(p)) return;
     wrapped.add(p);
     const orig = p.request.bind(p);
-    try {
-      p.request = async (args: any) => {
-        const res = await orig(args);
-        // A new address reaches the page only once it's blocked in URLs: a pixel fired the
-        // moment the dapp learns it would otherwise go out before the rule exists.
-        if (args?.method === "eth_accounts" || args?.method === "eth_requestAccounts") await addAddresses(res);
-        if (args?.method === "eth_chainId") addAddresses([], Number(res));
-        return res;
-      };
-    } catch {
-      /* frozen provider: fall back to events */
-    }
+    // A new address reaches the page only once it's blocked in URLs: a pixel fired the
+    // moment the dapp learns it would otherwise go out before the rule exists.
+    override(p, "request", (request) => async function (this: unknown, args: any) {
+      const res = await request.call(this ?? p, args);
+      if (args?.method === "eth_accounts" || args?.method === "eth_requestAccounts") await addAddresses(res);
+      if (args?.method === "eth_chainId") addAddresses([], Number(res));
+      return res;
+    });
     try {
       p.on?.("accountsChanged", (a: unknown) => addAddresses(a));
       p.on?.("chainChanged", (c: unknown) => addAddresses([], Number(c)));
@@ -144,40 +140,96 @@ import {
     orig({ method: "eth_accounts" }).then((a: unknown) => addAddresses(a), () => {});
     orig({ method: "eth_chainId" }).then((c: unknown) => addAddresses([], Number(c)), () => {});
   }
-  /* The page's accountsChanged listeners get a new address only once it's blocked in URLs, as
-     eth_requestAccounts above: switching to an account Canary hasn't seen fires the same pixels. */
+
+  /** Puts wrap(p[name]) in place of p[name]: on p itself, or, when p can't be changed (frozen,
+      locked), on the class p gets the method from, for p alone. False when neither works. */
+  function override(p: any, name: string, wrap: (orig: Function) => Function): boolean {
+    const orig = p[name];
+    if (typeof orig !== "function") return false;
+    const mine = wrap(orig);
+    try {
+      p[name] = mine;
+      if (p[name] === mine) return true;
+    } catch {
+      /* frozen or locked: try its class */
+    }
+    for (let o = Object.getPrototypeOf(p); o && o !== Object.prototype; o = Object.getPrototypeOf(o)) {
+      const d = Object.getOwnPropertyDescriptor(o, name);
+      if (!d) continue;
+      if (d.value !== orig) return false;
+      try {
+        Object.defineProperty(o, name, { ...d, value: function (this: unknown, ...a: unknown[]) { return (this === p ? mine : orig).apply(this, a); } });
+        return true;
+      } catch {
+        return false;
+      }
+    }
+    return false;
+  }
+
+  /** Deliveries held for a new address, run in the order they came: while one waits, later ones queue behind it. */
+  function inOrder() {
+    let tail: Promise<void> | undefined;
+    return {
+      busy: () => tail !== undefined,
+      later(wait: Promise<void> | undefined, deliver: () => unknown) {
+        const t: Promise<void> = (tail ?? Promise.resolve())
+          .then(() => wait)
+          .then(() => void deliver())
+          .catch((e) => void setTimeout(() => { throw e; })); // a listener's error, reported as if it threw directly
+        tail = t;
+        void t.then(() => tail === t && (tail = undefined));
+      },
+    };
+  }
+
+  /* Switching to an account Canary hasn't seen fires the same pixels as connecting: the page hears
+     of it only once the address is blocked in URLs. Held where the wallet sends it (its emit), so
+     listeners the page added before Canary got to the wallet wait too; for wallets that call their
+     listeners some other way, each listener added from here on is held. */
   function holdAccountsChanged(p: any) {
+    const emits = inOrder();
+    override(p, "emit", (emit) => function (this: unknown, event: unknown, ...args: unknown[]) {
+      const wait = event === "accountsChanged" ? addAddresses(args[0]) : undefined;
+      if (!wait && !emits.busy()) return emit.call(this, event, ...args);
+      emits.later(wait, () => emit.call(this, event, ...args)); // later events too, so none overtakes a held one
+      return true;
+    });
+
+    const calls = inOrder();
     const held = new WeakMap<Function, Function>();
     const heldFor = (f: Function) => {
-      let g = held.get(f);
+      let g = held.get(f) as (Function & { listener?: unknown }) | undefined;
       if (!g) {
         g = function (this: unknown, ...args: unknown[]) {
           const wait = addAddresses(args[0]);
-          if (!wait) return f.apply(this, args);
-          void wait.then(() => f.apply(this, args));
+          if (!wait && !calls.busy()) return f.apply(this, args);
+          calls.later(wait, () => f.apply(this, args));
         };
+        // EventEmitter finds a listener added with once() by this, to remove it by the function the page passed.
+        if ("listener" in f) g.listener = (f as any).listener;
         held.set(f, g);
       }
       return g;
     };
-    const patch = (name: string, map: (f: Function) => Function | undefined) => {
-      const orig = p[name];
-      if (typeof orig !== "function") return;
-      try {
-        p[name] = function (this: unknown, event: unknown, f: unknown, ...rest: unknown[]) {
-          return orig.call(this, event, event === "accountsChanged" && typeof f === "function" ? (map(f) ?? f) : f, ...rest);
-        };
-      } catch {
-        /* frozen provider: its listeners hear new accounts unheld */
-      }
+    const subscribe = (on: Function) => function (this: unknown, event: unknown, f: unknown, ...rest: unknown[]) {
+      return on.call(this, event, event === "accountsChanged" && typeof f === "function" ? heldFor(f) : f, ...rest);
     };
-    for (const name of ["on", "addListener", "once", "prependListener", "prependOnceListener"]) patch(name, heldFor);
-    for (const name of ["removeListener", "off"]) patch(name, (f) => held.get(f));
+    const unsubscribe = (off: Function) => function (this: unknown, event: unknown, f: unknown, ...rest: unknown[]) {
+      return off.call(this, event, event === "accountsChanged" && typeof f === "function" ? (held.get(f) ?? f) : f, ...rest);
+    };
+    for (const name of ["on", "addListener", "once", "prependListener", "prependOnceListener"]) override(p, name, subscribe);
+    for (const name of ["removeListener", "off"]) override(p, name, unsubscribe);
   }
 
   window.addEventListener("eip6963:announceProvider", (ev: any) => wrapProvider(ev?.detail?.provider));
   const pollEthereum = () => W.ethereum && wrapProvider(W.ethereum);
   queueMicrotask(pollEthereum);
+  // The parser runs queued microtasks before each of the page's scripts: a wallet that puts itself at
+  // window.ethereum after Canary is hooked before the page's own code can add listeners to it.
+  const early = new MutationObserver(pollEthereum);
+  early.observe(document, { childList: true, subtree: true });
+  document.addEventListener("DOMContentLoaded", () => early.disconnect());
   document.addEventListener("DOMContentLoaded", pollEthereum);
   window.addEventListener("load", pollEthereum);
   setTimeout(() => window.dispatchEvent(new Event("eip6963:requestProvider")), 0);
