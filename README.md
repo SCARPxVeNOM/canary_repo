@@ -1,13 +1,27 @@
-# Canary
+<p align="center">
+  <img src="docs/assets/canary-logo.png" width="112" alt="Canary logo">
+</p>
 
-**See what a dapp leaks before you connect, and stop it once you do. No dapp fork required.**
+<h1 align="center">Canary</h1>
 
-[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-[![ETHGlobal Mumbai 2026](https://img.shields.io/badge/ETHGlobal-Mumbai%202026-6c5ce7.svg)](https://ethglobal.com/events/mumbai)
-[![Built on anon-rpc](https://img.shields.io/badge/built%20on-anon--rpc-0a6b73.svg)](https://github.com/ethereum/anon-rpc)
-[![ENSv2 on Sepolia](https://img.shields.io/badge/ENSv2-Sepolia-5298ff.svg)](packages/ens/README.md#live-on-sepolia)
+<p align="center">
+  <b>See what a dapp leaks before you connect, and stop it once you do. No dapp fork required.</b>
+</p>
 
-**[Live demo (LeakyDash)](https://canary-leakydash.vercel.app)** · **[Canary Swap](https://canary-swap.vercel.app)** · **[Website](https://uixcanary.vercel.app)** · **[Performance work](docs/performance.md)** · **[Uniswap feedback](FEEDBACK.md)**
+<p align="center">
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="License: MIT"></a>
+  <a href="https://ethglobal.com/events/mumbai"><img src="https://img.shields.io/badge/ETHGlobal-Mumbai%202026-6c5ce7.svg" alt="ETHGlobal Mumbai 2026"></a>
+  <a href="https://github.com/ethereum/anon-rpc"><img src="https://img.shields.io/badge/built%20on-anon--rpc-0a6b73.svg" alt="Built on anon-rpc"></a>
+  <a href="packages/ens/README.md#live-on-sepolia"><img src="https://img.shields.io/badge/ENSv2-Sepolia-5298ff.svg" alt="ENSv2 on Sepolia"></a>
+</p>
+
+<p align="center">
+  <a href="https://canary-leakydash.vercel.app"><b>Live demo (LeakyDash)</b></a> ·
+  <a href="https://canary-swap.vercel.app"><b>Canary Swap</b></a> ·
+  <a href="https://uixcanary.vercel.app"><b>Website</b></a> ·
+  <a href="docs/performance.md"><b>Performance work</b></a> ·
+  <a href="FEEDBACK.md"><b>Uniswap feedback</b></a>
+</p>
 
 Canary is a browser extension. It does three things:
 
@@ -23,6 +37,7 @@ The same core protects autonomous agents through a local gateway and an SDK.
 
 - [The problem](#the-problem)
 - [What Canary does](#what-canary-does)
+- [Screenshots](#screenshots)
 - [Results](#results)
 - [How it works](#how-it-works)
 - [Performance: making anon-rpc fast enough to use](#performance-making-anon-rpc-fast-enough-to-use)
@@ -58,6 +73,47 @@ The dapp itself can always see your address and IP. Canary protects you from thi
 - a local **gateway** that any agent, in any language, points its RPC URL and proxy at;
 - a TypeScript **SDK** that also pseudonymizes wallet addresses in LLM prompts;
 - an **ENSv2 name per agent**. Its `privacy.manifest` *is* the policy the gateway enforces, and signed egress reports are written to it by a key that can write nothing else.
+
+## Screenshots
+
+These are unedited captures of the extension on the live sites, taken in headless Chrome at 2× scale on 7 Nov 2026.
+
+- **LeakyDash** used a Sepolia test wallet.
+- **1inch and Aave** used a synthetic address that signs nothing.
+
+**On the page:** the moment LeakyDash gets your address, Canary shows the site's privacy label from `leakydash.eth`. It also shows what `verifier.canary.eth` saw the site actually send.
+
+<p align="center">
+  <img src="docs/assets/screenshots/leakydash-notice.png" width="900" alt="LeakyDash with Canary's privacy-label notice">
+</p>
+
+**The popup:**
+
+<table>
+  <tr>
+    <td align="center" width="25%"><img src="docs/assets/screenshots/popup-leakydash-overview.png" alt="Popup overview on LeakyDash"></td>
+    <td align="center" width="25%"><img src="docs/assets/screenshots/popup-leakydash-manifest.png" alt="Declared vs observed on LeakyDash"></td>
+    <td align="center" width="25%"><img src="docs/assets/screenshots/popup-aave-label.png" alt="Canary's ENS label on app.aave.com"></td>
+    <td align="center" width="25%"><img src="docs/assets/screenshots/popup-canary-swap.png" alt="Canary Swap matches its manifest"></td>
+  </tr>
+  <tr>
+    <td align="center">Reads through anon-rpc and leaks blocked, on LeakyDash</td>
+    <td align="center">Declared vs observed: <code>leakydash.eth</code> and the verifier's signed verdict</td>
+    <td align="center">app.aave.com publishes no manifest, so Canary's own label from ENS is shown</td>
+    <td align="center">Canary Swap: matches its manifest, 100% coverage</td>
+  </tr>
+</table>
+
+**The dashboard:** 1inch, live, with 237 reads through anon-rpc and 4 leaks blocked. The other 39 requests went out unprotected, and the dashboard reports them as exposed rather than hiding them.
+
+<p align="center">
+  <img src="docs/assets/screenshots/dashboard-1inch.png" width="900" alt="Canary dashboard on 1inch">
+</p>
+
+<p align="center">
+  <img src="docs/assets/screenshots/popup-1inch-activity.png" width="260" alt="Activity on 1inch: every request with its outcome">
+  <br><sub>Activity on 1inch: every request, with what Canary did and why</sub>
+</p>
 
 ## Results
 
@@ -219,7 +275,7 @@ ENSv2 names (12 in total; transactions in [`packages/ens/README.md`](packages/en
 | [`tor-js-patches/`](tor-js-patches/) | Patches for upstream tor-js (keep-alive, gateway liveness), with tests and measurements |
 | [`scripts/`](scripts/) | `set-gateways.mjs` (writes gateway addresses into every config) and `live-e2e.mjs` (agents, live over tor-js) |
 | **Docs and evidence** | |
-| [`docs/`](docs/) | Design notes, performance, agent SDK design, test log ([below](#documentation)) |
+| [`docs/`](docs/) | Design notes, performance, agent SDK design, test log ([below](#documentation)); logo and screenshots in `docs/assets/` |
 | [`test-artifacts/`](test-artifacts/) | Raw logs, scans and benchmark output behind every number in the docs |
 | [`FEEDBACK.md`](FEEDBACK.md) | Uniswap developer feedback from building Canary Swap |
 | [`archive/canary-spike/`](archive/canary-spike/) | The first proof of concept, superseded by `extension/` |
