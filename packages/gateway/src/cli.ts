@@ -12,7 +12,12 @@ import { parseArgs } from "node:util";
 import { createGateway } from "./gateway.js";
 import { loadOrCreateCa } from "./mitm.js";
 
-const { values, positionals } = parseArgs({ allowPositionals: true, options: { config: { type: "string", short: "c" }, dir: { type: "string" } } });
+const { values, positionals } = parseArgs({ allowPositionals: true, options: { config: { type: "string", short: "c" }, dir: { type: "string" }, help: { type: "boolean", short: "h" } } });
+const USAGE = "usage: canary-gateway --config canary.config.json | canary-gateway ca [--dir path]";
+if (values.help) {
+  console.log(USAGE);
+  process.exit(0);
+}
 if (positionals[0] === "ca") {
   const { files, created } = await loadOrCreateCa(values.dir);
   console.log(`${created ? "created" : "found"} Canary's local CA in ${files.dir} (key stays there, mode 0600)
@@ -24,7 +29,7 @@ and point the agent at the proxy: HTTPS_PROXY=http://127.0.0.1:18080`);
   process.exit(0);
 }
 if (!values.config) {
-  console.error("usage: canary-gateway --config canary.config.json | canary-gateway ca [--dir path]");
+  console.error(USAGE);
   process.exit(2);
 }
 const path = resolve(values.config);

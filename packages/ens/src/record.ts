@@ -4,7 +4,7 @@
 
 import { keccak256, recoverTypedDataAddress, toBytes, type Hex } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
-import { canonicalJson } from "@canary/core";
+import { canonicalJson } from "@ayush_saklani/canary-core";
 
 export type CoarseReport = {
   agent: string;

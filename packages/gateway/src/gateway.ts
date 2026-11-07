@@ -2,7 +2,7 @@
 
    http://127.0.0.1:18545/<chainId>   JSON-RPC endpoint: the agent's RPC URL
    http://127.0.0.1:18080             HTTP(S) proxy: the agent's HTTPS_PROXY
-   http://127.0.0.1:18545/canary/...  control API for @canary/agent:
+   http://127.0.0.1:18545/canary/...  control API for @ayush_saklani/canary-agent:
        POST /canary/fetch   (x-canary-url: <url>)  in-process fetch, full policy with bodies visible
        POST /canary/events  {kind:"llm", requests, pseudonymized}  SDK-side counts
        GET  /canary/events  live egress decisions (server-sent events)
@@ -12,7 +12,7 @@
 
 import { createServer, type Server } from "node:http";
 import type { Hex } from "viem";
-import { DEFAULT_MANIFEST, isAddress, needlesFor, parseManifest, type Manifest } from "@canary/core";
+import { DEFAULT_MANIFEST, isAddress, needlesFor, parseManifest, type Manifest } from "@ayush_saklani/canary-core";
 import { startChromiumBackend, type ChromiumOptions } from "./backend/chromium.js";
 import type { AnonBackend, NetworkConfig } from "./backend/types.js";
 import { headersFrom, sendHttp, startProxy, writeResponse, type HttpContext } from "./http.js";

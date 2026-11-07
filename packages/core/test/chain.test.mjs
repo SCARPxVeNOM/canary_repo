@@ -1,5 +1,5 @@
 // Chain detection from RPC URLs (src/domain.ts).
-//   npm test -w @canary/core
+//   npm test -w @ayush_saklani/canary-core
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { chainHintFromUrl, knownChain } from "../dist/index.js";

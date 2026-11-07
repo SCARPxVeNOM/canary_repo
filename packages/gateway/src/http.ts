@@ -16,7 +16,7 @@ import { createServer, type IncomingMessage, type Server } from "node:http";
 import { connect, type Socket } from "node:net";
 import { TLSSocket } from "node:tls";
 import type { Mitm } from "./mitm.js";
-import { findAddress, isolationKeyFor, ruleFor, type AddressNeedles, type Category, type Channel, type Manifest } from "@canary/core";
+import { findAddress, isolationKeyFor, ruleFor, type AddressNeedles, type Category, type Channel, type Manifest } from "@ayush_saklani/canary-core";
 import type { AnonBackend } from "./backend/types.js";
 import type { Ledger } from "./ledger.js";
 

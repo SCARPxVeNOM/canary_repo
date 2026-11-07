@@ -1,6 +1,10 @@
-# @canary/core
+# @ayush_saklani/canary-core
 
 Platform-neutral Canary logic, shared by the browser extension (`extension/src/shared.ts` re-exports it) and the agent packages. No dependencies; deterministic exact matching, no heuristics.
+
+```sh
+npm install @ayush_saklani/canary-core
+```
 
 | Module | What |
 |---|---|

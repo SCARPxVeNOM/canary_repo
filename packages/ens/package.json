@@ -1,20 +1,54 @@
 {
-  "name": "@canary/ens",
+  "name": "@ayush_saklani/canary-ens",
   "version": "0.1.0",
-  "private": true,
   "type": "module",
   "license": "MIT",
   "description": "ENSv2 side of Canary: read an agent's privacy.manifest, publish signed privacy.report records with a one-key role, detect revocation.",
+  "keywords": [
+    "ens",
+    "ensv2",
+    "ethereum",
+    "privacy",
+    "agents"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SCARPxVeNOM/canary_repo.git",
+    "directory": "packages/ens"
+  },
+  "homepage": "https://github.com/SCARPxVeNOM/canary_repo/tree/main/packages/ens#readme",
+  "bugs": {
+    "url": "https://github.com/SCARPxVeNOM/canary_repo/issues"
+  },
+  "engines": {
+    "node": ">=20.11"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
-  "exports": { ".": { "types": "./dist/index.d.ts", "default": "./dist/index.js" } },
-  "bin": { "canary-ens": "./dist/cli.js" },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "bin": {
+    "canary-ens": "dist/cli.js"
+  },
   "scripts": {
     "build": "tsc -p tsconfig.json",
-    "test": "node --test --test-concurrency=1 \"test/*.test.mjs\""
+    "test": "node --test --test-concurrency=1 \"test/*.test.mjs\"",
+    "prepublishOnly": "npm run build"
   },
   "dependencies": {
-    "@canary/core": "0.1.0",
+    "@ayush_saklani/canary-core": "0.1.0",
     "viem": "^2.57.0"
   },
   "devDependencies": {

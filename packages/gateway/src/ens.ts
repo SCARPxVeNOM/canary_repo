@@ -11,8 +11,8 @@
 import { createPublicClient, createWalletClient, defineChain, http, type Address, type Chain, type Hex, type PublicClient } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { mainnet, sepolia } from "viem/chains";
-import type { Manifest } from "@canary/core";
-import { canWriteText, loadManifest, resolverOf, setTextRecord, signCoarseReport, TEXT_KEYS, type CoarseReport } from "@canary/ens";
+import type { Manifest } from "@ayush_saklani/canary-core";
+import { canWriteText, loadManifest, resolverOf, setTextRecord, signCoarseReport, TEXT_KEYS, type CoarseReport } from "@ayush_saklani/canary-ens";
 
 export type EnsConfig = {
   /** the agent's ENSv2 name, e.g. trader-01.agents.canary.eth */

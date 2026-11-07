@@ -1,15 +1,47 @@
 {
-  "name": "@canary/core",
+  "name": "@ayush_saklani/canary-core",
   "version": "0.1.0",
-  "private": true,
   "type": "module",
   "license": "MIT",
   "description": "Platform-neutral Canary logic: JSON-RPC classifier, address matching, coverage categories, privacy manifest (policy).",
+  "keywords": [
+    "ethereum",
+    "privacy",
+    "json-rpc",
+    "anon-rpc",
+    "wallet-address"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SCARPxVeNOM/canary_repo.git",
+    "directory": "packages/core"
+  },
+  "homepage": "https://github.com/SCARPxVeNOM/canary_repo/tree/main/packages/core#readme",
+  "bugs": {
+    "url": "https://github.com/SCARPxVeNOM/canary_repo/issues"
+  },
+  "engines": {
+    "node": ">=20.11"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
-  "exports": { ".": { "types": "./dist/index.d.ts", "default": "./dist/index.js" } },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
   "scripts": {
     "build": "tsc -p tsconfig.json",
-    "test": "node --test \"test/*.test.mjs\""
+    "test": "node --test \"test/*.test.mjs\"",
+    "prepublishOnly": "npm run build"
   }
 }

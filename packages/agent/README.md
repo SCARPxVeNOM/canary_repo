@@ -1,9 +1,14 @@
-# @canary/agent
+# @ayush_saklani/canary-agent
 
 In-process SDK for TypeScript agents (docs/agent-sdk.md §3.4). It hands the gateway what a proxy can't see: HTTPS bodies, and prompts, which it pseudonymizes before they leave. Policy stays in the gateway (one place, from the manifest).
 
+```sh
+npm install @ayush_saklani/canary-agent viem
+npm install @ayush_saklani/canary-gateway   # for `embedded` mode, or run its `canary-gateway` CLI separately
+```
+
 ```ts
-import { createCanary } from "@canary/agent";
+import { createCanary } from "@ayush_saklani/canary-agent";
 
 const canary = await createCanary({ gateway: "http://127.0.0.1:18545", wallets: [account.address] });
 // or: createCanary({ embedded: gatewayConfig, wallets })  — runs the gateway in this process

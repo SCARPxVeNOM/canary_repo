@@ -41,7 +41,7 @@ Every component takes its content as props. All placeholder content is in [`src/
 | `STATUS` | `GET /canary/status` on the local gateway |
 | `REPORT` | `GET /canary/report` |
 | `EVENTS` | `GET /canary/events` (server-sent events, newest first) |
-| `LOOKUP_RESULT` | `readAgentPrivacy(client, name)` from `@canary/ens` |
+| `LOOKUP_RESULT` | `readAgentPrivacy(client, name)` from `@ayush_saklani/canary-ens` |
 | `connection` (App) | from `status.backend.state` and whether calls get through |
 | `onSearch` (App) | runs the lookup and moves `lookup` through `reading` → `found` / `notFound` / `error` |
 | `onPublish`, `onRotate` (ReportCard) | `POST /canary/publish`, `GET /canary/report?rotate=1` |

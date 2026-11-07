@@ -6,7 +6,7 @@
 
 import { type Address, type Hex, type PublicClient } from "viem";
 import { normalize } from "viem/ens";
-import { parseManifest, type Manifest } from "@canary/core";
+import { parseManifest, type Manifest } from "@ayush_saklani/canary-core";
 import { TEXT_KEYS } from "./abi.js";
 import { parseReportRecord, verifyReportRecord, type ReportRecord } from "./record.js";
 import { canWriteText, roleHistory, type RoleChange } from "./write.js";

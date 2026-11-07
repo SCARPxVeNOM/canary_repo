@@ -16,7 +16,7 @@
 import {
   BROADCAST, NODE_SIGNING, SUBSTITUTABLE, findAddresses, isolationKeyFor, isBatchBody, parseJsonRpc,
   rpcError, rpcResult, type AddressNeedles, type Category, type Manifest, type RpcCall, type RpcResponse,
-} from "@canary/core";
+} from "@ayush_saklani/canary-core";
 import type { AnonBackend } from "./backend/types.js";
 import type { Ledger } from "./ledger.js";
 

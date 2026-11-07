@@ -13,6 +13,7 @@
   <a href="https://ethglobal.com/events/mumbai"><img src="https://img.shields.io/badge/ETHGlobal-Mumbai%202026-6c5ce7.svg" alt="ETHGlobal Mumbai 2026"></a>
   <a href="https://github.com/ethereum/anon-rpc"><img src="https://img.shields.io/badge/built%20on-anon--rpc-0a6b73.svg" alt="Built on anon-rpc"></a>
   <a href="packages/ens/README.md#live-on-sepolia"><img src="https://img.shields.io/badge/ENSv2-Sepolia-5298ff.svg" alt="ENSv2 on Sepolia"></a>
+  <a href="https://www.npmjs.com/package/@ayush_saklani/canary-agent"><img src="https://img.shields.io/npm/v/@ayush_saklani/canary-agent.svg?label=npm" alt="npm"></a>
 </p>
 
 <p align="center">
@@ -165,7 +166,7 @@ flowchart LR
   - The scanner measures who does. The verifier signs what it found into `privacy.verdict.canary`, under a grant for that one key.
   - The extension checks the signature, that the verifier still holds its role, and the expiry.
   - For an agent, the manifest is enforced: the gateway blocks what it doesn't declare.
-- **One core, two hosts.** `extension/` and `packages/` share `@canary/core`: the JSON-RPC classifier, address matching, coverage categories and the manifest schema.
+- **One core, two hosts.** `extension/` and `packages/` share `@ayush_saklani/canary-core`: the JSON-RPC classifier, address matching, coverage categories and the manifest schema.
 
 **Who learns what:**
 
@@ -264,10 +265,10 @@ ENSv2 names (12 in total; transactions in [`packages/ens/README.md`](packages/en
 | [`leakydash/`](leakydash/) | LeakyDash, the deliberately leaky demo dapp (local or Vercel) |
 | [`swap/`](swap/) | Canary Swap: Uniswap v4 quotes with no address, swaps on Sepolia, pool script, live and stress tests |
 | **Agents** | |
-| [`packages/core/`](packages/core/) | `@canary/core`: JSON-RPC classifier, address matching, coverage, privacy manifest. Shared with the extension |
-| [`packages/gateway/`](packages/gateway/) | `@canary/gateway`: anon-rpc in headless Chrome, JSON-RPC endpoint, HTTP(S) proxy, MITM CA, ledger, signed reports, `canary-gateway` CLI |
-| [`packages/ens/`](packages/ens/) | `@canary/ens`: ENSv2 manifest, verdict and report records, one-key roles, revocation checks, `canary-ens` CLI |
-| [`packages/agent/`](packages/agent/) | `@canary/agent`: in-process SDK for TypeScript agents (viem, ethers, fetch, LLM pseudonymizer) |
+| [`packages/core/`](packages/core/) | `@ayush_saklani/canary-core`: JSON-RPC classifier, address matching, coverage, privacy manifest. Shared with the extension |
+| [`packages/gateway/`](packages/gateway/) | `@ayush_saklani/canary-gateway`: anon-rpc in headless Chrome, JSON-RPC endpoint, HTTP(S) proxy, MITM CA, ledger, signed reports, `canary-gateway` CLI |
+| [`packages/ens/`](packages/ens/) | `@ayush_saklani/canary-ens`: ENSv2 manifest, verdict and report records, one-key roles, revocation checks, `canary-ens` CLI |
+| [`packages/agent/`](packages/agent/) | `@ayush_saklani/canary-agent`: in-process SDK for TypeScript agents (viem, ethers, fetch, LLM pseudonymizer) |
 | [`examples/`](examples/) | [`viem-agent`](examples/viem-agent/) (with a leaky mode for before/after, and a Uniswap v4 swap) and [`python-agent`](examples/python-agent/) (no SDK, only `RPC_URL` and `HTTPS_PROXY`) |
 | [`dashboard/`](dashboard/) | Web dashboard for Canary for agents (frontend only, placeholder data) |
 | **Infrastructure** | |
@@ -315,6 +316,38 @@ To see it work, open [LeakyDash](https://canary-leakydash.vercel.app), connect, 
 
 ### 3. Canary for agents
 
+The packages are on npm:
+
+| Package | What |
+|---|---|
+| [`@ayush_saklani/canary-gateway`](https://www.npmjs.com/package/@ayush_saklani/canary-gateway) | the gateway and its `canary-gateway` CLI |
+| [`@ayush_saklani/canary-agent`](https://www.npmjs.com/package/@ayush_saklani/canary-agent) | the TypeScript SDK |
+| [`@ayush_saklani/canary-ens`](https://www.npmjs.com/package/@ayush_saklani/canary-ens) | ENSv2 records and the `canary-ens` CLI |
+| [`@ayush_saklani/canary-core`](https://www.npmjs.com/package/@ayush_saklani/canary-core) | shared logic, installed with the others |
+
+They need Node 20.11+ and Chrome: the gateway runs anon-rpc in headless Chrome.
+
+```sh
+npm install @ayush_saklani/canary-gateway @ayush_saklani/canary-agent viem
+npx canary-gateway --config canary.config.json
+```
+
+For the config:
+
+1. Start from [`examples/viem-agent/canary.config.json`](examples/viem-agent/canary.config.json) and its [`manifest.json`](examples/viem-agent/manifest.json).
+2. List your tor-js gateway from step 1 under `network.workerConfig.gateways`.
+
+Then, in the agent:
+
+```ts
+import { createCanary } from "@ayush_saklani/canary-agent";
+
+const canary = await createCanary({ gateway: "http://127.0.0.1:18545", wallets: [account.address] });
+const client = createPublicClient({ chain: sepolia, transport: canary.viemTransport() });
+```
+
+To run the example agent from this repo instead:
+
 ```sh
 npm install && npm run build     # at the repo root: packages/core, ens, gateway, agent
 cd examples/viem-agent
@@ -326,7 +359,7 @@ WALLET=0x… npm run agent         # terminal 2 (npm run agent:leaky runs the sa
   - Point the agent's RPC URL at `http://127.0.0.1:18545/<chainId>`, and its chain reads go through anon-rpc.
   - `HTTPS_PROXY=http://127.0.0.1:18080` adds per-host rules.
   - Without the local CA, HTTPS can only go direct or be blocked. With it (`canary-gateway ca`, then `"mitm": true`), `anon` hosts go through anon-rpc too.
-- **TypeScript:** `createCanary()` from `@canary/agent` gives you:
+- **TypeScript:** `createCanary()` from `@ayush_saklani/canary-agent` gives you:
   - a viem transport;
   - an ethers provider;
   - a policy-checked `fetch`;
@@ -341,10 +374,10 @@ All suites run offline against EF's passthrough reference worker, hash-verified 
 
 | Suite | Command | Result |
 |---|---|---|
-| `@canary/core` | `npm test` at the root | 14/14 |
-| `@canary/ens` | `npm test` at the root | 10/10 |
-| `@canary/gateway` | `npm test` at the root | 42/42 |
-| `@canary/agent` | `npm test` at the root | 13/13 |
+| `@ayush_saklani/canary-core` | `npm test` at the root | 14/14 |
+| `@ayush_saklani/canary-ens` | `npm test` at the root | 10/10 |
+| `@ayush_saklani/canary-gateway` | `npm test` at the root | 42/42 |
+| `@ayush_saklani/canary-agent` | `npm test` at the root | 13/13 |
 | Extension unit tests (pipeline, ENS reader) | `npm run test:unit` in `extension/` | 23/23 |
 | Extension e2e: real Chromium against a leaky fixture dapp on 9 fake domains ([log](extension/test/e2e.log)) | `CHROME_BIN=… npm test` in `extension/` | 53/53 checks |
 | Extension wallet hold (account switching, listeners) | `CHROME_BIN=… npm test` in `extension/` | 17/17 checks |

@@ -1,9 +1,9 @@
-// @canary/agent against a real gateway + headless Chromium (passthrough worker).
+// @ayush_saklani/canary-agent against a real gateway + headless Chromium (passthrough worker).
 
 import { test, before, after } from "node:test";
 import assert from "node:assert/strict";
 import { createPublicClient, defineChain } from "viem";
-import { createGateway, startChromiumBackend } from "@canary/gateway";
+import { createGateway, startChromiumBackend } from "@ayush_saklani/canary-gateway";
 import { createCanary, UnknownAliasError } from "../dist/index.js";
 import { startFixtures, mapTestHosts, CHROME_OPTS, CHAIN_ID } from "../../gateway/test/fixtures.mjs";
 

@@ -1,4 +1,4 @@
-// The extension's view of @canary/core (packages/core): one classifier and
+// The extension's view of @ayush_saklani/canary-core (packages/core): one classifier and
 // one address matcher for both hosts, the browser extension and the agent
 // gateway/SDK. esbuild bundles the core source straight into each script.
 //

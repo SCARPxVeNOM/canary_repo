@@ -1,6 +1,13 @@
-# @canary/ens
+# @ayush_saklani/canary-ens
 
 The ENSv2 side of Canary. For agents (docs/agent-sdk.md §4): an agent's name holds its policy and its signed egress reports, with a one-key role so the gateway can write reports and nothing else. For dapps (docs/design-notes.md §3.3): a dapp's name holds its declared recipients and an independent verifier's signed verdict, again with a one-key role (below).
+
+```sh
+npm install @ayush_saklani/canary-ens          # the library and the canary-ens CLI
+npx canary-ens read-dapp leakydash.eth --rpc https://ethereum-sepolia-rpc.publicnode.com
+```
+
+Without `--rpc`, lookups go through the local Canary gateway (`http://127.0.0.1:18545/<chain>`), so they also travel over anon-rpc.
 
 | Record on the agent's name | Written by | Content |
 |---|---|---|
@@ -69,7 +76,7 @@ CANARY_OWNER_KEY=0x… canary-ens revoke-reporter <name> <reportKeyAddress>
 | Record on the dapp's name | Written by | Content |
 |---|---|---|
 | `url` | dapp (owner key) | its origin; the site serves `/.well-known/canary.json` → `{"ens": "<name>"}`, so the binding holds both ways |
-| `privacy.manifest` | dapp | who receives the connected address: `{name, origin, recipients: [{host, kind, purpose}], rpc}` (`parseDappManifest` in `@canary/core`) |
+| `privacy.manifest` | dapp | who receives the connected address: `{name, origin, recipients: [{host, kind, purpose}], rpc}` (`parseDappManifest` in `@ayush_saklani/canary-core`) |
 | `privacy.verdict.canary` | the verifier only, delegated for this one key | a scanner baseline turned into a signed verdict (below) |
 
 The dapp grants the verifier exactly one key (`grantTextKey`, as for the agent's reporter), so the verifier can publish bad news without the dapp's help and can't touch anything else. The owner keeps admin roles and could re-grant itself the key, so the verdict is also signed by the key in the verifier name's `addr` record. The only way to silence the verifier is to revoke the role, which readers see: `canWriteText` turns false, and `EACRolesChanged` is on chain. Per the ENS docs, a text-key grant covers that key on every name the same Permissioned Resolver instance serves; give the dapp's name its own resolver if that matters.

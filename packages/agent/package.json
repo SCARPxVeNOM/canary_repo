@@ -1,10 +1,38 @@
 {
-  "name": "@canary/agent",
+  "name": "@ayush_saklani/canary-agent",
   "version": "0.1.0",
-  "private": true,
   "type": "module",
   "license": "MIT",
   "description": "In-process Canary SDK for TypeScript agents: viem transport, fetch, and an LLM prompt pseudonymizer, enforced by a Canary Gateway.",
+  "keywords": [
+    "ethereum",
+    "privacy",
+    "anon-rpc",
+    "viem",
+    "ethers",
+    "llm",
+    "agents"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SCARPxVeNOM/canary_repo.git",
+    "directory": "packages/agent"
+  },
+  "homepage": "https://github.com/SCARPxVeNOM/canary_repo/tree/main/packages/agent#readme",
+  "bugs": {
+    "url": "https://github.com/SCARPxVeNOM/canary_repo/issues"
+  },
+  "engines": {
+    "node": ">=20.11"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
@@ -15,18 +43,19 @@
   },
   "scripts": {
     "build": "tsc -p tsconfig.json",
-    "test": "node --test --test-concurrency=1 \"test/*.test.mjs\""
+    "test": "node --test --test-concurrency=1 \"test/*.test.mjs\"",
+    "prepublishOnly": "npm run build"
   },
   "dependencies": {
-    "@canary/core": "0.1.0",
+    "@ayush_saklani/canary-core": "0.1.0",
     "viem": "^2.21.0"
   },
   "peerDependencies": {
-    "@canary/gateway": "0.1.0",
+    "@ayush_saklani/canary-gateway": "0.1.0",
     "ethers": "^6.13.0"
   },
   "peerDependenciesMeta": {
-    "@canary/gateway": {
+    "@ayush_saklani/canary-gateway": {
       "optional": true
     },
     "ethers": {
@@ -34,7 +63,7 @@
     }
   },
   "devDependencies": {
-    "@canary/gateway": "0.1.0",
+    "@ayush_saklani/canary-gateway": "0.1.0",
     "ethers": "^6.13.0"
   }
 }

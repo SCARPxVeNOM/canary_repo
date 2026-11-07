@@ -337,7 +337,7 @@ Local stub chain + the repo's **passthrough** worker (hash-verified the same way
 
 # Round 3: Canary for agents (6 Nov 2026)
 
-Tests of `packages/` (agent-sdk.md §0) and of the extension after moving it onto `@canary/core`.
+Tests of `packages/` (agent-sdk.md §0) and of the extension after moving it onto `@ayush_saklani/canary-core`.
 
 - **Machine:** Linux container, Node v22.23.4, Google Chrome for Testing 153.0.8010.12 (headless), Python 3.13.18.
 - **Packages:** playwright-core 1.64.1 (drives Chrome), viem 2.57.16, ganache 7.9.2 + solc 0.8.38 (local chain and mock ENSv2 contracts).
@@ -347,11 +347,11 @@ Tests of `packages/` (agent-sdk.md §0) and of the extension after moving it ont
 
 | Suite | Result | Covers |
 |---|---|---|
-| `@canary/core` | ✅ 5/5 | classifier, address encodings, manifest validation and host rules |
-| `@canary/ens` | ✅ 4/4 | manifest load; one-key report role with **both** documented delegation APIs; signed report; revocation via simulated `setText` and `EACRolesChanged`; tampering, forged reporter, policy drift |
-| `@canary/gateway` | ✅ 39/39 | bridge (16 MB streamed in 64 frames, aborts, 10 concurrent calls); Chrome killed mid-request (fails closed, one relaunch); boot failure (recovers); JSON-RPC routing, per-wallet batch split, fail closed; proxy and CONNECT rules; MITM CA; reports; jitter; ENS policy with live updates and publishing over anon-rpc; Python agent |
-| `@canary/agent` | ✅ 13/13 | viem and ethers through the gateway; fetch policy; LLM round trip (provider sees `WALLET_1`, agent gets the address back); `wrapTools`; events; report; embedded mode |
-| `extension/` e2e | ✅ 24/24 | unchanged checks, now on `@canary/core` |
+| `@ayush_saklani/canary-core` | ✅ 5/5 | classifier, address encodings, manifest validation and host rules |
+| `@ayush_saklani/canary-ens` | ✅ 4/4 | manifest load; one-key report role with **both** documented delegation APIs; signed report; revocation via simulated `setText` and `EACRolesChanged`; tampering, forged reporter, policy drift |
+| `@ayush_saklani/canary-gateway` | ✅ 39/39 | bridge (16 MB streamed in 64 frames, aborts, 10 concurrent calls); Chrome killed mid-request (fails closed, one relaunch); boot failure (recovers); JSON-RPC routing, per-wallet batch split, fail closed; proxy and CONNECT rules; MITM CA; reports; jitter; ENS policy with live updates and publishing over anon-rpc; Python agent |
+| `@ayush_saklani/canary-agent` | ✅ 13/13 | viem and ethers through the gateway; fetch policy; LLM round trip (provider sees `WALLET_1`, agent gets the address back); `wrapTools`; events; report; embedded mode |
+| `extension/` e2e | ✅ 24/24 | unchanged checks, now on `@ayush_saklani/canary-core` |
 
 ## 12. Findings
 
@@ -548,7 +548,7 @@ Scanner fixes from these runs:
 - `canary-gateway` with `examples/viem-agent/canary.config.json` (EF's demo gateway only): Tor never bootstrapped. The dial to the gateway timed out, then "Reached circuit build retry limit" at ~70 s. The same config with our 3 gateways: worker ready in 3.6 s.
 - Through it: Sepolia `eth_blockNumber` (one block behind publicnode queried directly), `eth_getBalance`, a batch of `eth_chainId` + `eth_call`, and mainnet `eth_blockNumber`, all answered in 0.84–0.87 s. `eth_sendTransaction` was refused locally. Report: 6 RPC calls, 5 protected, 1 blocked.
 - `examples/viem-agent` (`node agent.mjs`, no LLM key): its 3 reads were protected (0.9–1.0 s), the prompt it would send names `WALLET_1` and `AGENT_NAME`, and it printed coverage and the on-chain report form.
-- On a fresh clone, `npm install && npm run build` left `canary-gateway` and `canary-ens` unlinked (their `dist/` doesn't exist yet at install), so `npm run gateway` failed with "command not found". Fixed: the root `build` ends with `npm rebuild @canary/gateway @canary/ens`, which links them. `examples/viem-agent` gained `npm run gateway:local` (our gateways).
+- On a fresh clone, `npm install && npm run build` left `canary-gateway` and `canary-ens` unlinked (their `dist/` doesn't exist yet at install), so `npm run gateway` failed with "command not found". Fixed: the root `build` ends with `npm rebuild @ayush_saklani/canary-gateway @ayush_saklani/canary-ens`, which links them. `examples/viem-agent` gained `npm run gateway:local` (our gateways).
 - **The agent's names on ENSv2 Sepolia** (`packages/ens/scripts/sepolia-setup.mjs`, run with `--rpc` = the gateway): `agents.canary.eth` (its own UserRegistry) and `trader-01.agents.canary.eth` (its own Permissioned Resolver), plus a funded report key. All 6 transactions, and the 5 record writes after them, went through the gateway, so `eth_sendRawTransaction` over anon-rpc now works live (write mode `anon`). A second run of the setup sent nothing.
 - **Policy from ENS** (`npm run gateway:ens:local`): the gateway started fail-closed, then loaded the manifest from the name (policy `0x280b5592…`, reporter declared). The agent's 3 reads were protected (1.1–1.6 s), and `POST /canary/publish` wrote the signed report. `canary-ens read`: `reportSigned`, `signerIsReporter`, `policyMatches`, `reporterCanWrite` true. After `revoke-reporter`: `reporterCanWrite` false, and the gateway's publish got HTTP 409; after `grant-reporter`, true again.
 - Not run live yet: an LLM call, `examples/python-agent`.
@@ -563,10 +563,10 @@ Fresh clone of `main` at `83d52aa`, plus live runs in a real Chrome with the Can
 
 | Suite | Result |
 |---|---|
-| `@canary/core` | 11/11 |
-| `@canary/ens` (mock ENSv2) | 8/8 |
-| `@canary/gateway` (passthrough worker) | 39/39 |
-| `@canary/agent` | 13/13 |
+| `@ayush_saklani/canary-core` | 11/11 |
+| `@ayush_saklani/canary-ens` (mock ENSv2) | 8/8 |
+| `@ayush_saklani/canary-gateway` (passthrough worker) | 39/39 |
+| `@ayush_saklani/canary-agent` | 13/13 |
 | `extension` unit + e2e | 20/20 + 41/41 checks |
 | `leakydash` | 4/4 |
 
@@ -633,7 +633,7 @@ Raw results: `../live-check/results.json` (outside the repo: it holds this machi
 
 ## 20. Privacy labels, the connect notice, receipts, 69 read endpoints (6 Nov)
 
-**Offline suites:** `@canary/core` 13/13 (two new chain-detection tests), `@canary/ens` 10/10 (`addressRecipients`, label names), `@canary/gateway` 41/41, `@canary/agent` 13/13: root suite 77/77. Extension: unit 22/22 (two new: the label fallback), e2e **50/50** (a seventh run: a site with no manifest and Canary's label; the connect notice, shown once per site; receipts). The gateway's "Chromium dies mid-request" test failed once (relaunch not ready within 15 s) while 12 Chrome processes from a live run were open, and passed alone.
+**Offline suites:** `@ayush_saklani/canary-core` 13/13 (two new chain-detection tests), `@ayush_saklani/canary-ens` 10/10 (`addressRecipients`, label names), `@ayush_saklani/canary-gateway` 41/41, `@ayush_saklani/canary-agent` 13/13: root suite 77/77. Extension: unit 22/22 (two new: the label fallback), e2e **50/50** (a seventh run: a site with no manifest and Canary's label; the connect notice, shown once per site; receipts). The gateway's "Chromium dies mid-request" test failed once (relaunch not ready within 15 s) while 12 Chrome processes from a live run were open, and passed alone.
 
 **Read endpoints:** 69 chains in every shipped config, each one checked through our gateways over Tor with `eth_chainId` and an `eth_getBalance`. Official RPCs that refused Tor exits with HTTP 403: mainnet.optimism.io, rpc.gnosischain.com, mainnet.unichain.org, both zkSync Era RPCs, zkevm-rpc.com, rpc.api.lisk.com, rpc.soneium.org, both abs.xyz RPCs, Flare's API, Kaia's public node, rpc.taiko.xyz; publicnode or drpc is used for those chains instead. drpc's Kaia and Blast answer `eth_getBalance` with "method does not exist", so those two chains have no read endpoint (their reads are forwarded). Chain detection no longer maps an L2 or testnet provider URL to another chain's id (`linea-mainnet.infura.io` was read as mainnet); unknown provider network names are probed instead of guessed.
 

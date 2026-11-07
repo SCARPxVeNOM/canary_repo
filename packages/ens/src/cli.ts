@@ -24,7 +24,7 @@ import { parseArgs } from "node:util";
 import { createPublicClient, createWalletClient, defineChain, http, type Address, type Chain, type Hex } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { mainnet, sepolia } from "viem/chains";
-import { parseDappManifest, parseManifest } from "@canary/core";
+import { parseDappManifest, parseManifest } from "@ayush_saklani/canary-core";
 import { TEXT_KEYS } from "./abi.js";
 import { readAgentPrivacy, readText, resolverOf } from "./read.js";
 import { policyHashOf } from "./record.js";
@@ -36,13 +36,15 @@ const { values, positionals } = parseArgs({
   options: {
     chain: { type: "string", default: "11155111" }, rpc: { type: "string" }, "universal-resolver": { type: "string" },
     verifier: { type: "string", default: "canary" }, "verifier-name": { type: "string" }, "ttl-days": { type: "string", default: "30" }, evidence: { type: "string" },
+    help: { type: "boolean", short: "h" },
   },
 });
 const [cmd, name, arg] = positionals;
-const usage = () => {
-  console.error("usage: canary-ens read|set-manifest|grant-reporter|revoke-reporter|set-dapp|grant-verifier|revoke-verifier|sign-verdict|publish-verdict|read-dapp <name> [file|address] [--chain id] [--rpc url]");
-  process.exit(2);
+const usage = (code = 2) => {
+  (code ? console.error : console.log)("usage: canary-ens read|set-manifest|grant-reporter|revoke-reporter|set-dapp|grant-verifier|revoke-verifier|sign-verdict|publish-verdict|read-dapp <name> [file|address] [--chain id] [--rpc url]");
+  process.exit(code);
 };
+if (values.help) usage(0);
 if (!cmd || !name) usage();
 
 const id = Number(values.chain);

@@ -1,6 +1,6 @@
 /* The data the dashboard displays, mirrored from the packages so the screens
    take exactly what the real code returns. When the dashboard is wired up,
-   these can become imports from @canary/core, @canary/gateway and @canary/ens.
+   these can become imports from @ayush_saklani/canary-core, @ayush_saklani/canary-gateway and @ayush_saklani/canary-ens.
 
    Source of each shape:
      Category, Channel, Observation, Manifest   packages/core/src/coverage.ts, policy.ts
@@ -14,7 +14,7 @@
 
 export type Hex = `0x${string}`;
 
-/* --- @canary/core ---------------------------------------------------------- */
+/* --- @ayush_saklani/canary-core ---------------------------------------------------------- */
 
 export type Category =
   | "protected"
@@ -56,7 +56,7 @@ export type Manifest = {
   llm?: { allow?: string[] };
 };
 
-/* --- @canary/gateway ------------------------------------------------------- */
+/* --- @ayush_saklani/canary-gateway ------------------------------------------------------- */
 
 export type BackendState = "starting" | "warming" | "ready" | "failed" | "closed";
 
@@ -118,7 +118,7 @@ export type Report = {
 
 export type SignedReport = { report: Report; reportHash: Hex; signer?: Hex; signature?: Hex };
 
-/* --- @canary/ens ----------------------------------------------------------- */
+/* --- @ayush_saklani/canary-ens ----------------------------------------------------------- */
 
 export type CoarseReport = {
   agent: string;

@@ -1,5 +1,5 @@
 /* Display helpers and the category vocabulary, shared by both tabs. Labels
-   follow @canary/core's CATEGORY_LABEL, and colours follow the extension
+   follow @ayush_saklani/canary-core's CATEGORY_LABEL, and colours follow the extension
    popup, so the dashboard and the popup read as one product. */
 
 import type { Category, Channel, HostRule } from "./types";

@@ -3,7 +3,7 @@
      STATUS          GET  /canary/status
      REPORT          GET  /canary/report
      EVENTS          GET  /canary/events (one item per server-sent event)
-     LOOKUP_RESULT   readAgentPrivacy(client, name) from @canary/ens
+     LOOKUP_RESULT   readAgentPrivacy(client, name) from @ayush_saklani/canary-ens
    Replace these with real calls; the components only take props. */
 
 import type { AgentPrivacy, Egress, GatewayStatus, Manifest, SignedReport } from "./types";

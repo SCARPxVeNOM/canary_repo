@@ -8,8 +8,8 @@
 
 import { keccak256, recoverTypedDataAddress, toBytes, type Hex } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
-import { canonicalJson } from "@canary/core";
-import type { CoarseReport } from "@canary/ens";
+import { canonicalJson } from "@ayush_saklani/canary-core";
+import type { CoarseReport } from "@ayush_saklani/canary-ens";
 import type { Ledger } from "./ledger.js";
 
 export const GATEWAY_VERSION = "0.1.0";
@@ -39,7 +39,7 @@ const TYPES = {
   ],
 } as const;
 
-export { policyHashOf } from "@canary/ens";
+export { policyHashOf } from "@ayush_saklani/canary-ens";
 
 export function buildReport(ledger: Ledger, agent: string, policyHash: Hex): Report {
   return {
@@ -86,7 +86,7 @@ const bucket = (n: number) => (n === 0 ? "0" : n < 100 ? "1-99" : n < 1000 ? "10
 const pct5 = (num: number, den: number) => (den === 0 ? undefined : Math.floor((100 * num) / den / 5) * 5);
 const DAY = 86400;
 
-/** The form that goes in the agent's ENS `privacy.report` record (signed separately, see @canary/ens). */
+/** The form that goes in the agent's ENS `privacy.report` record (signed separately, see @ayush_saklani/canary-ens). */
 export function coarseReport(s: SignedReport, evidenceUri?: string): CoarseReport {
   const r = s.report;
   const rpcAnon = r.rpc.protected + r.rpc.ipOnly;

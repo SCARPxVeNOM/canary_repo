@@ -16,7 +16,7 @@ import { readFileSync } from "node:fs";
 import { createPublicClient, createWalletClient, formatEther, formatUnits, parseEther } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { sepolia } from "viem/chains";
-import { createCanary } from "@canary/agent";
+import { createCanary } from "@ayush_saklani/canary-agent";
 import { MARKETS } from "../../swap/src/markets.js";
 import { ABI, bestQuote, minOut, swapExactInSingle } from "../../swap/src/v4.js";
 

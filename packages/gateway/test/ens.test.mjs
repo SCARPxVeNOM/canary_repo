@@ -5,7 +5,7 @@
 import { test, before, after } from "node:test";
 import assert from "node:assert/strict";
 import { createGateway, startChromiumBackend } from "../dist/index.js";
-import { readAgentPrivacy, policyHashOf, setTextRecord, grantTextKey, revokeTextKey, TEXT_KEYS } from "@canary/ens";
+import { readAgentPrivacy, policyHashOf, setTextRecord, grantTextKey, revokeTextKey, TEXT_KEYS } from "@ayush_saklani/canary-ens";
 import { startFixtures, mapTestHosts, CHROME_OPTS } from "./fixtures.mjs";
 import { startChain, KEYS } from "../../ens/test/chain.mjs";
 

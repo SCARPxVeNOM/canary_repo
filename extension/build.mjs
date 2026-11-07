@@ -110,13 +110,13 @@ async function buildCss(out) {
 
 /**
  * Code shared with ../packages (the verdict format in packages/ens) imports
- * viem and @canary/core by name. Resolve both from here: one viem in the
+ * viem and @ayush_saklani/canary-core by name. Resolve both from here: one viem in the
  * bundle, the core source, and nothing needed outside extension/.
  */
 export const sharedPackages = {
   name: "shared-packages",
   setup(b) {
-    b.onResolve({ filter: /^@canary\/core$/ }, () => ({ path: resolve(HERE, "../packages/core/src/index.ts") }));
+    b.onResolve({ filter: /^@ayush_saklani\/canary-core$/ }, () => ({ path: resolve(HERE, "../packages/core/src/index.ts") }));
     b.onResolve({ filter: /^viem(\/.*)?$/ }, (a) =>
       a.pluginData === "shared" || a.resolveDir.startsWith(HERE) ? undefined : b.resolve(a.path, { resolveDir: HERE, kind: a.kind, pluginData: "shared" }),
     );

@@ -8,7 +8,7 @@
 
 import { createPublicClient, erc20Abi, formatEther, formatUnits, http } from "viem";
 import { sepolia } from "viem/chains";
-import { createCanary } from "@canary/agent";
+import { createCanary } from "@ayush_saklani/canary-agent";
 
 const WALLET = process.env.WALLET;
 if (!WALLET) throw new Error("set WALLET=0x… (an address to watch; Canary never needs a key)");

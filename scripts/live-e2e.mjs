@@ -4,7 +4,7 @@
 //   node scripts/live-e2e.mjs [--out <dir>] [--only ef|own]
 //
 // For each tor-js gateway set (EF's demo gateway, then our own from
-// canary.local.config.json), it starts the real @canary/gateway (headless
+// canary.local.config.json), it starts the real @ayush_saklani/canary-gateway (headless
 // Chrome + anon-rpc) and checks that:
 //   1. the backend boots (and how long it takes);
 //   2. chain reads through the gateway's RPC endpoint (any-language path) and
@@ -22,8 +22,8 @@
 // Direct ground-truth reads use public addresses only (vitalik.eth's), so they
 // reveal nothing about the person running the check.
 
-import { createGateway } from "@canary/gateway";
-import { createCanary } from "@canary/agent";
+import { createGateway } from "@ayush_saklani/canary-gateway";
+import { createCanary } from "@ayush_saklani/canary-agent";
 import { createPublicClient, erc20Abi } from "viem";
 import { mainnet, sepolia } from "viem/chains";
 import { spawn } from "node:child_process";

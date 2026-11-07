@@ -1,4 +1,4 @@
-// @canary/ens against mock ENSv2 contracts on a local chain, for both
+// @ayush_saklani/canary-ens against mock ENSv2 contracts on a local chain, for both
 // delegation APIs the ENS docs describe.
 
 import { test, before, after } from "node:test";

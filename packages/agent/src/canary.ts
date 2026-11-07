@@ -1,4 +1,4 @@
-/* @canary/agent: the in-process SDK (docs/agent-sdk.md §3.4).
+/* @ayush_saklani/canary-agent: the in-process SDK (docs/agent-sdk.md §3.4).
 
    const canary = await createCanary({ gateway: "http://127.0.0.1:18545", wallets: [account.address] });
    const client = createPublicClient({ chain: sepolia, transport: canary.viemTransport() });
@@ -12,13 +12,13 @@
    prompts, which it pseudonymizes before they leave. */
 
 import { http } from "viem";
-import { isAddress } from "@canary/core";
+import { isAddress } from "@ayush_saklani/canary-core";
 import { Pseudonymizer, UnknownAliasError } from "./pseudonymize.js";
 
 export type CanaryOptions = {
   /** URL of a running gateway (default http://127.0.0.1:18545) */
   gateway?: string;
-  /** or run the gateway in this process: a @canary/gateway GatewayConfig */
+  /** or run the gateway in this process: a @ayush_saklani/canary-gateway GatewayConfig */
   embedded?: Record<string, unknown>;
   /** the agent's addresses */
   wallets?: string[];
@@ -42,9 +42,9 @@ export async function createCanary(opts: CanaryOptions = {}) {
   if (opts.embedded) {
     let mod: any;
     try {
-      mod = await import("@canary/gateway");
+      mod = await import("@ayush_saklani/canary-gateway");
     } catch {
-      throw new Error('embedded mode needs "@canary/gateway" installed');
+      throw new Error('embedded mode needs "@ayush_saklani/canary-gateway" installed');
     }
     embedded = await mod.createGateway({ proxyPort: false, ...opts.embedded, wallets: [...((opts.embedded.wallets as string[]) ?? []), ...(opts.wallets ?? [])] });
   }

@@ -1,11 +1,14 @@
-# @canary/gateway
+# @ayush_saklani/canary-gateway
 
 One local process that an agent in any language points its RPC URL and HTTP(S) proxy at (docs/agent-sdk.md §3). Chain reads go through EF's anon-rpc; other egress follows the agent's privacy manifest; every decision is counted and reported.
 
 ```sh
-canary-gateway --config canary.config.json     # see examples/viem-agent for a working config
-canary-gateway ca                              # opt-in MITM CA: create it, print how to trust it
+npm install @ayush_saklani/canary-gateway        # Node 20.11+, and Chrome for the headless anon-rpc backend
+npx canary-gateway --config canary.config.json
+npx canary-gateway ca                          # opt-in MITM CA: create it, print how to trust it
 ```
+
+A working config is [`examples/viem-agent/canary.config.json`](https://github.com/SCARPxVeNOM/canary_repo/blob/main/examples/viem-agent/canary.config.json), with its [`manifest.json`](https://github.com/SCARPxVeNOM/canary_repo/blob/main/examples/viem-agent/manifest.json). `network.workerConfig.gateways` lists the tor-js gateways to reach Tor through. Run your own from [`gateway/`](https://github.com/SCARPxVeNOM/canary_repo/tree/main/gateway), one Docker container.
 
 ## Endpoints
 

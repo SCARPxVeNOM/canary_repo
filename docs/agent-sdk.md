@@ -10,11 +10,11 @@ Draft v1.1 · 6 Nov 2026 · brainstorm first, then the blueprint. v1 applies the
 
 - **Yes, we can build it, for any agent**, in two layers:
   1. **Canary Gateway** (any language, any framework): a local process the agent points its RPC URL and HTTP proxy at. Zero code changes for chain traffic; other HTTPS is direct/block per host unless the operator installs Canary's local CA.
-  2. **`@canary/agent` SDK** (TypeScript first): wraps the agent in-process for the things a proxy can't see. That means request bodies over HTTPS, addresses inside LLM prompts, and per-wallet isolation.
+  2. **`@ayush_saklani/canary-agent` SDK** (TypeScript first): wraps the agent in-process for the things a proxy can't see. That means request bodies over HTTPS, addresses inside LLM prompts, and per-wallet isolation.
 - **The constraint that shapes everything:** anon-rpc's Node harness is a prototype. It isn't on npm (`@anon-rpc/node-harness` returns 404; `@anon-rpc/browser-harness` 0.4.0 is published) and ran only the passthrough worker in our tests. There's no WebAssembly in its sandbox, so **tor-js can't run natively in Node today**. Whether it supports KPS is unverified: ask EF. The browser harness can, and it is tested. So the Gateway hosts the browser harness in a headless Chromium it manages, and swaps to the Node harness when that matures. EF's brief lists "bring anon-rpc to a new platform" as a valid entry, so this is in scope, not a workaround.
 - **Agents leak more than dapps.** Their reads reveal *strategy* before they act (quotes, allowances, positions). One server IP links a whole fleet of agent wallets. And LLM providers see addresses in every prompt.
 - **ENSv2 fits better here than for dapps.** The ENS brief gives bonus points for "agents as namespaces, each with their own identity and permissions". Each agent gets a subname whose `privacy.manifest` **is** the policy the SDK enforces: declared = enforced, not just compared.
-- **Reuse:** `extension/src/shared.ts` (JSON-RPC classifier, address matching, chain detection, coverage categories) is already platform-neutral. It becomes `@canary/core`, shared by the extension and the agent SDK.
+- **Reuse:** `extension/src/shared.ts` (JSON-RPC classifier, address matching, chain detection, coverage categories) is already platform-neutral. It becomes `@ayush_saklani/canary-core`, shared by the extension and the agent SDK.
 
 ### Changes in v1
 
@@ -32,11 +32,11 @@ Draft v1.1 · 6 Nov 2026 · brainstorm first, then the blueprint. v1 applies the
 
 ## 0. Implementation status (6 Nov 2026)
 
-Everything below is in `packages/` and `examples/`; each package README has the API and config reference. **Tests:** 61 pass (`npm test` at the repo root), plus the extension's 24/24 now that it runs on `@canary/core`. They run against EF's passthrough reference worker (hash-verified as on chain), local fixtures, and a local chain with mock ENSv2 contracts. **Live since 6 Nov:** over tor-js (through our own gateways), and on ENS's Sepolia deployment: `agents.canary.eth` is a subname registry, and `trader-01.agents.canary.eth` has its own Permissioned Resolver; the gateway reads its policy from that name, publishes the signed report with a one-key grant, and the revoke shows (`packages/ens/README.md`, test-log.md §16).
+Everything below is in `packages/` and `examples/`; each package README has the API and config reference. **Tests:** 61 pass (`npm test` at the repo root), plus the extension's 24/24 now that it runs on `@ayush_saklani/canary-core`. They run against EF's passthrough reference worker (hash-verified as on chain), local fixtures, and a local chain with mock ENSv2 contracts. **Live since 6 Nov:** over tor-js (through our own gateways), and on ENS's Sepolia deployment: `agents.canary.eth` is a subname registry, and `trader-01.agents.canary.eth` has its own Permissioned Resolver; the gateway reads its policy from that name, publishes the signed report with a one-key grant, and the revoke shows (`packages/ens/README.md`, test-log.md §16).
 
 | Blueprint part | Where | Status |
 |---|---|---|
-| `@canary/core` (§5) | `packages/core` | done; the extension's `shared.ts` re-exports it |
+| `@ayush_saklani/canary-core` (§5) | `packages/core` | done; the extension's `shared.ts` re-exports it |
 | Chromium AnonBackend + loopback bridge (§3.1) | `packages/gateway/src/backend/` | done: streaming in ≤256 KB frames with backpressure, abort, crash and boot-failure relaunch with backoff |
 | JSON-RPC endpoint (§3.2) | `packages/gateway/src/rpc.ts` | done: substitute / forward / local / refuse signing / fail closed; batches split per wallet; `eth_getCode` cache; write modes; timing jitter |
 | HTTP(S) proxy (§3.3) | `packages/gateway/src/http.ts` | done: host rules, CONNECT direct/block, undeclared handling |
@@ -53,7 +53,7 @@ Everything below is in `packages/` and `examples/`; each package README has the 
    - `authorizeTextRoles(name, key, account, grant)` in the Permissioned Resolver guide;
    - `grantSetterRoles(setterCalldata, account)` / `revokeRoles` in the contracts reference.
 
-   `@canary/ens` tries both and uses the one the resolver accepts. It detects revocation by simulating `setText` from the report key, which doesn't depend on either API. Both variants are tested.
+   `@ayush_saklani/canary-ens` tries both and uses the one the resolver accepts. It detects revocation by simulating `setText` from the report key, which doesn't depend on either API. Both variants are tested.
 2. **`reporter` in the manifest.** The manifest declares the report key's address, so a reader can check that the report's signer is the declared reporter, and that the reporter still has the role.
 3. **What `privacy.report` holds.** It holds the coarse report itself plus an EIP-712 signature over it, not only a hash and URI. Readers can verify it without fetching anything. `reportHash` commits to the full report, and `evidenceUri` is optional.
 4. **One policy engine.** The SDK sends non-RPC requests through the gateway's `/canary/fetch`, so the policy is enforced in one place (with bodies visible), not re-implemented in the SDK.
@@ -120,7 +120,7 @@ On a browser the page is the adversary's code and we can only patch it. On a ser
 │  agent process (any framework, any language)                                      │
 │   ├─ RPC URL ───────────────────────────────┐                                     │
 │   ├─ HTTPS_PROXY ──────────────────────────┐│                                     │
-│   └─ @canary/agent (TS, optional) ─────────┼┼─ in-process: wraps fetch, viem,     │
+│   └─ @ayush_saklani/canary-agent (TS, optional) ─────────┼┼─ in-process: wraps fetch, viem,     │
 │        prompt pseudonymizer, per-wallet     ││   ethers, LLM clients; reports      │
 │        isolation, egress events            ││   events to the gateway             │
 │                                            ▼▼                                     │
@@ -167,7 +167,7 @@ Each `isolationKey` is passed through untouched (tested across the harness hops)
 
 ### 3.2 Gateway: JSON-RPC endpoint
 
-The same policy as the extension, from `@canary/core`:
+The same policy as the extension, from `@ayush_saklani/canary-core`:
 
 - **Standard read methods → substituted:** answered by Canary's read endpoint for that chain, via anon-rpc.
 - **Other methods → forwarded** to the upstream the operator configured, via anon-rpc (IP only).
@@ -197,10 +197,10 @@ Without MITM, the proxy sees only the CONNECT host: rules are per host, `direct`
 
 Many APIs (Cloudflare-fronted ones, some LLM providers) refuse or challenge Tor exits, as Tenderly did (test-log.md §5). Test every host over tor-js before declaring it `anon`.
 
-### 3.4 `@canary/agent`: the in-process SDK (TypeScript)
+### 3.4 `@ayush_saklani/canary-agent`: the in-process SDK (TypeScript)
 
 ```ts
-import { createCanary } from "@canary/agent";
+import { createCanary } from "@ayush_saklani/canary-agent";
 
 const canary = await createCanary({
   gateway: "http://127.0.0.1:18545",      // or embedded: <gateway config> to run the gateway in-process
@@ -299,11 +299,11 @@ As built (npm workspaces at the repo root):
 
 ```
 packages/
-  core/        ← @canary/core: classifier, address matching, chain detection, categories, manifest
-  ens/         ← @canary/ens: manifest/report records, coarse-report signing, one-key role, revocation, canary-ens CLI
-  gateway/     ← @canary/gateway: AnonBackend (chromium), JSON-RPC endpoint, HTTP(S) proxy, MITM CA, ledger, reports, ENS binding, canary-gateway CLI
-  agent/       ← @canary/agent: createCanary, viemTransport, ethersProvider, fetch, llmFetch/wrapLLM, wrapTools
-extension/     ← unchanged location; src/shared.ts re-exports @canary/core (bundled by esbuild)
+  core/        ← @ayush_saklani/canary-core: classifier, address matching, chain detection, categories, manifest
+  ens/         ← @ayush_saklani/canary-ens: manifest/report records, coarse-report signing, one-key role, revocation, canary-ens CLI
+  gateway/     ← @ayush_saklani/canary-gateway: AnonBackend (chromium), JSON-RPC endpoint, HTTP(S) proxy, MITM CA, ledger, reports, ENS binding, canary-gateway CLI
+  agent/       ← @ayush_saklani/canary-agent: createCanary, viemTransport, ethersProvider, fetch, llmFetch/wrapLLM, wrapTools
+extension/     ← unchanged location; src/shared.ts re-exports @ayush_saklani/canary-core (bundled by esbuild)
 examples/
   viem-agent/    ← Sepolia agent: reads balances, asks an LLM; --leaky for the before/after; local or ENS policy
   python-agent/  ← same idea via the gateway only (RPC_URL + HTTPS_PROXY), standard library
@@ -323,7 +323,7 @@ The extension is done. This replaces the scanner work in design-notes.md §6 if 
 
 | Hours | Gateway + backend | SDK | ENSv2 | Demo agent |
 |---|---|---|---|---|
-| 0–3 | **Spike:** headless Chromium boots browser-harness + tor-js; `backend.fetch` answers `eth_blockNumber` over the loopback WebSocket bridge, and a large `eth_getLogs` streams through it | move `shared.ts` → `@canary/core` | ENSv2 Sepolia name + subname for one agent | plain viem + one LLM client (§9) |
+| 0–3 | **Spike:** headless Chromium boots browser-harness + tor-js; `backend.fetch` answers `eth_blockNumber` over the loopback WebSocket bridge, and a large `eth_getLogs` streams through it | move `shared.ts` → `@ayush_saklani/canary-core` | ENSv2 Sepolia name + subname for one agent | plain viem + one LLM client (§9) |
 | 3–10 | JSON-RPC endpoint: substitute / forward / fail closed, isolation keys, caching | `viemTransport`, `fetch`, events | manifest schema → policy loader | agent loop: read → LLM → decide |
 | 10–18 | HTTP proxy with host rules, undeclared detection | `wrapLLM` pseudonymizer (OpenAI/Anthropic shapes) | EAC one-key role for the report key; report writer | wire SDK in; a "leaky" mode for before/after |
 | 18–26 | ledger, coverage, EIP-712 report | `canary.report()` | revocation detection | Sepolia swap via anon path |
@@ -395,6 +395,6 @@ The extension is done. This replaces the scanner work in design-notes.md §6 if 
 - Can we run our own KPS gateway?
 
 **ENS:**
-- Which one-key delegation API is deployed on Sepolia: `authorizeTextRoles(name, key, account, grant)` or `grantSetterRoles(setter, account)` / `revokeRoles`? (`@canary/ens` handles both; we want to demo the live one.) Which Universal Resolver address should clients use?
+- Which one-key delegation API is deployed on Sepolia: `authorizeTextRoles(name, key, account, grant)` or `grantSetterRoles(setter, account)` / `revokeRoles`? (`@ayush_saklani/canary-ens` handles both; we want to demo the live one.) Which Universal Resolver address should clients use?
 - Fastest path to a subname registry under one name on Sepolia, with a Permissioned Resolver per subname?
 - Can a one-key text role be granted per subname rather than per resolver instance?

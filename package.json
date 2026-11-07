@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "license": "MIT",
-  "description": "Canary for agents: @canary/core, @canary/gateway and @canary/agent (see docs/agent-sdk.md). The browser extension in extension/ builds on its own.",
+  "description": "Canary for agents: @ayush_saklani/canary-core, @ayush_saklani/canary-gateway and @ayush_saklani/canary-agent (see docs/agent-sdk.md). The browser extension in extension/ builds on its own.",
   "workspaces": [
     "packages/core",
     "packages/ens",
@@ -12,8 +12,8 @@
     "examples/viem-agent"
   ],
   "scripts": {
-    "build": "npm run build -w @canary/core -w @canary/ens -w @canary/gateway -w @canary/agent && npm rebuild @canary/gateway @canary/ens",
-    "test": "npm test -w @canary/core -w @canary/ens -w @canary/gateway -w @canary/agent",
+    "build": "npm run build -w @ayush_saklani/canary-core -w @ayush_saklani/canary-ens -w @ayush_saklani/canary-gateway -w @ayush_saklani/canary-agent && npm rebuild @ayush_saklani/canary-gateway @ayush_saklani/canary-ens",
+    "test": "npm test -w @ayush_saklani/canary-core -w @ayush_saklani/canary-ens -w @ayush_saklani/canary-gateway -w @ayush_saklani/canary-agent",
     "gateways": "node scripts/set-gateways.mjs"
   },
   "devDependencies": {
