@@ -466,7 +466,7 @@ const pipeline = new RpcPipeline(async (target, body, key) => {
 
 /* --- circuit pre-warming --------------------------------------------------
    With per-address isolation, the first read about an address builds a new
-   circuit: ~2.0 s instead of ~1.15 s (test-repo.md §14). Building it as soon
+   circuit: ~2.0 s instead of ~1.15 s (docs/test-log.md §14). Building it as soon
    as Canary learns the address takes that off the dapp's first read. The
    warm-up is one eth_blockNumber to a read endpoint, under the address's key:
    the endpoint learns nothing it wouldn't from the real read. Arti stops

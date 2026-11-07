@@ -1,4 +1,4 @@
-/* The privacy manifest: an agent's declared policy (agent-sdk.md §3.3, §4).
+/* The privacy manifest: an agent's declared policy (docs/agent-sdk.md §3.3, §4).
    Stored in the agent's ENSv2 `privacy.manifest` text record, or in a local
    file. The gateway enforces it: declared = enforced. */
 
@@ -19,7 +19,7 @@ export type Manifest = {
     /** how eth_sendRawTransaction leaves: anon (public RPC over anon-rpc), private (relay over anon-rpc), direct */
     write: WriteMode;
   };
-  /** the gateway's report key address: the only account meant to write privacy.report (agent-sdk.md §4) */
+  /** the gateway's report key address: the only account meant to write privacy.report (docs/agent-sdk.md §4) */
   reporter?: string;
   /** whether the agent's wallets are published on its name; a declaration, not enforced here */
   wallets?: "disclosed" | "undisclosed";

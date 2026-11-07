@@ -1,4 +1,4 @@
-/* The `privacy.report` record: the coarse egress report (agent-sdk.md §3.5)
+/* The `privacy.report` record: the coarse egress report (docs/agent-sdk.md §3.5)
    plus the report key's EIP-712 signature over it. Readers recover the signer
    and compare it with the manifest's declared `reporter`. */
 

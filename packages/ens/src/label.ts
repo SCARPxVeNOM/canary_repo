@@ -1,5 +1,5 @@
 /* Canary's privacy labels: the verifier's verdict on a site that publishes no
-   ENS name of its own, under a name Canary holds (idea.md §3.3).
+   ENS name of its own, under a name Canary holds (docs/design-notes.md §3.3).
 
      app.uniswap.org → app-uniswap-org.labels.canary.eth
        url                      https://app.uniswap.org (binds the label to the site)

@@ -177,7 +177,7 @@ export const createHandler = (appJs) => (req, res) => {
             for (const k of Object.keys(logs)) logs[k] = logs[k].filter((e) => !mine(e));
             return json(200, { ok: true });
           case "/.well-known/canary.json":
-            // Origin → ENS binding (idea.md §3.3): leakydash.eth on ENSv2 Sepolia, whose url record points back here.
+            // Origin → ENS binding (docs/design-notes.md §3.3): leakydash.eth on ENSv2 Sepolia, whose url record points back here.
             return json(200, { ens: process.env.LEAKYDASH_ENS ?? "leakydash.eth" });
         }
       }

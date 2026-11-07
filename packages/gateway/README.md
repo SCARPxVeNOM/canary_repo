@@ -1,6 +1,6 @@
 # @canary/gateway
 
-One local process that an agent in any language points its RPC URL and HTTP(S) proxy at (agent-sdk.md §3). Chain reads go through EF's anon-rpc; other egress follows the agent's privacy manifest; every decision is counted and reported.
+One local process that an agent in any language points its RPC URL and HTTP(S) proxy at (docs/agent-sdk.md §3). Chain reads go through EF's anon-rpc; other egress follows the agent's privacy manifest; every decision is counted and reported.
 
 ```sh
 canary-gateway --config canary.config.json     # see examples/viem-agent for a working config

@@ -1,4 +1,4 @@
-/* The gateway's JSON-RPC endpoint (agent-sdk.md §3.2).
+/* The gateway's JSON-RPC endpoint (docs/agent-sdk.md §3.2).
 
    standard read           → SUBSTITUTE: the chain's read endpoint, via anon-rpc   (Protected)
    other method            → FORWARD: the chain's upstream, via anon-rpc           (Protected, IP only)

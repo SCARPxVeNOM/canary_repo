@@ -1,4 +1,4 @@
-/* Opt-in local CA for the HTTPS proxy (agent-sdk.md §1 option C, §3.3).
+/* Opt-in local CA for the HTTPS proxy (docs/agent-sdk.md §1 option C, §3.3).
 
    Without it the proxy only sees CONNECT host names: HTTPS can be sent
    directly or blocked, never through anon-rpc. With it, the operator installs

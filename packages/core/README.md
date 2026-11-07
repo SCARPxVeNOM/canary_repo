@@ -7,7 +7,7 @@ Platform-neutral Canary logic, shared by the browser extension (`extension/src/s
 | `rpc.ts` | `parseJsonRpc` (single or batch), `SUBSTITUTABLE` read methods, `BROADCAST`, `NODE_SIGNING`, error/result helpers |
 | `address.ts` | `needlesFor` / `findAddress` / `findAddresses`: an address in hex (any case, padded, URL-encoded) or base64; `isolationKeyFor` |
 | `domain.ts` | `registrableDomain`, `isThirdParty`, `knownChain` (extension only) |
-| `coverage.ts` | coverage categories and labels (agent-sdk.md §3.5) |
+| `coverage.ts` | coverage categories and labels (docs/agent-sdk.md §3.5) |
 | `policy.ts` | the privacy manifest: `parseManifest`, `ruleFor`, `canonicalJson` |
 
 ## The privacy manifest

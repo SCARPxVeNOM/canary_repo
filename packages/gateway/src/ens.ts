@@ -1,4 +1,4 @@
-/* The gateway's ENSv2 binding (agent-sdk.md §4):
+/* The gateway's ENSv2 binding (docs/agent-sdk.md §4):
    - load the policy from the agent's `privacy.manifest` text record, and
      re-read it every `refreshMs`, so a policy change on chain applies live;
    - publish the signed coarse report to `privacy.report` with the report key,

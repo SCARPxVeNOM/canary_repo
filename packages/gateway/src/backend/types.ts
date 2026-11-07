@@ -1,4 +1,4 @@
-/* AnonBackend: how the gateway reaches anon-rpc (agent-sdk.md §3.1).
+/* AnonBackend: how the gateway reaches anon-rpc (docs/agent-sdk.md §3.1).
    `chromium` works today; a `node` backend slots in when EF's node harness
    can run tor-js. The interface stays the same. */
 

@@ -55,7 +55,7 @@ const ANSWERS = {
 };
 
 // LeakyDash's ENS name, answered by the read endpoint's Universal Resolver:
-// it declares its RPC provider and indexer, not its tracker (idea.md §3.4),
+// it declares its RPC provider and indexer, not its tracker (docs/design-notes.md §3.4),
 // and carries a verdict from a verifier it delegated privacy.verdict.canary to.
 const UR = "0xeeeeeeee14d718c2b47d9923deab1335e144eeee";
 const RESOLVER = "0x" + "22".repeat(20);

@@ -10,7 +10,7 @@
 //
 // Get an address by running a gateway (gateway/README.md): `docker logs canary-gateway`
 // prints it. --with-ef appends EF's demo gateway as a last resort (it was not
-// completing boots on 6 Nov 2026; test-repo.md §19). Then rebuild the extension.
+// completing boots on 6 Nov 2026; docs/test-log.md §19). Then rebuild the extension.
 
 import { readFile, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";

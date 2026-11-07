@@ -2,7 +2,7 @@
 
 **See what a dapp leaks before you connect, and stop it once you do. No dapp fork required.**
 
-ETHGlobal Mumbai 2026 · team working doc · v2 · 5 Nov 2026 (updated after the repo tests in [test-repo.md](test-repo.md))
+ETHGlobal Mumbai 2026 · team working doc · v2 · 5 Nov 2026 (updated after the repo tests in [test-log.md](test-log.md))
 
 ---
 
@@ -17,15 +17,15 @@ ETHGlobal Mumbai 2026 · team working doc · v2 · 5 Nov 2026 (updated after the
 - **Secondary track:** ENS, Best Use of ENSv2.
 - **Third track:** Uniswap, Build with Uniswap (a private-quote page). Was a stretch goal; built 6 Nov (below).
 - **Our edge:** no fork + declared vs observed + enforcement + measured coverage. Each piece exists somewhere already; nobody has built the full loop.
-- **Status (5 Nov, evening):** the core mechanism works. The spike in `canary-spike/` ran live over tor-js on the unmodified **app.ens.domains**: 8/8 of its RPC batches to its own keyed provider were answered via anon-rpc instead, and the page still worked (1.3–2.8 s per batch). Details: test-repo.md §10.
-- **Part 1 (enforcement extension) is built:** `extension/`. It covers fetch, XHR, WebSocket and sendBeacon, blocks third-party requests carrying your address, fails closed, and has a coverage popup. It also reads the dapp's ENSv2 manifest and verifier's verdict over anon-rpc and shows declared vs observed (6 Nov). Its end-to-end test passes 51/51 (`extension/README.md`). The popup and dashboard (HeroUI) show four outcomes, every request in plain words with its evidence and a receipt of what each side saw, and can block undeclared recipients per site. Read endpoints for 69 chains, each checked over Tor.
+- **Status (5 Nov, evening):** the core mechanism works. The spike in `archive/canary-spike/` ran live over tor-js on the unmodified **app.ens.domains**: 8/8 of its RPC batches to its own keyed provider were answered via anon-rpc instead, and the page still worked (1.3–2.8 s per batch). Details: test-log.md §10.
+- **Part 1 (enforcement extension) is built:** `extension/`. It covers fetch, XHR, WebSocket and sendBeacon, blocks third-party requests carrying your address, fails closed, and has a coverage popup. It also reads the dapp's ENSv2 manifest and verifier's verdict over anon-rpc and shows declared vs observed (6 Nov). Its end-to-end test passes 53/53 (`extension/README.md`). The popup and dashboard (HeroUI) show four outcomes, every request in plain words with its evidence and a receipt of what each side saw, and can block undeclared recipients per site. Read endpoints for 71 chains, each checked over Tor.
 - **Privacy labels for dapps with no manifest (6 Nov):** most dapps will never publish one, so Canary publishes its verifier's verdict for them under `<host>.labels.canary.eth` (§3.3). Live on Sepolia for Uniswap, Aave, ENS, revoke.cash and Snapshot, from the baseline scans. The extension shows the label (the site's own manifest first, else Canary's) in the popup, and on the page the moment the page gets your address: live over tor-js on app.aave.com ("3 third parties got your address in Canary's scan"), app.uniswap.org ("No third party got your address") and app.ens.domains ("2 third parties").
-- **Canary for agents is built too (6 Nov):** gateway, SDK, ENSv2 records and two example agents in `packages/` and `examples/`, sharing `@canary/core` with the extension. 61 tests pass on the passthrough worker and mock ENSv2 contracts. Live over tor-js on 6 Nov: the gateway answered Sepolia and mainnet reads in ~0.85 s and the example agent ran through it. Its names are live on Sepolia: `agents.canary.eth` (a subname registry) and `trader-01.agents.canary.eth`, whose manifest is the gateway's policy and whose `privacy.report` the gateway signs and publishes under a one-key grant (test-repo.md §16). Status and differences from the plan: agent-sdk.md §0.
+- **Canary for agents is built too (6 Nov):** gateway, SDK, ENSv2 records and two example agents in `packages/` and `examples/`, sharing `@canary/core` with the extension. 61 tests pass on the passthrough worker and mock ENSv2 contracts. Live over tor-js on 6 Nov: the gateway answered Sepolia and mainnet reads in ~0.85 s and the example agent ran through it. Its names are live on Sepolia: `agents.canary.eth` (a subname registry) and `trader-01.agents.canary.eth`, whose manifest is the gateway's policy and whose `privacy.report` the gateway signs and publishes under a one-key grant (test-log.md §16). Status and differences from the plan: agent-sdk.md §0.
 - **Demo dapp and scanner are built:** `leakydash/` (provider, tracker, first-party backend, live log viewer, native anon-rpc mode) and `scanner/` (Playwright + mitmproxy + synthetic canary address). On LeakyDash, third parties receiving the address went **2 → 0** with Canary and RPC coverage **0% → 100%**; the undeclared tracker is flagged against LeakyDash's manifest (`test-artifacts/scans/`). Same result live, over tor-js through our own gateways, against the deployed LeakyDash (6 Nov).
 - **ENSv2 is live on Sepolia (6 Nov):** `leakydash.eth` has its own Permissioned Resolver, `url` and `privacy.manifest` records, and a one-key `grantSetterRoles` grant to the verifier. `canary.eth` has a UserRegistry as its subregistry, holding `verifier.canary.eth`, whose key signed and published a verdict from a real LeakyDash baseline scan (`undeclared`: the tracker). Revoking the verifier's role shows in `canary-ens read-dapp` and in the extension's reader. Names and transactions: `packages/ens/README.md` (*Live on Sepolia*).
 - **Live demo: https://canary-leakydash.vercel.app** (LeakyDash on Vercel; its provider and tracker are `canary-leakydash-rpc` and `canary-leakydash-tracker.vercel.app`, separate sites since `vercel.app` is a public suffix). `leakydash.eth`'s `url` and manifest point at it, and the published verdict comes from a scan of it. `/logs` shows each visitor only their own entries (a random per-browser id), with real IPs.
-- **Canary Swap (6 Nov), for Uniswap:** a scan of app.uniswap.org asking for a quote showed `POST /quote` with `swapper` = the address, plus the tokens and the amount, before anything is signed (`test-artifacts/scans/quote/`). `swap/` (live at https://canary-swap.vercel.app) quotes from the v4 Quoter over `eth_call` instead (no address), swaps through the Universal Router on our ETH/CNRY v4 pool on Sepolia, and quotes the mainnet ETH/USDC pools. Its name `swap.canary.eth` has a `matches` verdict. With Canary every read went through anon-rpc and the popup reads "Matches manifest"; the agent does the same swap through the gateway, its raw transaction over anon-rpc. `swap/README.md`, `FEEDBACK.md`, test-repo.md §21.
-- **Real-dapp scans (6 Nov):** on app.ens.domains, app.uniswap.org, app.aave.com, revoke.cash and snapshot.box, third parties receiving the address went **12 → 0** with Canary. RPC coverage was 100% on four; on Aave it was 15%, because Aave sends most reads to its own RPC proxy in a non-JSON-RPC envelope. Blocking also cut calls the apps use (name lists, profiles). `test-artifacts/scans/RESULTS.md`, test-repo.md §15.
+- **Canary Swap (6 Nov), for Uniswap:** a scan of app.uniswap.org asking for a quote showed `POST /quote` with `swapper` = the address, plus the tokens and the amount, before anything is signed (`test-artifacts/scans/quote/`). `swap/` (live at https://canary-swap.vercel.app) quotes from the v4 Quoter over `eth_call` instead (no address), swaps through the Universal Router on our ETH/CNRY v4 pool on Sepolia, and quotes the mainnet ETH/USDC pools. Its name `swap.canary.eth` has a `matches` verdict. With Canary every read went through anon-rpc and the popup reads "Matches manifest"; the agent does the same swap through the gateway, its raw transaction over anon-rpc. `swap/README.md`, `FEEDBACK.md`, test-log.md §21.
+- **Real-dapp scans (6 Nov):** on app.ens.domains, app.uniswap.org, app.aave.com, revoke.cash and snapshot.box, third parties receiving the address went **12 → 0** with Canary. RPC coverage was 100% on four; on Aave it was 15%, because Aave sends most reads to its own RPC proxy in a non-JSON-RPC envelope. Blocking also cut calls the apps use (name lists, profiles). `test-artifacts/scans/RESULTS.md`, test-log.md §15.
 - **Biggest remaining risk:** EF's demo gateway stopped completing boots on 6 Nov. Since 7 Nov the extension's default build goes through our three gateways, public through a Playit UDP tunnel, but they run on one team machine: up only while it is. The agent example's default config still dials them locally (127.0.0.1). Staying up for good needs a server with a public UDP port.
 - **Before hacking starts:** take the open questions in section 12 to the EF and ENS mentors (EF's anon-rpc workshop was 5:00 PM IST, Thu 5 Nov, Workshop Room 2).
 
@@ -91,7 +91,7 @@ Playwright Chromium (with or without Canary) ──proxy──► mitmproxy (gro
 
 ### 3.1 Extension: enforcement (Person A)
 
-- **Start from our spike** (`canary-spike/`, built on `@anon-rpc/browser-extension-harness`; EF's `impl/demo-extension` is the reference). It already has the MAIN-world fetch shim, the bridge, substitution, IP-only forwarding, fail-closed, batch support and stats, plus an offline e2e (8/8). The service worker owns the harness, an offscreen document holds the null-origin sandbox, and the worker stays verified and warm.
+- **Start from our spike** (`archive/canary-spike/`, built on `@anon-rpc/browser-extension-harness`; EF's `impl/demo-extension` is the reference). It already has the MAIN-world fetch shim, the bridge, substitution, IP-only forwarding, fail-closed, batch support and stats, plus an offline e2e (8/8). The service worker owns the harness, an offscreen document holds the null-origin sandbox, and the worker stays verified and warm.
 - **Page ↔ extension channel:** replace the spike's `window.postMessage` (the page can read and spoof it) with a `MessageChannel` handed to the shim at `document_start`.
 - **Shim:** a MAIN-world content script at `document_start`, in all frames. It wraps `fetch`, `XMLHttpRequest`, `WebSocket.prototype.send` and `navigator.sendBeacon`.
 - **Classifier (deterministic, no AI):**
@@ -182,7 +182,7 @@ A small wagmi token dashboard on Sepolia that we control, written the way many r
 - "No leak observed" is not "no leak". The matcher detects the encodings listed in 3.2. Arbitrary obfuscation or encryption is out of scope and lands in **Not inspected**.
 - Coverage % = Protected RPC reads ÷ all RPC reads (the shim's count plus direct RPC requests seen by mitmproxy). Report it alongside the latency overhead (p50/p95).
 - Also report the **share of all dapp requests** by category, including Backend / indexer. EF judges "how much of the app's traffic goes through Anon-RPC", and real dapps lean on indexer APIs as much as on RPC.
-- Measured so far (test-repo.md §10): ~1.1 s median per read over tor-js, 1.3–2.8 s per Multicall batch on app.ens.domains, ~5 ms added by the extension itself.
+- Measured so far (test-log.md §10): ~1.1 s median per read over tor-js, 1.3–2.8 s per Multicall batch on app.ens.domains, ~5 ms added by the extension itself.
 - Every site shows: "This dapp can always see your address and your IP."
 
 ---
@@ -209,10 +209,10 @@ Record a backup video by hour 30.
 
 | Hours | A: Extension | B: Scanner | C: ENSv2 + LeakyDash | D: only with 4 people |
 |---|---|---|---|---|
-| 0–3 | ~~Spike~~ **done** (`canary-spike/`) | ~~Spike: Playwright + mitmproxy + fake wallet catches the canary~~ **done** (`scanner/`) | ~~Spike: register an ENSv2 Sepolia name; set a text record; `authorizeTextRoles` on a second key~~ **done** (`grantSetterRoles`: Sepolia has no `authorizeTextRoles`) | Spike: v4 Quoter quote on Sepolia |
+| 0–3 | ~~Spike~~ **done** (`archive/canary-spike/`) | ~~Spike: Playwright + mitmproxy + fake wallet catches the canary~~ **done** (`scanner/`) | ~~Spike: register an ENSv2 Sepolia name; set a text record; `authorizeTextRoles` on a second key~~ **done** (`grantSetterRoles`: Sepolia has no `authorizeTextRoles`) | Spike: v4 Quoter quote on Sepolia |
 | 3–12 | ~~Substitution, method allowlist, chain-id learning, DNR rules~~ **done** (`extension/`) | ~~Matcher (all encodings), flows, report JSON~~ **done** | ~~Manifest/verdict schema, EIP-712 signer, reader library~~ **done** (`packages/ens/src/verdict.ts`) | Private-quote widget |
 | 12–20 | ~~Blocking, labels, popup~~ **done**; next: live tor-js runs on real dapps, popup polish | ~~Runs with and without Canary, coverage %, build fingerprint~~ **done** (`--compare`) | ~~LeakyDash + observer RPC + tracker + log viewer~~ **done locally** (`leakydash/`, incl. native anon-rpc mode) | Sepolia swap tx, FEEDBACK.md |
-| 20–28 | ~~Fail-closed mode, isolation keys, ENS lookups via anon-rpc~~ **done** (declared vs observed in the popup) | ~~Real-dapp scans (3–5)~~ **done** (5 dapps, test-repo.md §15) | ~~Verdict write + revocation detection~~ **done, live on Sepolia** (`canary-ens`) | UI polish |
+| 20–28 | ~~Fail-closed mode, isolation keys, ENS lookups via anon-rpc~~ **done** (declared vs observed in the popup) | ~~Real-dapp scans (3–5)~~ **done** (5 dapps, test-log.md §15) | ~~Verdict write + revocation detection~~ **done, live on Sepolia** (`canary-ens`) | UI polish |
 | 28–33 | Bug bash, latency numbers | ~~Results table~~ **done** (`test-artifacts/scans/RESULTS.md`) | ~~README (CROPS section), architecture diagram~~ **done** (README) | Demo video draft |
 | 33–36 | Final demo, video, submissions (everyone) | | | |
 
@@ -220,7 +220,7 @@ Record a backup video by hour 30.
 
 **Hour-3 checkpoints:** the Tor worker and the shim are already proven. Develop on the passthrough worker for speed (offline e2e) and test on tor-js regularly. If the scanner's mitmproxy + fake-wallet spike isn't catching the canary by hour 3, simplify it before adding flows. If ENSv2 Sepolia registration blocks us, go to the ENS mentors immediately.
 
-**Setup notes (test-repo.md):** npm 11 needs `npm install-scripts approve esbuild node-datachannel`. On a Mac, anything running the in-process KPS server needs Docker. Use the full Chromium build (not headless-shell) for extension tests.
+**Setup notes (test-log.md):** npm 11 needs `npm install-scripts approve esbuild node-datachannel`. On a Mac, anything running the in-process KPS server needs Docker. Use the full Chromium build (not headless-shell) for extension tests.
 
 **Cut order:** Uniswap → multiple verifiers → WebSocket support → isolation keys → real-dapp scans.
 **Never cut:** reads via anon-rpc by default, coverage measurement, the ENS manifest with a delegated signed verdict, honest labels.
@@ -314,7 +314,7 @@ Record a backup video by hour 30.
 **EF (workshop: 5:00 PM IST, Thu 5 Nov, Workshop Room 2)**
 1. Does a retrofit extension count as "your app routes its reads through anon-rpc by default"?
 2. Tor worker: can we point it at our own KPS gateway? How much load can the demo gateway take? Is `isolationKey` supported?
-3. ~~Extension harness: what's the recommended way to call `worker.fetch` on behalf of page requests?~~ Answered in practice: calling it from the service worker for page-originated requests works without harness changes (test-repo.md §10).
+3. ~~Extension harness: what's the recommended way to call `worker.fetch` on behalf of page requests?~~ Answered in practice: calling it from the service worker for page-originated requests works without harness changes (test-log.md §10).
 4. Will judges accept reads answered by a different endpoint than the dapp's own (substitution)?
 
 **ENS**
@@ -354,5 +354,5 @@ Record a backup video by hour 30.
 - "Keeping Privacy Labels Honest" (PoPETs 2022): https://petsymposium.org/popets/2022/popets-2022-0119.php
 - "The next great wallet will be private" (ethereum.org): https://ethereum.org/latest/next-great-wallet-private/
 - Chainlink tokenized equity feeds: https://docs.chain.link/data-feeds/tokenized-equity-feeds/robinhood
-- Repo test log and Canary spike results: [test-repo.md](test-repo.md)
+- Repo test log and Canary spike results: [test-log.md](test-log.md)
 - PrivacyRPC (prior art, Solana): https://github.com/AltCoinWiz/PrivacyRPC

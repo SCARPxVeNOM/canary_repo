@@ -1,6 +1,6 @@
 # Canary scanner
 
-Loads a dapp with a fake wallet holding a fresh, synthetic **canary address**, records every request the browser makes through **mitmproxy** (ground truth), and reports who received the address, in which encoding, and whether the dapp declared them. Run it with and without the Canary extension for a before/after table (idea.md §3.2).
+Loads a dapp with a fake wallet holding a fresh, synthetic **canary address**, records every request the browser makes through **mitmproxy** (ground truth), and reports who received the address, in which encoding, and whether the dapp declared them. Run it with and without the Canary extension for a before/after table (docs/design-notes.md §3.2).
 
 ```sh
 pip install mitmproxy          # provides mitmdump

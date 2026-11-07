@@ -1,4 +1,4 @@
-/* Coverage ledger: every egress decision, counted (agent-sdk.md §3.5). */
+/* Coverage ledger: every egress decision, counted (docs/agent-sdk.md §3.5). */
 
 import { EventEmitter } from "node:events";
 import type { Category, Channel, Observation } from "@canary/core";

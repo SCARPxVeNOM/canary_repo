@@ -1,5 +1,5 @@
 // Find the canary address in captured traffic, in every encoding we claim to
-// detect (idea.md §3.2). Exact matching only: we generated the address, so a
+// detect (docs/design-notes.md §3.2). Exact matching only: we generated the address, so a
 // hit is never a coincidence.
 
 import { keccak_256 } from "@noble/hashes/sha3";

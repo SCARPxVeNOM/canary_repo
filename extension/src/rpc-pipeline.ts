@@ -2,7 +2,7 @@
 // worker. Each worker.fetch over tor-js costs ~1 s (a new Tor stream, TCP and
 // TLS through three relays: tor-js sends `Connection: close`), so the cost is
 // in the number of requests, not their size. Measured over tor-js
-// (test-repo.md §14): 20 reads sent one by one took 43–55 s; as one JSON-RPC
+// (docs/test-log.md §14): 20 reads sent one by one took 43–55 s; as one JSON-RPC
 // batch, 1.6–2.1 s.
 //
 //   cache     eth_chainId / net_version: per endpoint, for good.

@@ -1,4 +1,4 @@
-// A verifier's signed verdict on a dapp's ENSv2 name (idea.md §3.3), against
+// A verifier's signed verdict on a dapp's ENSv2 name (docs/design-notes.md §3.3), against
 // the mock ENSv2 contracts, for both delegation APIs.
 
 import { test, before, after } from "node:test";

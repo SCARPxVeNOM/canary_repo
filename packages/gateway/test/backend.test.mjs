@@ -1,4 +1,4 @@
-// Spike (agent-sdk.md §6, hour 0–3): headless Chromium boots
+// Spike (docs/agent-sdk.md §6, hour 0–3): headless Chromium boots
 // @anon-rpc/browser-harness, and the gateway's Node process reaches
 // worker.fetch over the loopback WebSocket bridge, with streamed bodies.
 

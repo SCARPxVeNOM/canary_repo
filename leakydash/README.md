@@ -1,6 +1,6 @@
 # LeakyDash
 
-A deliberately leaky Sepolia token dashboard for demoing Canary (idea.md §3.4). Everything runs locally from one process; each party is its own site under `*.localhost`, which every modern browser resolves to this machine.
+A deliberately leaky Sepolia token dashboard for demoing Canary (docs/design-notes.md §3.4). Everything runs locally from one process; each party is its own site under `*.localhost`, which every modern browser resolves to this machine.
 
 ```sh
 npm install

@@ -1,6 +1,6 @@
 // What the popup and the dashboard say, in one place. The service worker
 // counts nine categories (shared.ts); people get four, plus what wasn't
-// counted. Wording follows idea.md §4: never "private", "safe" or "leak-free".
+// counted. Wording follows docs/design-notes.md §4: never "private", "safe" or "leak-free".
 
 import { compareDeclared, type Category, type DeclaredRow } from "../shared.js";
 import { privacyLabel, type PrivacyLabel } from "../privacy-label.js";

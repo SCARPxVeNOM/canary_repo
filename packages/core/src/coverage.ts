@@ -1,4 +1,4 @@
-/* Coverage categories (idea.md §4, agent-sdk.md §3.5).
+/* Coverage categories (docs/design-notes.md §4, docs/agent-sdk.md §3.5).
    Wording rule: never "private" or "leak-free"; always "observed, with gaps". */
 
 export type Category =

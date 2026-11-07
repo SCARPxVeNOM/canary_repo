@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "license": "MIT",
-  "description": "Canary for agents: @canary/core, @canary/gateway and @canary/agent (see agent-sdk.md). The browser extension in extension/ builds on its own.",
+  "description": "Canary for agents: @canary/core, @canary/gateway and @canary/agent (see docs/agent-sdk.md). The browser extension in extension/ builds on its own.",
   "workspaces": [
     "packages/core",
     "packages/ens",

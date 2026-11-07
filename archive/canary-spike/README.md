@@ -1,6 +1,6 @@
 # Canary spike
 
-> **Superseded by [`../extension/`](../extension/).** Kept for reference. It was built inside a clone of `ethereum/anon-rpc` at `impl/canary-spike/` and resolves the harness from `impl/node_modules`, so it doesn't build standalone.
+> **Superseded by [`../../extension/`](../../extension/).** Kept for reference. It was built inside a clone of `ethereum/anon-rpc` at `impl/canary-spike/` and resolves the harness from `impl/node_modules`, so it doesn't build standalone.
 
 MV3 extension on `@anon-rpc/browser-extension-harness`. A MAIN-world shim wraps
 `window.fetch`; JSON-RPC POSTs are answered by the service worker through the

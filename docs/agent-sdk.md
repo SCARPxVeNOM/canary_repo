@@ -2,7 +2,7 @@
 
 **Wrap any autonomous agent so its chain reads go through anon-rpc, and its address doesn't leak to third parties without being declared.**
 
-Draft v1.1 · 6 Nov 2026 · brainstorm first, then the blueprint. v1 applies the review findings listed under "Changes in v1"; v1.1 adds what has been built (§0) and where the build differs from the plan. Companion to [idea.md](idea.md) (the browser extension).
+Draft v1.1 · 6 Nov 2026 · brainstorm first, then the blueprint. v1 applies the review findings listed under "Changes in v1"; v1.1 adds what has been built (§0) and where the build differs from the plan. Companion to [design-notes.md](design-notes.md) (the browser extension).
 
 ---
 
@@ -24,7 +24,7 @@ Draft v1.1 · 6 Nov 2026 · brainstorm first, then the blueprint. v1 applies the
 - **Batches touching several agent wallets are split per wallet**; one gateway path per chain (3.2).
 - **Pseudonymizer:** ASCII aliases; covers ENS names and tx hashes; restores aliases across streamed chunks and before tool validation; balances are declared, not hidden (3.4).
 - **The egress report is metadata too:** on chain it is coarse, and updated daily or on demand (3.5, §4).
-- **Node harness facts checked** against test-repo.md and npm (TL;DR, 3.1, §10).
+- **Node harness facts checked** against test-log.md and npm (TL;DR, 3.1, §10).
 - **Gateway default port is 18545:** 8545 clashes with anvil and Hardhat.
 - **§9 decisions proposed; staffing for 2–4 people** (§6).
 
@@ -32,7 +32,7 @@ Draft v1.1 · 6 Nov 2026 · brainstorm first, then the blueprint. v1 applies the
 
 ## 0. Implementation status (6 Nov 2026)
 
-Everything below is in `packages/` and `examples/`; each package README has the API and config reference. **Tests:** 61 pass (`npm test` at the repo root), plus the extension's 24/24 now that it runs on `@canary/core`. They run against EF's passthrough reference worker (hash-verified as on chain), local fixtures, and a local chain with mock ENSv2 contracts. **Live since 6 Nov:** over tor-js (through our own gateways), and on ENS's Sepolia deployment: `agents.canary.eth` is a subname registry, and `trader-01.agents.canary.eth` has its own Permissioned Resolver; the gateway reads its policy from that name, publishes the signed report with a one-key grant, and the revoke shows (`packages/ens/README.md`, test-repo.md §16).
+Everything below is in `packages/` and `examples/`; each package README has the API and config reference. **Tests:** 61 pass (`npm test` at the repo root), plus the extension's 24/24 now that it runs on `@canary/core`. They run against EF's passthrough reference worker (hash-verified as on chain), local fixtures, and a local chain with mock ENSv2 contracts. **Live since 6 Nov:** over tor-js (through our own gateways), and on ENS's Sepolia deployment: `agents.canary.eth` is a subname registry, and `trader-01.agents.canary.eth` has its own Permissioned Resolver; the gateway reads its policy from that name, publishes the signed report with a one-key grant, and the revoke shows (`packages/ens/README.md`, test-log.md §16).
 
 | Blueprint part | Where | Status |
 |---|---|---|
@@ -152,14 +152,14 @@ interface AnonBackend {
 | Backend | Networks | Status | Notes |
 |---|---|---|---|
 | `chromium` | tor-js, Nym, Nox | **works today** (browser harness is tested; tor-js reads took ~1.1–1.4 s in our runs) | Gateway launches headless Chromium (Playwright), serves a local page that boots `@anon-rpc/browser-harness`, and bridges `worker.fetch`. ~150 MB dependency; one browser per gateway, many agents per gateway. |
-| `node` | passthrough only | prototype, not on npm (404 on 5 Nov) | QuickJS isolate. No WebAssembly in the guest, so no tor-js yet. A bridged `socket` capability already exists in the prototype (test-repo.md §2: it carried a real connection), which a native tor-js could use later. KPS support: unverified, ask EF. |
+| `node` | passthrough only | prototype, not on npm (404 on 5 Nov) | QuickJS isolate. No WebAssembly in the guest, so no tor-js yet. A bridged `socket` capability already exists in the prototype (test-log.md §2: it carried a real connection), which a native tor-js could use later. KPS support: unverified, ask EF. |
 | `native` (future) | — | — | Whatever EF ships next; the interface stays the same. |
 
 **Gateway ↔ Chromium bridge.** Not Playwright's `evaluate`/`exposeBinding`, which serialize whole values and can't stream.
 - The local page opens a WebSocket to the gateway on loopback (random port, one-time token in the URL).
 - Request frames: `{id, url, method, headers}`, then body chunks. Response frames: a head frame (status, headers), then body chunks, with backpressure.
 - Bodies already stream inside the harness; this keeps them streaming end to end, so large `eth_getLogs` responses are fine.
-- Abort frames map to an `AbortController` (the harness handles aborted fetches, test-repo.md §3).
+- Abort frames map to an `AbortController` (the harness handles aborted fetches, test-log.md §3).
 - If Chromium crashes, the gateway fails closed, relaunches it and re-boots the worker (~13 s cold); status shows `warming`.
 - **Passthrough during development:** the passthrough worker uses the page's own `fetch`, so CORS applies and many non-RPC APIs will fail. Launch the dev Chromium with `--disable-web-security` (passthrough only, never with tor-js), or test the proxy against CORS-enabled servers.
 
@@ -195,7 +195,7 @@ Policy per destination host, from the manifest:
 
 Without MITM, the proxy sees only the CONNECT host: rules are per host, `direct` or `block`, and coverage says "not inspected: HTTPS bodies". Agents that need non-RPC HTTPS via anon-rpc use the in-process SDK (D) or the MITM CA (C). With the CA flag, the proxy sees everything.
 
-Many APIs (Cloudflare-fronted ones, some LLM providers) refuse or challenge Tor exits, as Tenderly did (test-repo.md §5). Test every host over tor-js before declaring it `anon`.
+Many APIs (Cloudflare-fronted ones, some LLM providers) refuse or challenge Tor exits, as Tenderly did (test-log.md §5). Test every host over tor-js before declaring it `anon`.
 
 ### 3.4 `@canary/agent`: the in-process SDK (TypeScript)
 
@@ -267,7 +267,7 @@ The report is EIP-712-signed by a **report key** the gateway holds (not the agen
 - the on-chain `privacy.report` record is updated on demand or at most daily, with windows aligned to whole days and counts as coarse buckets and percentages;
 - the record update is a transaction from the report key: send it through the gateway's anon path, and fund the report key without linking it to the agent's wallets.
 
-Wording rules from idea.md §4 apply: never "private" or "leak-free"; always "observed in this window, with these gaps".
+Wording rules from design-notes.md §4 apply: never "private" or "leak-free"; always "observed in this window, with these gaps".
 
 ---
 
@@ -277,7 +277,7 @@ Wording rules from idea.md §4 apply: never "private" or "leak-free"; always "ob
 |---|---|---|
 | `privacy.manifest` | operator | the policy: per-host rules (`anon`/`direct`/`block`), undeclared handling, RPC write mode, the `reporter` address (schema: `packages/core/README.md`) |
 | `privacy.report` | the gateway's report key (one-key EAC role) | the coarse report plus its EIP-712 signature, with `reportHash` committing to the full report (daily or on demand; see 3.5 and `packages/ens/README.md`) |
-| `privacy.verdict.<verifier>` | independent verifier (one-key EAC role) | verifier's signed opinion, as in idea.md §3.3 |
+| `privacy.verdict.<verifier>` | independent verifier (one-key EAC role) | verifier's signed opinion, as in design-notes.md §3.3 |
 | `addr` | operator | the agent's wallet(s), or deliberately absent |
 
 **Why this beats the dapp version:**
@@ -286,7 +286,7 @@ Wording rules from idea.md §4 apply: never "private" or "leak-free"; always "ob
 - **Fleets are natural:**
   - `agents.canary.eth` as a subname registry (one subname per agent);
   - expiring or revocable subnames for short-lived agents;
-  - a Permissioned Resolver per agent so each agent owns its data. A text-key grant covers that key on every name served by the same resolver instance (idea.md §3.3), so with a shared resolver one gateway's report key could write every agent's `privacy.report`. If a fleet shares a resolver, it shares one report key, and the manifest says so.
+  - a Permissioned Resolver per agent so each agent owns its data. A text-key grant covers that key on every name served by the same resolver instance (design-notes.md §3.3), so with a shared resolver one gateway's report key could write every agent's `privacy.report`. If a fleet shares a resolver, it shares one report key, and the manifest says so.
 - **Revocation is visible.** An operator who silences reporting must revoke the role, which emits `EACRolesChanged`. Anyone reading the name sees "reporting revoked".
 
 Optional: whether `addr` is set on the agent's name is itself a privacy choice. A public agent identity linked to its wallets defeats unlinkability, so the manifest can declare "wallets undisclosed".
@@ -313,7 +313,7 @@ examples/
 
 ## 6. Hackathon build plan (agent track, on top of what's done)
 
-The extension is done. This replaces the scanner work in idea.md §6 if we choose to pivot (see §9).
+The extension is done. This replaces the scanner work in design-notes.md §6 if we choose to pivot (see §9).
 
 **Progress (6 Nov):** every cell below is built and tested (§0) except these:
 - live tor-js and ENS Sepolia runs (hour-3 checkpoints);
@@ -370,10 +370,10 @@ The extension is done. This replaces the scanner work in idea.md §6 if we choos
 | LLM pseudonymization breaks the agent's reasoning | Medium | Stable aliases, an allow-list for well-known contracts, and restoring aliases in tool calls. Test on the demo agent's actual prompts. |
 | MITM CA scares judges or users | Low | Off by default; operator-only; explain it's the same model as corporate egress proxies. |
 | Proxy env vars ignored by some clients | Medium | Report it as "not inspected"; the in-process SDK covers TS agents fully. |
-| EF demo gateway capacity with many agents | High | Ask EF about running our own KPS gateway (already in idea.md §12). |
+| EF demo gateway capacity with many agents | High | Ask EF about running our own KPS gateway (already in design-notes.md §12). |
 | Scope: two hosts in 36 h | High | The extension is done. Treat this as the second host built on the same core, and cut the dapp scanner if needed (see §9). |
 | Gateway ↔ Chromium bridge doesn't stream, or drops under load | Medium | Loopback WebSocket with chunked bodies and backpressure (3.1); spike it at hour 0; fallback: buffered responses with a size cap. |
-| APIs refuse Tor exits (as Tenderly did, test-repo.md §5) | Medium | Test every `anon` host over tor-js before declaring it; declare the rest `direct`. |
+| APIs refuse Tor exits (as Tenderly did, test-log.md §5) | Medium | Test every `anon` host over tor-js before declaring it; declare the rest `direct`. |
 | The egress report itself reveals the agent's activity | Medium | The full report stays with the operator; the on-chain record is coarse and updated daily or on demand (3.5). |
 | Port clash with anvil/Hardhat on 8545 | Low | Gateway defaults to 18545, configurable. |
 

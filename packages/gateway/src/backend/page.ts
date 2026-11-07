@@ -1,6 +1,6 @@
 /* Runs inside the headless Chromium page the gateway launches. Boots
    @anon-rpc/browser-harness and serves worker.fetch to the gateway over a
-   loopback WebSocket (agent-sdk.md §3.1, "Gateway ↔ Chromium bridge").
+   loopback WebSocket (docs/agent-sdk.md §3.1, "Gateway ↔ Chromium bridge").
 
    Frames, gateway → page (text JSON):
      {t:"req", id, url, method, headers, body?: base64, anonOptions?}

@@ -1,4 +1,4 @@
-/* Prompt pseudonymizer (agent-sdk.md §3.4).
+/* Prompt pseudonymizer (docs/agent-sdk.md §3.4).
 
    Before a request reaches an LLM provider:
      agent wallets        0x5Ca1…FfEe → WALLET_1   (also bare 40-hex forms)

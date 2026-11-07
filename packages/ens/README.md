@@ -1,6 +1,6 @@
 # @canary/ens
 
-The ENSv2 side of Canary. For agents (agent-sdk.md §4): an agent's name holds its policy and its signed egress reports, with a one-key role so the gateway can write reports and nothing else. For dapps (idea.md §3.3): a dapp's name holds its declared recipients and an independent verifier's signed verdict, again with a one-key role (below).
+The ENSv2 side of Canary. For agents (docs/agent-sdk.md §4): an agent's name holds its policy and its signed egress reports, with a one-key role so the gateway can write reports and nothing else. For dapps (docs/design-notes.md §3.3): a dapp's name holds its declared recipients and an independent verifier's signed verdict, again with a one-key role (below).
 
 | Record on the agent's name | Written by | Content |
 |---|---|---|
@@ -64,7 +64,7 @@ CANARY_OWNER_KEY=0x… canary-ens revoke-reporter <name> <reportKeyAddress>
 
 `--chain <id>` (default 11155111). `--rpc <url>` defaults to the local gateway (`http://127.0.0.1:18545/<chain>`), so these lookups and transactions also go over anon-rpc. `--universal-resolver <address>` for chains viem doesn't know.
 
-## A dapp's name: manifest and a verifier's verdict (idea.md §3.3)
+## A dapp's name: manifest and a verifier's verdict (docs/design-notes.md §3.3)
 
 | Record on the dapp's name | Written by | Content |
 |---|---|---|

@@ -15,7 +15,7 @@ tor-js sends `Connection: close`, so every request pays for a new Tor stream, TC
 
 Tests: `cargo test -p tor-js` 121/121, including pool tests (never across keys, idle, age and server limits, caps, sweeping) and response-framing tests.
 
-Measured (test-repo.md §14, `test-artifacts/latency/ka-bench.mjs`, raw: `res-keepalive.json`): our 3 gateways, 3 interleaved rounds, fresh profile each; the stock build is hash-identical to the on-chain worker `0x5b62f358…818b`:
+Measured (docs/test-log.md §14, `test-artifacts/latency/ka-bench.mjs`, raw: `res-keepalive.json`): our 3 gateways, 3 interleaved rounds, fresh profile each; the stock build is hash-identical to the on-chain worker `0x5b62f358…818b`:
 
 | | stock 0.4.4 | keep-alive |
 |---|---|---|

@@ -2,7 +2,7 @@
 
 Browsers can't open raw TCP, so tor-js reaches Tor relays through a **gateway**: a small server that relays encrypted Tor connections over [KPS](https://ethereum.github.io/kps/) (WebRTC, one UDP port) and serves the public directory snapshot. This is EF's [`tor-js-gateway`](https://github.com/ethereum/tor-js/tree/main/crates/tor-js-gateway), built from a pinned commit. Nothing in it is Canary-specific.
 
-Why run one: EF's demo gateway (Frankfurt) is shared, "limited capacity, may disappear at any time". On 5–6 Nov 2026 it took 2.8 s just to dial and repeatedly failed to reach guards, then stopped answering KPS entirely (test-repo.md §14).
+Why run one: EF's demo gateway (Frankfurt) is shared, "limited capacity, may disappear at any time". On 5–6 Nov 2026 it took 2.8 s just to dial and repeatedly failed to reach guards, then stopped answering KPS entirely (docs/test-log.md §14).
 
 ## Run
 

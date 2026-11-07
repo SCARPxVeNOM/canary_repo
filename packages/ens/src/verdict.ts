@@ -1,4 +1,4 @@
-/* A verifier's signed verdict on a dapp (idea.md §3.3): the
+/* A verifier's signed verdict on a dapp (docs/design-notes.md §3.3): the
    `privacy.verdict.<verifier>` text record on the dapp's ENSv2 name.
 
    The dapp delegates exactly that one key to the verifier (grantTextKey), so

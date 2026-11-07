@@ -1,4 +1,4 @@
-/* @canary/agent: the in-process SDK (agent-sdk.md §3.4).
+/* @canary/agent: the in-process SDK (docs/agent-sdk.md §3.4).
 
    const canary = await createCanary({ gateway: "http://127.0.0.1:18545", wallets: [account.address] });
    const client = createPublicClient({ chain: sepolia, transport: canary.viemTransport() });

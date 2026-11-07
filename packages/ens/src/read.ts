@@ -1,8 +1,8 @@
-/* Reading an agent's privacy records (agent-sdk.md §4).
+/* Reading an agent's privacy records (docs/agent-sdk.md §4).
 
    Reads go through the client you pass. Inside the gateway that client's
    transport is the gateway's own RPC endpoint, so Canary's ENS lookups travel
-   over anon-rpc like every other read (idea.md §3.1). */
+   over anon-rpc like every other read (docs/design-notes.md §3.1). */
 
 import { type Address, type Hex, type PublicClient } from "viem";
 import { normalize } from "viem/ens";

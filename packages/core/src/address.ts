@@ -50,5 +50,5 @@ export function findAddresses(haystack: string, needles: AddressNeedles[]): stri
   return out;
 }
 
-/** Isolation key for requests that carry one of your addresses (idea.md §3.1). */
+/** Isolation key for requests that carry one of your addresses (docs/design-notes.md §3.1). */
 export const isolationKeyFor = (address: string) => `addr:${address.toLowerCase()}`;

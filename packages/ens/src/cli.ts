@@ -6,7 +6,7 @@
    canary-ens grant-reporter <name> <address>    let the gateway's report key write privacy.report only
    canary-ens revoke-reporter <name> <address>   take it back (visible on chain as EACRolesChanged)
 
-   A dapp's name (idea.md §3.3):
+   A dapp's name (docs/design-notes.md §3.3):
    canary-ens set-dapp <name> <manifest.json>     publish url (= manifest.origin) and privacy.manifest   (CANARY_OWNER_KEY)
    canary-ens grant-verifier <name> <address>     let a verifier write privacy.verdict.<id> only         (CANARY_OWNER_KEY)
    canary-ens revoke-verifier <name> <address>    silence it (visible on chain)                           (CANARY_OWNER_KEY)

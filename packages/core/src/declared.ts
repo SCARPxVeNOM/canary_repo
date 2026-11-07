@@ -1,5 +1,5 @@
 /* A dapp's declared recipients, and how they compare with what a page was
-   seen sending (idea.md §2 "Declare", §3.3).
+   seen sending (docs/design-notes.md §2 "Declare", §3.3).
 
    The manifest lives in the `privacy.manifest` text record of the dapp's ENS
    name; the site names that ENS name at /.well-known/canary.json, and the

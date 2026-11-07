@@ -1,6 +1,6 @@
 # anon-rpc repo: test log
 
-Tests run against the local clone of `ethereum/anon-rpc`, to check the assumptions in [idea.md](idea.md) before hacking starts.
+Tests run against the local clone of `ethereum/anon-rpc`, to check the assumptions in [design-notes.md](design-notes.md) before hacking starts.
 
 - **Date:** 5 Nov 2026 (IST)
 - **Repo:** `anon-rpc/` at commit `c8980fb` (Merge PR #15, spec **0.4.0**)
@@ -193,7 +193,7 @@ Nox overhead: +1008 ms (5.3×).
 
 ## 5. Which public RPC endpoints accept anonymized traffic
 
-Custom driver over the repo's bench page: [test-artifacts/tor-endpoints.mjs](test-artifacts/tor-endpoints.mjs) (run from `anon-rpc/impl/site`). It boots tor-js and Nym once (specifiers read via mainnet publicnode), then sends 3 × `eth_getBalance` per endpoint per arm, with a 30 s timeout each. The same address is used on Sepolia (it only tests reachability).
+Custom driver over the repo's bench page: [test-artifacts/tor-endpoints.mjs](../test-artifacts/tor-endpoints.mjs) (run from `anon-rpc/impl/site`). It boots tor-js and Nym once (specifiers read via mainnet publicnode), then sends 3 × `eth_getBalance` per endpoint per arm, with a 30 s timeout each. The same address is used on Sepolia (it only tests reachability).
 
 | net | endpoint | direct | tor-js | nym |
 |---|---|---|---|---|
@@ -218,7 +218,7 @@ How to read it:
 
 ---
 
-## 6. What this means for Canary (idea.md)
+## 6. What this means for Canary (design-notes.md)
 
 1. **tor-js cold boot is about 13 s.** Boot it when the extension starts and keep it warm in the offscreen document (the harness's reuse cache is tested and works), and show a "warming up" state in the popup.
 2. **About 1–1.5 s per read over tor-js** (Sepolia publicnode p50 ~952 ms). A wagmi dashboard making ~20 reads needs batching or caching (`eth_chainId`, `eth_getCode`).
@@ -241,7 +241,7 @@ How to read it:
 
 ## Artifacts
 
-All in [test-artifacts/](test-artifacts/):
+All in [test-artifacts/](../test-artifacts/):
 
 - `test.log`: full `npm test` output
 - `docker-e2e.log`: root KPS e2e run in Docker
@@ -260,7 +260,7 @@ Round 1 tested what the repo does on its own. This round tests the assumption Ca
 
 - Upstream `main` is still `c8980fb` (spec 0.4.0). The clone is current.
 - **adopters.json5 now lists two shipping apps:** Kiwi News (added 14 Oct) and Privacy Pools (added 15 Oct). Both use tor-js. Both are **opt-in toggles built into the app itself** (off by default). There are still no wallets.
-  - ⚠️ idea.md §1.3 ("the adopters page listed no shipping wallet or app") is out of date. Suggested wording: *"Two apps (Kiwi News, Privacy Pools) offer anon-rpc as an opt-in setting. No wallet ships it, and nothing routes a dapp's traffic by default or works on dapps that didn't integrate it."*
+  - ⚠️ design-notes.md §1.3 ("the adopters page listed no shipping wallet or app") is out of date. Suggested wording: *"Two apps (Kiwi News, Privacy Pools) offer anon-rpc as an opt-in setting. No wallet ships it, and nothing routes a dapp's traffic by default or works on dapps that didn't integrate it."*
 
 ## 9. Real Chrome, hosted demo
 
@@ -272,7 +272,7 @@ Round 1 tested what the repo does on its own. This round tests the assumption Ca
 
 ## 10. Canary spike: interception + substitution
 
-Code: `canary-spike/` (source + `dist-live/` unpacked build). Built on `@anon-rpc/browser-extension-harness`.
+Code: `archive/canary-spike/` (source + `dist-live/` unpacked build). Built on `@anon-rpc/browser-extension-harness`.
 
 ```
 page JS (viem http transport) ─fetch─► MAIN-world shim (document_start, all frames)
@@ -283,7 +283,7 @@ page JS (viem http transport) ─fetch─► MAIN-world shim (document_start, al
                                      anon path down: JSON-RPC error, never direct       → "failed-closed"
 ```
 
-### Offline e2e (`canary-spike/test/e2e-offline.mjs`): ✅ 8/8
+### Offline e2e (`archive/canary-spike/test/e2e-offline.mjs`): ✅ 8/8
 
 Local stub chain + the repo's **passthrough** worker (hash-verified the same way as on chain), a viem dapp whose `http()` transport points at a logging "provider", and a logging "read endpoint". Run in Chrome for Testing 153, headless.
 
@@ -304,11 +304,11 @@ Local stub chain + the repo's **passthrough** worker (hash-verified the same way
 1. **Chain learning is a weak spot.** Asking the dapp's provider for `eth_chainId` over the anon path tells the provider "someone uses this dapp" (not who). It also breaks if the provider refuses Tor exits (Tenderly returned 403 in §5): Canary then fails closed and the dapp breaks. **Fix:** take the chain from the connected wallet (`eth_chainId` via EIP-1193/6963) or a known-host table, and probe the provider only as a last resort.
 2. **viem's `http()` transport is caught** because it calls `fetch` with a string body at request time. Not yet covered: XHR (some ethers v5 setups), WebSocket transports, `sendBeacon`, `Request` objects with stream bodies.
 3. **The page ↔ bridge channel is `window.postMessage`**, which the page can read and spoof. That's fine for a spike (the page only gets its own answers), but switch to a `MessageChannel` handed over at `document_start` before shipping.
-4. **No harness changes were needed.** `worker.fetch` from the service worker worked for page-originated requests as-is, which answers mentor question 3 in idea.md §12 in practice.
+4. **No harness changes were needed.** `worker.fetch` from the service worker worked for page-originated requests as-is, which answers mentor question 3 in design-notes.md §12 in practice.
 
 ### Live run in real Chrome over tor-js: ✅
 
-`canary-spike/dist-live` loaded unpacked in your Chrome (tor-js, demo gateway, read endpoint = `ethereum-rpc.publicnode.com`). Driven through browser automation in that profile.
+`archive/canary-spike/dist-live` loaded unpacked in your Chrome (tor-js, demo gateway, read endpoint = `ethereum-rpc.publicnode.com`). Driven through browser automation in that profile.
 
 **Controlled test on example.com** (page calls `fetch("https://eth.drpc.org", …)` as a dapp would):
 
@@ -371,7 +371,7 @@ Tests of `packages/` (agent-sdk.md §0) and of the extension after moving it ont
 
 ## 14. Latency: where it goes and what we changed (6 Nov)
 
-Scripts and raw results: [test-artifacts/latency/](test-artifacts/latency/). All runs use the real tor-js worker from its on-chain specifier (`0x700dA319…`, bundle = `tor-js@0.4.4/dist/anon-rpc-worker.js`, keccak matches `workerHash`).
+Scripts and raw results: [test-artifacts/latency/](../test-artifacts/latency/). All runs use the real tor-js worker from its on-chain specifier (`0x700dA319…`, bundle = `tor-js@0.4.4/dist/anon-rpc-worker.js`, keccak matches `workerHash`).
 
 ### Why a read costs ~1 s
 
@@ -458,7 +458,7 @@ Not fixable in Canary:
 
 ### HTTP keep-alive in tor-js (`ka-bench.mjs`, 6 Nov)
 
-tor-js patched to reuse HTTP/1.1 connections per isolation key ([tor-js-patches/](tor-js-patches/)). Built in Docker with the pinned toolchain; the unpatched build came out hash-identical to the on-chain worker (`0x5b62f358…818b`), so the baseline is exactly what Canary runs. Both loaded through the real harness with hash verification (a stand-in specifier pointing at the local bundle), our 3 gateways, 3 interleaved rounds, fresh profile each.
+tor-js patched to reuse HTTP/1.1 connections per isolation key ([tor-js-patches/](../tor-js-patches/)). Built in Docker with the pinned toolchain; the unpatched build came out hash-identical to the on-chain worker (`0x5b62f358…818b`), so the baseline is exactly what Canary runs. Both loaded through the real harness with hash verification (a stand-in specifier pointing at the local bundle), our 3 gateways, 3 interleaved rounds, fresh profile each.
 
 | | stock 0.4.4 | keep-alive |
 |---|---|---|
@@ -478,7 +478,7 @@ This is the final build (`0xd80132ce…`, after the review fixes below); raw: `r
 
 ### Gateway liveness check in tor-js (`fo-bench.mjs`, 6 Nov)
 
-The patched worker (keep-alive + liveness check, [tor-js-patches/](tor-js-patches/)) vs stock 0.4.4. 3 own gateways, a read every 500 ms, the busiest gateway killed twice per build and run. Final build (`0xd80132ce…`); raw: `res-failover-patched.json` (stock vs final), `res-failover-final-x4.json` (final only).
+The patched worker (keep-alive + liveness check, [tor-js-patches/](../tor-js-patches/)) vs stock 0.4.4. 3 own gateways, a read every 500 ms, the busiest gateway killed twice per build and run. Final build (`0xd80132ce…`); raw: `res-failover-patched.json` (stock vs final), `res-failover-final-x4.json` (final only).
 
 | | stock 0.4.4 | patched (0001 + 0002) |
 |---|---|---|
@@ -526,7 +526,7 @@ Also: idle connections respect the server's `Keep-Alive: timeout`, HTTP/1.0 resp
 
 ## 15. Real-dapp scans (6 Nov)
 
-`scanner/scan.mjs --compare` on five mainnet dapps, with `extension/dist-local` (tor-js through our 3 gateways). Flow: load → connect → scroll, a fresh synthetic address per run. None of them publishes a manifest, so "declared" isn't checked. Table: [`test-artifacts/scans/RESULTS.md`](test-artifacts/scans/RESULTS.md) (`scanner/summary.mjs`), with each site's reports beside it.
+`scanner/scan.mjs --compare` on five mainnet dapps, with `extension/dist-local` (tor-js through our 3 gateways). Flow: load → connect → scroll, a fresh synthetic address per run. None of them publishes a manifest, so "declared" isn't checked. Table: [`test-artifacts/scans/RESULTS.md`](../test-artifacts/scans/RESULTS.md) (`scanner/summary.mjs`), with each site's reports beside it.
 
 - **Third parties that received the address: 12 → 0** across the five. RPC calls leaving the page directly: 0 on four of them.
 - **Aave: coverage 15%.** Most of its reads go to its own `/api/rpc-proxy/` as `{chainId, method, params}`, not JSON-RPC 2.0, so Canary doesn't recognize them: 11 calls left the page directly, 4 with the address, and Aave's server passes them on to its provider. Canary counts the ones with the address as detected (first party). Its third-party RPC (`mainnet.gateway.tenderly.co`) went through anon-rpc.

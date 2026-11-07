@@ -1,4 +1,4 @@
-/* Writing records and managing the one-key role (agent-sdk.md §4).
+/* Writing records and managing the one-key role (docs/agent-sdk.md §4).
 
    - canWriteText: simulates setText from an account. Works whichever
      delegation API the resolver has, and is how Canary detects revocation.

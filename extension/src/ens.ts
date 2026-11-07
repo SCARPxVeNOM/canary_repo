@@ -1,5 +1,5 @@
 // A dapp's declared recipients and its verifier's verdict, read from ENS
-// (idea.md §3.3).
+// (docs/design-notes.md §3.3).
 //
 //   https://<site>/.well-known/canary.json  → {"ens": "leakydash.eth"}
 //   <name> url record                       → must point back at <site>

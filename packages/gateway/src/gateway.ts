@@ -1,4 +1,4 @@
-/* Canary Gateway (agent-sdk.md §3): one local process per machine.
+/* Canary Gateway (docs/agent-sdk.md §3): one local process per machine.
 
    http://127.0.0.1:18545/<chainId>   JSON-RPC endpoint: the agent's RPC URL
    http://127.0.0.1:18080             HTTP(S) proxy: the agent's HTTPS_PROXY

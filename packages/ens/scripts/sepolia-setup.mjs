@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-/* Canary's demo names on ENSv2 Sepolia (idea.md §3.3). Safe to rerun: each
+/* Canary's demo names on ENSv2 Sepolia (docs/design-notes.md §3.3). Safe to rerun: each
    step checks the chain first and skips what is already done.
 
      leakydash.eth          the dapp, with its own Permissioned Resolver (a
@@ -8,7 +8,7 @@
      canary.eth             Canary's namespace: a UserRegistry is its subregistry
      verifier.canary.eth    the verifier: a subname owned by the verifier key,
                             addr = that key (readers check verdict signers against it)
-     agents.canary.eth      the agents' namespace (agent-sdk.md §4): its own
+     agents.canary.eth      the agents' namespace (docs/agent-sdk.md §4): its own
                             UserRegistry, one subname per agent
      trader-01.agents.canary.eth
                             the example agent, with its own Permissioned Resolver

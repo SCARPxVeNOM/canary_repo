@@ -1,5 +1,5 @@
 /* Non-RPC egress: the HTTP(S) proxy and the SDK's /canary/fetch route
-   (agent-sdk.md §3.3).
+   (docs/agent-sdk.md §3.3).
 
    Per destination host, from the manifest:
      anon    → worker.fetch (Tor exit). Needs the request in the clear: the SDK

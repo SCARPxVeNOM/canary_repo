@@ -1,4 +1,4 @@
-/* Egress reports (agent-sdk.md §3.5).
+/* Egress reports (docs/agent-sdk.md §3.5).
 
    The full report is EIP-712-signed by a report key the gateway holds (never
    the agent's wallet key) and stays with the operator. What goes on chain is

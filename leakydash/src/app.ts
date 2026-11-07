@@ -19,7 +19,7 @@ const TOR_JS = {
   specifier: "0x700dA3193D35fA54Cd3fBf29B66f2a2A0385659e" as const,
   bootstrapRpc: "https://ethereum-rpc.publicnode.com", // the specifier lives on mainnet
   config: { gateways: ["152.236.3.22:12298:uEiCH0VdbhryzJcMtCfB0vLA4sOvHdQ4hq5w7CopcwU59bQ"] },
-  readEndpoint: "https://ethereum-sepolia-rpc.publicnode.com", // accepts Tor exits (test-repo.md §5)
+  readEndpoint: "https://ethereum-sepolia-rpc.publicnode.com", // accepts Tor exits (docs/test-log.md §5)
 };
 
 const TOKENS: { symbol: string; address: Address; decimals: number }[] = [

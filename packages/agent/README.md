@@ -1,6 +1,6 @@
 # @canary/agent
 
-In-process SDK for TypeScript agents (agent-sdk.md §3.4). It hands the gateway what a proxy can't see: HTTPS bodies, and prompts, which it pseudonymizes before they leave. Policy stays in the gateway (one place, from the manifest).
+In-process SDK for TypeScript agents (docs/agent-sdk.md §3.4). It hands the gateway what a proxy can't see: HTTPS bodies, and prompts, which it pseudonymizes before they leave. Policy stays in the gateway (one place, from the manifest).
 
 ```ts
 import { createCanary } from "@canary/agent";
