@@ -12,7 +12,7 @@ import {
   type Coverage, type Filter, type ManifestView, type Recipient, type SessionSummary, type Settings, type Site, type TabState, type Worker,
 } from "./model.js";
 import {
-  CopyText, CoverageBar, CoverageBlock, cx, Empty, EventRow, Eyebrow, FILTER_LABEL, FilterChips, LabelCard, Logo, manifestStatusFor, ManifestStatus,
+  ChainLinks, CopyText, CoverageBar, CoverageBlock, cx, Empty, EventRow, Eyebrow, FILTER_LABEL, FilterChips, LabelCard, Logo, manifestStatusFor, ManifestStatus,
   Outcome, ProtectionSwitch, RowStatus, ThemeButton, Tone, useFiltered,
 } from "./parts.js";
 import { privacyLabel } from "../privacy-label.js";
@@ -642,6 +642,7 @@ function ManifestPage({ ses, tab, m, go, refresh }: { ses: Session; tab: TabStat
             <Panel title={m.kind === "pending" ? "Checking…" : m.kind === "none" ? "No manifest named" : "No usable manifest"}>
               <p className="text-[15px] text-ink-2">{m.text}</p>
               {v && <p className="mt-3 text-[14px] text-ink-2"><b className="font-medium text-ink">{v.title}:</b> {v.text}</p>}
+              <ChainLinks links={v?.links} className="mt-2" />
               {"label" in m && m.label && <LabelCard l={m.label} className="mt-4" />}
               <p className="mt-3 text-[14px] text-ink-2">
                 A site names its manifest with <code className="font-mono text-[12px]">/.well-known/canary.json</code> pointing at an ENS name with a <code className="font-mono text-[12px]">privacy.manifest</code> text record.
@@ -658,6 +659,7 @@ function ManifestPage({ ses, tab, m, go, refresh }: { ses: Session; tab: TabStat
                 ["Text record", <span className="font-mono">privacy.manifest</span>],
                 ["Chain", m.kind === "ok" ? chainName(m.chainId) : "—"],
                 ["Verdict", v ? v.text : "None on this name"],
+                ...(v?.links ? [["On chain", <ChainLinks links={v.links} />] as [string, ReactNode]] : []),
                 ["Resolved", m.kind === "pending" ? "Not yet" : `${day(tab.since)}, via anon-rpc`],
               ].map(([k, val], i) => (
                 <div key={String(k)} className={cx("grid grid-cols-[100px_1fr] gap-3 py-2.5", i > 0 && "border-t border-line")}>

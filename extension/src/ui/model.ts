@@ -301,7 +301,12 @@ export function manifestBadge(m: ManifestView): { label: string; tone: "good" | 
 export const labelBadge = (l: PrivacyLabel) => (l.rows.length ? `Label: ${l.rows.length} third ${l.rows.length === 1 ? "party" : "parties"}` : "Label: no third parties");
 
 /** What Canary could check about a verifier's signed verdict, in words. null: there is none. */
-export function verdictOf(v: any): { tone: "good" | "bad" | "warn"; title: string; text: string } | null {
+export function verdictOf(v: any): { tone: "good" | "bad" | "warn"; title: string; text: string; links?: { tx?: string; resolver?: string } } | null {
+  const c = verdictCheckOf(v);
+  return c && v?.links ? { ...c, links: v.links } : c;
+}
+
+function verdictCheckOf(v: any): { tone: "good" | "bad" | "warn"; title: string; text: string } | null {
   if (!v) return null;
   if (v.state === "invalid") return { tone: "warn", title: "Verdict ignored", text: `The verdict record is malformed (${v.error}).` };
   const r = v.verdict;

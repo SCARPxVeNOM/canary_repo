@@ -194,3 +194,26 @@ test("a label is used only when it points back at the site", async () => {
   assert.equal((await labelled(404, labelVerdict({ origin: "https://elsewhere.example" }))).label.verdict.matchesSite, false, "a verdict about another site");
   assert.equal((await labelled(404, labelVerdict(), { writers: [] })).label.verdict.delegated, false, "the verifier's role revoked");
 });
+
+test("the transaction that wrote the verdict: found by its exact value, never a guess", async () => {
+  const { recordTx, TEXT_CHANGED } = await import(out);
+  const key = "privacy.verdict.canary";
+  const log = (value, tx, k = key) => ({ data: encodeAbiParameters([{ type: "string" }, { type: "string" }], [k, value]), transactionHash: tx, topics: [TEXT_CHANGED] });
+  const now = Date.UTC(2026, 10, 7);
+  const asked = [];
+  const rpc = (logs) => async (method, params) => {
+    asked.push([method, params]);
+    if (method === "eth_blockNumber") return { result: toHex(12_081_000) };
+    return logs instanceof Error ? { error: { message: logs.message } } : { result: logs };
+  };
+  // a shared resolver: another name's verdict, an older one of ours, then ours
+  const tx = await recordTx(rpc([log("ours, older", "0xa1"), log("theirs", "0xb2"), log("ours", "0xc3"), log("ours", "0xd4", "url")]), "0x1b46EB3b4Cf84F3f57EF21293eA46496f9593443", key, "ours", now / 1000 - 86_400, now);
+  assert.equal(tx, "0xc3");
+  const q = asked.find(([m]) => m === "eth_getLogs")[1][0];
+  assert.equal(q.topics[0], TEXT_CHANGED);
+  assert.equal(q.topics[1], null, "any name on the resolver; the value decides");
+  assert.ok(parseInt(q.toBlock) - parseInt(q.fromBlock) < 10_000, "within public endpoints' 10,000-block limit");
+  assert.ok(parseInt(q.fromBlock) <= 12_081_000 - 7_200, "starts before the record was signed (a day ago, ~7,200 blocks)");
+  assert.equal(await recordTx(rpc([log("theirs", "0xb2")]), "0x1b46EB3b4Cf84F3f57EF21293eA46496f9593443", key, "ours", now / 1000, now), undefined, "no log with this value");
+  assert.equal(await recordTx(rpc(new Error("pruned history unavailable")), "0x1b46EB3b4Cf84F3f57EF21293eA46496f9593443", key, "ours", now / 1000, now), undefined, "endpoint can't say");
+});

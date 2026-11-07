@@ -19,7 +19,7 @@
 // the lookup doesn't tell an RPC provider which dapp you're on. The well-known
 // file comes straight from the site, which already sees your IP.
 
-import { decodeFunctionResult, encodeFunctionData, namehash, toHex, type Hex } from "viem";
+import { decodeAbiParameters, decodeFunctionResult, encodeFunctionData, keccak256, namehash, toHex, type Hex } from "viem";
 import { LABELS_PARENT, labelName } from "../../packages/ens/src/label.js";
 import { parseVerdictRecord, verdictKey, verifyVerdictRecord, type VerdictRecord } from "../../packages/ens/src/verdict.js";
 import { parseDappManifest, sameOrigin, type DappManifest } from "./shared.js";
@@ -61,7 +61,11 @@ export type VerdictCheck =
       /** the verdict is about this site and this name */
       matchesSite: boolean;
       expired: boolean;
+      /** block explorer links: the name's resolver, and the transaction that wrote this verdict (when found) */
+      links?: ChainLinks;
     };
+
+export type ChainLinks = { resolver?: string; tx?: string };
 
 /** Canary's label for a site that names no ENS name of its own; `error` when it couldn't be read. */
 export type Label = { ens: string; verdict: VerdictCheck } | { ens: string; error: string };
@@ -136,11 +140,9 @@ export async function readAddr(call: EthCall, ur: string, name: string): Promise
  * resolver has no Enhanced Access Control (e.g. an ENSv1 name behind the
  * Universal Resolver's v1 adapter): there's no role to check.
  */
-export async function canWriteText(call: EthCall, ur: string, name: string, key: string, account: string): Promise<boolean | null> {
-  const f = await call(ur, encodeFunctionData({ abi: universalAbi, functionName: "findResolver", args: [dnsEncode(name)] }));
-  if (f.error || !f.result) return null;
-  const [resolver] = decodeFunctionResult({ abi: universalAbi, functionName: "findResolver", data: f.result as Hex });
-  if (/^0x0{40}$/i.test(resolver)) return null;
+export async function canWriteText(call: EthCall, ur: string, name: string, key: string, account: string, resolver?: string | null): Promise<boolean | null> {
+  resolver = resolver === undefined ? await resolverOf(call, ur, name) : resolver;
+  if (!resolver) return null;
   const eac = await call(resolver, encodeFunctionData({ abi: resolverAbi, functionName: "roles", args: [0n, account as Hex] }));
   if (eac.error || !eac.result || eac.result === "0x") return null;
   const w = await call(resolver, encodeFunctionData({ abi: resolverAbi, functionName: "setText", args: [dnsEncode(name), key, ""] }), account);
@@ -148,8 +150,52 @@ export async function canWriteText(call: EthCall, ur: string, name: string, key:
   return !w.error;
 }
 
+/** The name's resolver (ENSv2 names included), or null. */
+export async function resolverOf(call: EthCall, ur: string, name: string): Promise<string | null> {
+  const f = await call(ur, encodeFunctionData({ abi: universalAbi, functionName: "findResolver", args: [dnsEncode(name)] }));
+  if (f.error || !f.result) return null;
+  const [resolver] = decodeFunctionResult({ abi: universalAbi, functionName: "findResolver", data: f.result as Hex });
+  return /^0x0{40}$/i.test(resolver) ? null : resolver;
+}
+
+/** Any other JSON-RPC read, through the same anon path as EthCall. */
+export type EthRpc = (method: string, params: unknown[]) => Promise<{ result?: unknown; error?: { message: string } }>;
+
+/** ENSv2 Permissioned Resolver's text event: topic 1 the name's resource on that resolver, topic 2 keccak(key), data (key, value). */
+export const TEXT_CHANGED = "0x14cf4389d9a790cb32a054e033d7e3d3b78119dee4fea3c0983aac1db3f54015";
+const EXPLORER: Record<number, string> = { 1: "https://etherscan.io", 11155111: "https://sepolia.etherscan.io" };
+const SEPOLIA_BLOCK_S = 12;
+
+/**
+ * The transaction that wrote `value` into `key` on `resolver`. One eth_getLogs
+ * of 10,000 blocks from about when the record was signed (`since`, unix
+ * seconds), the most public endpoints allow; the log must hold this exact
+ * value, so another name on a shared resolver, or an older verdict, doesn't
+ * count. undefined when the endpoint can't say (log history pruned, range
+ * refused): the resolver link still shows.
+ */
+export async function recordTx(rpc: EthRpc, resolver: string, key: string, value: string, since: number, now = Date.now()): Promise<string | undefined> {
+  const b = await rpc("eth_blockNumber", []);
+  const latest = Number(b.result);
+  if (b.error || !Number.isSafeInteger(latest)) return undefined;
+  const from = Math.max(0, latest - Math.ceil(Math.max(0, now / 1000 - since) / SEPOLIA_BLOCK_S) - 300);
+  const r = await rpc("eth_getLogs", [{ address: resolver, topics: [TEXT_CHANGED, null, keccak256(toHex(key))], fromBlock: toHex(from), toBlock: toHex(Math.min(latest, from + 9_999)) }]);
+  if (r.error || !Array.isArray(r.result)) return undefined;
+  for (const l of [...(r.result as { data: Hex; transactionHash: string }[])].reverse()) {
+    try {
+      const [k, v] = decodeAbiParameters([{ type: "string" }, { type: "string" }], l.data);
+      if (k === key && v === value) return l.transactionHash;
+    } catch {
+      /* not this event's layout */
+    }
+  }
+  return undefined;
+}
+
 /** Check a verdict record: signature, signer = the verifier name's addr, role still delegated, about this site, not expired. */
-export async function checkVerdict(raw: string, site: { origin: string; ens: string }, call: EthCall, ur: string, key: string, now = Date.now()): Promise<VerdictCheck> {
+export async function checkVerdict(
+  raw: string, site: { origin: string; ens: string }, call: EthCall, ur: string, key: string, now = Date.now(), chain?: { chainId: number; rpc?: EthRpc },
+): Promise<VerdictCheck> {
   let r: VerdictRecord;
   try {
     r = parseVerdictRecord(raw);
@@ -164,7 +210,13 @@ export async function checkVerdict(raw: string, site: { origin: string; ens: str
   } catch {
     /* an unsupported or unresolvable verifier name: not verified */
   }
-  const delegated = signed ? await canWriteText(call, ur, site.ens, key, r.signer) : null;
+  const resolver = signed ? await resolverOf(call, ur, site.ens) : null;
+  const explorer = chain && EXPLORER[chain.chainId];
+  const [delegated, tx] = await Promise.all([
+    signed ? canWriteText(call, ur, site.ens, key, r.signer, resolver) : null,
+    resolver && explorer && chain?.rpc ? recordTx(chain.rpc, resolver, key, raw, r.issuedAt, now).catch(() => undefined) : undefined,
+  ]);
+  const links = resolver && explorer ? { links: { resolver: `${explorer}/address/${resolver}#events`, ...(tx ? { tx: `${explorer}/tx/${tx}` } : {}) } } : {};
   const { signature: _, ...verdict } = r;
   return {
     state: "read",
@@ -174,6 +226,7 @@ export async function checkVerdict(raw: string, site: { origin: string; ens: str
     delegated,
     matchesSite: r.name === site.ens && sameOrigin(r.origin, site.origin),
     expired: now / 1000 > r.expiresAt,
+    ...links,
   };
 }
 
@@ -189,7 +242,7 @@ export async function siteEnsName(origin: string, timeoutMs = 5000): Promise<str
 type EnsConfig = { chainId: number; universalResolver: string; verifier?: string; labels?: string };
 
 /** Canary's label for the site, if it has one that points back at it. */
-async function readLabel(origin: string, call: EthCall, ens: EnsConfig, now: number): Promise<Label | undefined> {
+async function readLabel(origin: string, call: EthCall, ens: EnsConfig, now: number, rpc?: EthRpc): Promise<Label | undefined> {
   const name = labelName(origin, ens.labels ?? LABELS_PARENT);
   if (!name) return undefined;
   const ur = ens.universalResolver;
@@ -197,23 +250,23 @@ async function readLabel(origin: string, call: EthCall, ens: EnsConfig, now: num
   try {
     const [url, raw] = await Promise.all([readText(call, ur, name, "url"), readText(call, ur, name, vKey)]);
     if (!raw || !(url && sameOrigin(url, origin))) return undefined;
-    return { ens: name, verdict: await checkVerdict(raw, { origin, ens: name }, call, ur, vKey, now) };
+    return { ens: name, verdict: await checkVerdict(raw, { origin, ens: name }, call, ur, vKey, now, { chainId: ens.chainId, rpc }) };
   } catch (e) {
     return { ens: name, error: String((e as Error).message ?? e) };
   }
 }
 
 /** Everything the popup needs to show declared vs observed, and the verdict, for one site. */
-export async function readDeclared(origin: string, call: EthCall, ens: EnsConfig, now = Date.now()): Promise<Declared> {
+export async function readDeclared(origin: string, call: EthCall, ens: EnsConfig, now = Date.now(), rpc?: EthRpc): Promise<Declared> {
   let name: string | null;
   try {
     name = await siteEnsName(origin);
   } catch (e) {
-    const label = await readLabel(origin, call, ens, now);
+    const label = await readLabel(origin, call, ens, now, rpc);
     return { state: "error", error: String((e as Error).message ?? e), ...(label ? { label } : {}) };
   }
   if (!name) {
-    const label = await readLabel(origin, call, ens, now);
+    const label = await readLabel(origin, call, ens, now, rpc);
     return { state: "none", ...(label ? { label } : {}) };
   }
   const ur = ens.universalResolver;
@@ -226,7 +279,7 @@ export async function readDeclared(origin: string, call: EthCall, ens: EnsConfig
     ]);
     // Both directions: the site names the ENS name, and the name names the site.
     if (!(url && sameOrigin(url, origin))) return { state: "unbound", ens: name, url };
-    const verdict = verdictRaw ? await checkVerdict(verdictRaw, { origin, ens: name }, call, ur, vKey, now) : undefined;
+    const verdict = verdictRaw ? await checkVerdict(verdictRaw, { origin, ens: name }, call, ur, vKey, now, { chainId: ens.chainId, rpc }) : undefined;
     const v = verdict ? { verdict } : {};
     if (!raw) return { state: "notFound", ens: name, ...v };
     let manifest: DappManifest;

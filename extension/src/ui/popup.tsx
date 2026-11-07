@@ -8,7 +8,7 @@ import {
   activeTabId, applyTheme, coverage, declaredCount, hostOf, manifestOf, send,
   type Coverage, type Filter, type ManifestView, type Settings, type Site, type TabState, type Worker,
 } from "./model.js";
-import { CoverageBlock, Empty, EventRow, FILTER_LABEL, FilterChips, headline, LabelCard, Logo, manifestStatusFor, ManifestStatus, ProtectionSwitch, RowStatus, Summary, ThemeButton, useFiltered, cx } from "./parts.js";
+import { ChainLinks, CoverageBlock, Empty, EventRow, FILTER_LABEL, FilterChips, headline, LabelCard, Logo, manifestStatusFor, ManifestStatus, ProtectionSwitch, RowStatus, Summary, ThemeButton, useFiltered, cx } from "./parts.js";
 import { verdictOf } from "./model.js";
 import { privacyLabel } from "../privacy-label.js";
 
@@ -200,6 +200,7 @@ function Manifest({ tab, m, site, onBlock, openDashboard }: { tab: TabState; m: 
           <div id="declared" className="rounded-xl border border-line bg-surface p-3.5 text-[14px] text-ink">
             {m.text}
             {v && <p className="mt-2 text-[13px] text-ink-2"><b className="font-medium text-ink">{v.title}:</b> {v.text}</p>}
+            <ChainLinks links={v?.links} className="mt-2" />
           </div>
           {"label" in m && m.label && <LabelCard l={m.label} />}
         </>
@@ -217,6 +218,7 @@ function Manifest({ tab, m, site, onBlock, openDashboard }: { tab: TabState; m: 
               )}
             </p>
             {v && <p className="mt-2 text-[13px] text-ink-2"><b className="font-medium text-ink">{v.title}:</b> {v.text}</p>}
+            <ChainLinks links={v?.links} className="mt-2" />
             <p className="mt-2 text-[12px] text-muted">Read from ENS through anon-rpc. What wasn't observed may still be sent.</p>
           </div>
           <div id="declaredRows" className="space-y-1.5">

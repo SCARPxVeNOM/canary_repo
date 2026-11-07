@@ -676,7 +676,9 @@ function declaredFor(origin: string): Promise<Declared> {
     // Its own circuit: ENS lookups never share one with reads about your addresses.
     const call = (to: string, data: string, from?: string) =>
       pipeline.call(read, { jsonrpc: "2.0", id: 1, method: "eth_call", params: [{ ...(from ? { from } : {}), to, data }, "latest"] }, "canary:ens").then((o) => o.answer as { result?: string; error?: { message: string } });
-    entry.value = readDeclared(origin, call, ENS).catch((e) => ({ state: "error", error: String(e?.message ?? e) }) as Declared);
+    const rpc = (method: string, params: unknown[]) =>
+      pipeline.call(read, { jsonrpc: "2.0", id: 1, method, params }, "canary:ens").then((o) => o.answer as { result?: unknown; error?: { message: string } });
+    entry.value = readDeclared(origin, call, ENS, Date.now(), rpc).catch((e) => ({ state: "error", error: String(e?.message ?? e) }) as Declared);
   }
   void entry.value.then((d) => { if (d.state === "error" || ("label" in d && d.label && "error" in d.label)) entry.ttl = DECLARED_RETRY_MS; });
   declaredCache.set(origin, entry);

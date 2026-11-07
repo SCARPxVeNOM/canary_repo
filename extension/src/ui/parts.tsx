@@ -3,7 +3,7 @@
 import { Button, Chip, Disclosure, Switch, Tag, TagGroup } from "@heroui/react";
 import { useMemo, type ReactNode } from "react";
 import { CATEGORY_LABEL } from "../shared.js";
-import { Check, Chevron, Copy, Dotted, Eye, Half, Hatch, Moon, Shield, Slash, Sun, Warn } from "./icons.js";
+import { Check, Chevron, Copy, Dotted, External, Eye, Half, Hatch, Moon, Shield, Slash, Sun, Warn } from "./icons.js";
 import {
   ago, BUCKET_LABEL, BUCKETS, channelLabel, clock, filterOf, ipVisible, isDark, labelBadge, manifestBadge, receiptsOf, sentenceOf, short, titleOf,
   type Bucket, type Coverage, type Ev, type Filter, type ManifestView, type Settings, type Site, type TabState, type Worker,
@@ -347,6 +347,22 @@ export function RowStatus({ s }: { s: "declared" | "undeclared" | "notSeen" }) {
 const LABEL_SOURCE: Record<PrivacyLabel["source"], string> = { site: "From the site's ENS name", canary: "Canary's label on ENS", none: "", pending: "" };
 const LABEL_TONE: Record<PrivacyLabel["tone"], string> = { good: "text-protect", bad: "text-expose", warn: "text-partial", muted: "text-ink" };
 
+/** Where the verdict is on chain: the transaction that wrote it, and the name's resolver (its events list every record write). */
+export function ChainLinks({ links, className }: { links?: { tx?: string; resolver?: string }; className?: string }) {
+  if (!links?.tx && !links?.resolver) return null;
+  const a = (href: string, text: string) => (
+    <a href={href} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 font-medium text-link underline underline-offset-2">
+      {text} <External size={12} />
+    </a>
+  );
+  return (
+    <p data-chain-links className={cx("flex flex-wrap gap-x-3 gap-y-1 text-[12.5px]", className)}>
+      {links.tx && a(links.tx, "Verdict transaction")}
+      {links.resolver && a(links.resolver, "Resolver on Etherscan")}
+    </p>
+  );
+}
+
 /** The site's privacy label (privacy-label.ts): what it says, and where it comes from. */
 export function LabelCard({ l, className }: { l: PrivacyLabel; className?: string }) {
   return (
@@ -368,6 +384,7 @@ export function LabelCard({ l, className }: { l: PrivacyLabel; className?: strin
       )}
       {l.warning && <p className="mt-2 text-[13px] leading-snug text-partial">{l.warning}</p>}
       {l.by && <p className="mt-2 text-[12px] leading-snug text-muted">{l.by}</p>}
+      <ChainLinks links={l.links} className="mt-2" />
     </section>
   );
 }

@@ -3,7 +3,7 @@
 // nothing. Shared by the popup, the dashboard and the notice the page shows
 // when you connect a wallet, so all three say the same thing.
 
-import type { Declared, VerdictCheck } from "./ens.js";
+import type { ChainLinks, Declared, VerdictCheck } from "./ens.js";
 
 export type PrivacyLabel = {
   source: "pending" | "site" | "canary" | "none";
@@ -17,6 +17,8 @@ export type PrivacyLabel = {
   by: string;
   /** why it can't be fully trusted, if anything */
   warning?: string;
+  /** block explorer links for the verdict: the transaction that wrote it, and the name's resolver */
+  links?: ChainLinks;
 };
 
 const KIND: Record<string, string> = { rpc: "RPC provider", "backend+rpc": "RPC provider", backend: "backend", analytics: "analytics", indexer: "indexer" };
@@ -55,6 +57,7 @@ export function privacyLabel(d: Declared | undefined): PrivacyLabel {
       rows,
       by: `Published by the site in ${d.ens}${v ? `, checked by ${v.verdict.verifier} on ${date(v.verdict.issuedAt)}` : ""}`,
       ...(more.length ? { warning: `${v!.verdict.verifier} saw it send your address to more: ${more.join(", ")}.` } : v ? { warning: caveat(v) } : {}),
+      ...(v?.links ? { links: v.links } : {}),
     };
   }
 
@@ -65,7 +68,7 @@ export function privacyLabel(d: Declared | undefined): PrivacyLabel {
     if (why || v.state !== "read") return { source: "none", tone: "warn", title: "No privacy label for this site", rows: [], by: "", warning: `Canary's label for it was ignored: ${why}.` };
     const got = v.verdict.addressRecipients;
     const by = `Canary's label ${label.ens}, signed by ${v.verdict.verifier}, scanned ${date(v.verdict.issuedAt)}`;
-    if (!got) return { source: "canary", ens: label.ens, tone: "muted", title: "Canary scanned this site", rows: [], by, warning: caveat(v) };
+    if (!got) return { source: "canary", ens: label.ens, tone: "muted", title: "Canary scanned this site", rows: [], by, warning: caveat(v), ...(v.links ? { links: v.links } : {}) };
     return {
       source: "canary",
       ens: label.ens,
@@ -73,6 +76,7 @@ export function privacyLabel(d: Declared | undefined): PrivacyLabel {
       title: got.length ? `${n(got.length, "third party", "third parties")} got your address in Canary's scan` : "No third party got your address in Canary's scan",
       rows: got.map((r) => ({ host: r.host, kind: kindOf(r.kind) })),
       by,
+      ...(v.links ? { links: v.links } : {}),
       warning: caveat(v),
     };
   }
