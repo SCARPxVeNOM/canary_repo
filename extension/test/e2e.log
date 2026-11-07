@@ -1,13 +1,12 @@
-
 1. Baseline: no extension
-   dapp: {"chainId":11155111,"blockNumber":"273","balance":"1","call":"0x0000000000000000000000000000000000000000000000000000000000000001","custom":{"from":"provider"},"batch":["273","1"],"xhrBalance":"0x1","wsBlockNumber":"273","hostileBalance":"1","rpcMs":344,"trackerFetch":"sent 204","trackerBase64":"sent 204","trackerBeacon":true,"trackerXhr":204,"trackerPixel":"loaded","trackerClean":"sent 204","points":{"points":42},"indexer":{"name":"vitalik.eth"}}
+   dapp: {"chainId":11155111,"blockNumber":"273","balance":"1","call":"0x0000000000000000000000000000000000000000000000000000000000000001","custom":{"from":"provider"},"batch":["273","1"],"xhrBalance":"0x1","wsBlockNumber":"273","hostileBalance":"1","ownBalance":"1","ownAccounts":"[null,null]","rpcMs":361,"trackerFetch":"sent 204","trackerBase64":"sent 204","trackerBeacon":true,"trackerXhr":204,"trackerPixel":"loaded","trackerClean":"sent 204","points":{"points":42},"indexer":{"name":"vitalik.eth"}}
   ✓ provider received reads from the page's origin
   ✓ WebSocket provider received reads
   ✓ tracker received the address (fetch, base64, beacon, XHR, pixel)
 
 2. With Canary
-   dapp: {"chainId":11155111,"blockNumber":"546","balance":"2","call":"0x0000000000000000000000000000000000000000000000000000000000000002","custom":{"from":"provider"},"batch":["546","2"],"xhrBalance":"0x2","wsBlockNumber":"546","hostileBalance":"2","rpcMs":484,"trackerFetch":"failed: Failed to fetch","trackerBase64":"failed: Failed to fetch","trackerBeacon":true,"trackerXhr":0,"trackerPixel":"error","trackerClean":"sent 204","points":{"points":42},"indexer":{"name":"vitalik.eth"}}
-   counts: {"backend":2,"blocked":5,"detected":1,"direct":0,"failedClosed":0,"localNode":0,"notInspected":0,"protected":9,"protectedIpOnly":1} notes: ["chain of torblock.provider.test assumed from the wallet (11155111)","its URL carried your address"]
+   dapp: {"chainId":11155111,"blockNumber":"546","balance":"2","call":"0x0000000000000000000000000000000000000000000000000000000000000002","custom":{"from":"provider"},"batch":["546","2"],"xhrBalance":"0x2","wsBlockNumber":"546","hostileBalance":"ERR An internal error was received.","ownBalance":"2","ownAccounts":"[[],[]]","rpcMs":2094,"trackerFetch":"failed: Failed to fetch","trackerBase64":"failed: Failed to fetch","trackerBeacon":true,"trackerXhr":0,"trackerPixel":"error","trackerClean":"sent 204","points":{"points":42},"indexer":{"name":"vitalik.eth"}}
+   counts: {"backend":2,"blocked":5,"detected":1,"direct":0,"failedClosed":4,"localNode":0,"notInspected":0,"protected":11,"protectedIpOnly":1} notes: ["couldn't tell which chain torblock.provider.test serves, and the anon path to torblock.provider.test failed (HTTP 403 from torblock.provider.test): not sent","chain of rpc.leakydash.test (11155111) asked of the dapp's own server by the page, as anon-rpc couldn't; the question carries no address","its URL carried your address"]
    provider got: eth_chainId@null, alchemy_getTokenBalances@null, eth_chainId@null
    tracker got: /event
   ✓ dapp works: reads answered by the read endpoint (546 / 2)
@@ -17,13 +16,15 @@
   ✓ provider saw no read methods
   ✓ nothing reached the provider from the page's origin
   ✓ non-standard method forwarded over anon path (IP only)
-  ✓ Tor-hostile provider: read still answered (chain from wallet, labelled)
+  ✓ dapp's own Tor-refusing proxy: the page asked its chain (no address), the read endpoint answered
+  ✓ eth_accounts to a remote node answered [] by Canary, nothing sent
+  ✓ third-party Tor-refusing provider: chain unknown, so failed closed, never sent directly
   ✓ tracker received NO request carrying the address
   ✓ tracker's clean pageview still went through
   ✓ leaks blocked: fetch, base64 fetch, XHR, pixel all failed for the page
   ✓ first-party /api/points allowed and reported as detected
   ✓ indexer traffic allowed and reported as backend
-  ✓ coverage counts: blocked ≥ 5, protected ≥ 8, failedClosed 0
+  ✓ coverage counts: blocked ≥ 5, protected ≥ 9, failed closed only for the Tor-refusing provider
   ✓ wallet address learned via EIP-1193/6963
   ✓ eth_chainId answered from Canary's cache: the read endpoint was never asked
   ✓ pipeline sent fewer anon-rpc requests than it answered calls
@@ -46,7 +47,7 @@
   ✓ dashboard overview shows the coverage count
 
 3. Anon path down (read endpoint 503) → fail closed
-   dapp: {"chainId":11155111,"blockNumber":"ERR An internal error was received.","balance":"ERR An internal error was received.","call":"ERR An internal error was received.","custom":{"from":"provider"},"batch":"ERR An internal error was received.","xhrBalance":"{\"jsonrpc\":\"2.0\",\"id\":7,\"error\":{\"code\":-32603,\"message\":\"Canary: anon path unavailable (Failed to fetch). Not sent directly.\"}}","wsBlockNumber":"ERR An internal error was received.","hostileBalance":"ERR An internal error was received.","rpcMs":7334}
+   dapp: {"chainId":11155111,"blockNumber":"ERR An internal error was received.","balance":"ERR An internal error was received.","call":"ERR An internal error was received.","custom":{"from":"provider"},"batch":"ERR An internal error was received.","xhrBalance":"{\"jsonrpc\":\"2.0\",\"id\":7,\"error\":{\"code\":-32603,\"message\":\"Canary: anon path unavailable (Failed to fetch). Not sent directly.\"}}","wsBlockNumber":"ERR An internal error was received.","hostileBalance":"ERR An internal error was received.","ownBalance":"ERR An internal error was received.","ownAccounts":"[[],[]]","rpcMs":8466}
   ✓ connect notice not repeated for a site this browser session
   ✓ reads failed with an error instead of going direct
   ✓ counted as failed closed
@@ -70,4 +71,4 @@
   ✓ no well-known file: label read from labelled-test.labels.canary.eth, signed, delegated, bound to the site
   ✓ popup shows Canary's label, and badges it
 
-51/51 checks passed
+53/53 checks passed
